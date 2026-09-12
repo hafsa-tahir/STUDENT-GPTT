@@ -1,0 +1,9 @@
+import { Pencil } from "lucide-react";
+
+export type PlannerSession = { id: number; startedAt: Date | string; endedAt: Date | string | null; minutesStudied: number; planItemId: number | null };
+type Plan = { id: number; title: string; sessions: PlannerSession[] };
+
+export function PlannerSessionSummary({ plans, onEdit }: { plans: Plan[]; onEdit?: (session: PlannerSession) => void }) {
+  const rows = plans.flatMap(plan => plan.sessions.map(session => ({ ...session, planTitle: plan.title }))).sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()).slice(0, 5);
+  return <section className="mx-auto mt-5 max-w-[1200px] px-5 pb-8 sm:px-8 lg:px-10"><div className="rounded-2xl border border-[#A070A1] bg-[#FDF3F3] p-5 sm:p-6"><h2 className="text-[16px] font-semibold tracking-[-.02em]">Recent study sessions</h2><p className="mt-1 text-[13px] text-[#724060]">A record of time you have actually logged from your study plans.</p>{rows.length ? <div className="mt-5 divide-y divide-[#A070A1]">{rows.map(session => <div key={session.id} className="flex items-center justify-between gap-4 py-3"><div><p className="text-[13px] font-medium">{session.planTitle}</p><p className="mt-0.5 text-[11px] text-[#724060]">{new Date(session.startedAt).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}</p></div><div className="flex items-center gap-2"><p className="text-[13px] font-semibold text-[#A070A1]">{session.minutesStudied} min</p>{onEdit && <button onClick={() => onEdit(session)} className="grid h-8 w-8 place-items-center rounded-lg text-[#724060] hover:bg-[#F8E7E7]" aria-label={`Edit logged session for ${session.planTitle}`}><Pencil className="h-3.5 w-3.5" /></button>}</div></div>)}</div> : <p className="mt-5 rounded-xl bg-[#F8E7E7] p-4 text-[13px] text-[#724060]">No sessions logged yet. Use the timer icon next to a planner task to record your focused time.</p>}</div></section>;
+}

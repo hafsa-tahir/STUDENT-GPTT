@@ -1,0 +1,151 @@
+# StudentGPT TODO
+
+- [x] Establish a secure full-stack application foundation with environment documentation and reusable design tokens.
+- [x] Define normalized persistent data models for profiles, academic organization, conversations, documents, quizzes, flashcards, study plans, progress, quotas, and telemetry.
+- [x] Complete real authenticated user sessions, protected routes, persistent profiles, and a unified secure sign-out flow.
+- [x] Build the responsive application shell with desktop sidebar navigation and mobile bottom navigation.
+- [x] Implement per-user subject, course, and topic CRUD with server-enforced ownership isolation.
+- [x] Build a dashboard powered only by stored academic records, tasks, activity, exams, and progress.
+- [x] Complete editable study plans, tasks, study sessions, and completion tracking.
+- [x] Integrate a server-side provider-neutral LLM service for streaming academic chat and structured artifact generation.
+- [x] Implement persisted conversations, learning modes, markdown/code/math rendering, regeneration, and quota telemetry.
+- [x] Implement private document upload, scoped storage paths, signed retrieval, asynchronous processing states, extraction, chunking, embeddings, and authorized RAG citations.
+- [x] Complete real topic/document quiz generation, scoring, explanations, and stored attempt history.
+- [x] Complete real topic/document flashcard generation, review interaction, and stored review outcomes.
+- [ ] Enforce rate limits, quotas, input validation, error handling, upload safeguards, and ownership security tests.
+- [x] Remove or explicitly gate the legacy cookie-session fallback so Supabase sign-out cannot leave StudentGPT API access authenticated.
+- [ ] Add end-to-end authentication coverage for sign-up, sign-in, protected route denial, profile creation, and secure sign-out.
+- [x] Complete update APIs and UI for study-plan names, deadlines, and task scheduling, duration, and notes.
+- [x] Complete real study-session logging, persistence, and dashboard/planner display.
+- [ ] Add planner CRUD, completion, and study-session ownership-isolation tests.
+- [x] Replace prompt-based planner and task editing with proper forms that support title, dates, duration, notes, clear-note behavior, and cancellation.
+- [x] Verify the planner editing workflows end to end before closing the broad planner-workflow item.
+- [x] Add private document selection to quiz and flashcard generation workflows.
+- [x] Add authenticated quiz-attempt and flashcard-review history queries and UI.
+- [ ] Add persistence and ownership-isolation tests for quiz attempts and flashcard reviews.
+- [x] Complete editable task-note viewing, update, and clearing through the protected planner procedure.
+- [x] Display individual persisted study-session records in the planner and explicit study-session metrics on the dashboard.
+- [x] Capture consistent start and end timestamps when logging study sessions, and test task-note and session persistence flows.
+- [ ] Verify mobile and desktop responsive UX, TypeScript checks, unit tests, API workflows, production build, and deployment documentation.
+- [ ] Deliver the completed StudentGPT application with credentials/setup instructions and a checkpoint.
+- [x] Diagnose the reported sign-in failure, including browser configuration retrieval, Supabase authentication responses, and session handoff.
+- [x] Complete the sign-in repair with a regression test for the diagnosed unconfirmed-email failure path.
+- [x] Verify protected-route access and secure sign-out with the confirmed non-sensitive test account.
+- [x] Replace the localhost email-confirmation redirect with the deployed StudentGPT preview URL and document the required Supabase allow-list entry.
+- [x] Resend and verify a confirmation email that returns to StudentGPT instead of localhost.
+- [x] Add a regression test covering unconfirmed-email messaging and resend-confirmation behavior.
+- [x] Redesign the StudentGPT visual system, dashboard surfaces, navigation, hierarchy, and interaction details to meet a premium academic-product standard.
+- [x] Add a persistent Research workspace for creating, saving, revisiting, and organizing research briefs by topic.
+- [x] Implement AI research synthesis with structured overview, key concepts, questions, source notes, and study-action outputs tied to each saved research brief.
+- [ ] Connect saved research briefs to study chat, practice generation, planner tasks, and user-owned academic subjects.
+- [ ] Verify the redesigned interface and Research workflow with authenticated real user data across desktop and mobile.
+- [x] Expand Research so a topic-only request generates a complete styled research document with differentiated headings, bullet sections, and a saved document view.
+- [x] Add source-aware community-perspective and video-resource sections with clear source links and transparency about retrieval limits.
+- [x] Add a save/export-ready research-document action with persistent per-user ownership.
+- [x] Add quiz scope controls for a selected chapter, section, range, complete book, number of MCQs, and difficulty.
+- [x] Add a Notes studio that generates persistent chapter, section, range, or whole-book notes with headings, bullets, and user-authored sticky notes.
+- [x] Add a Revision studio that creates a saved revision sequence from a complete book or selected chapter.
+- [ ] Connect all generated research, notes, quizzes, and revision materials to the user’s owned subject, topic, and uploaded document records.
+- [ ] Review every expanded academic-studio workflow with real authenticated data on desktop and mobile before delivery.
+- [x] Add a topic-only Research entry flow that creates a saved research brief without requiring separate title and question fields.
+- [x] Persist exported research documents in private storage with user-owned export history and authorized retrieval.
+- [x] Add subject selection to scoped Practice generation and complete modal forms for Planner editing and session logging.
+- [x] Add editable study-session management with ownership enforcement and planner controls.
+- [ ] Add explicit quota-telemetry and markdown/code/math chat-rendering verification.
+- [ ] Add concrete document-embedding, async-processing, and authorized RAG-citation verification.
+- [ ] Add persistence-focused tests for task-note updates/clearing and study-session create/update flows.
+- [ ] Submit and reload authenticated Planner plan, task, note, completion, session-log, and session-edit flows to verify persisted state end to end.
+- [x] Fix and re-verify the authenticated Revision bot generation failure.
+- [x] Verify Revision bot generation succeeds with a selected owned document, subject, and chapter scope after the strict-output repair.
+- [x] Redesign the Research canvas as a structured visual project board based on the user’s reference, with clear labeled cells and academic planning sections.
+- [x] Expand research synthesis into more detailed, evidence-rich, long-form topic materials with stronger study depth.
+- [x] Improve topic-relevant YouTube video ranking and display transparent relevance context.
+- [x] Change Research export from browser-tab navigation to a true device-download file action.
+- [x] Review the redesigned Research board, enriched synthesis, relevant videos, and device-download export with real authenticated data.
+- [x] Make the Research Project Canvas fill the available visual board height without sparse cells.
+- [x] Add a dedicated visible YouTube video-resources section with topic-relevant video cards.
+- [x] Add whole-canvas layout export so users can download the Research Project Canvas as it appears in the browser.
+- [x] Review the full-height canvas, visible videos, and whole-canvas export with authenticated data.
+- [x] Move the Research library above the canvas and make the canvas use the full available page width.
+- [x] Add a desktop sidebar collapse control while preserving mobile navigation behavior.
+- [ ] Review the revised top-library, full-width Research layout and sidebar collapse on desktop and mobile.
+- [x] Replace forced equal-height Research board cards with a compact balanced content-sized canvas that avoids blank space.
+- [x] Review the compact content-sized Research canvas with an authenticated project.
+- [x] Replace the uneven column/masonry Research canvas with grouped balanced rows so long cards do not leave large blank regions below shorter cards.
+- [x] Compare the new gap-free Research canvas against the user’s supplied export screenshot with authenticated project data.
+- [x] Remove the visible gray void below the short opening Research card by balancing the first board section with stacked content groups.
+- [x] Replace all remaining multi-column Research card stacks with compact full-width horizontal sections so no gray canvas gaps can remain.
+- [x] Remove the large Dashboard metric-card dead space by using a balanced responsive metric grid.
+- [x] Review the corrected Dashboard metrics and Research canvas with authenticated desktop data.
+- [ ] Document StudentGPT’s current APIs and built-in AI model, then define the secure Groq, Tavily, Flutter/Dart, and FlutLab migration architecture.
+- [ ] Configure a server-side Groq chat integration and Tavily research integration without exposing API secrets in the Flutter APK.
+- [ ] Build a Flutter/Dart StudentGPT client that uses the secure server API boundary for authentication, chat, and research.
+- [ ] Prepare a FlutLab-compatible project and obtain a validated Android APK through the user-authorized build flow.
+- [ ] Audit all StudentGPT workspace screens and define a cohesive premium visual system with clear hierarchy, spacing, and responsive rules.
+- [ ] Refine the shared shell, navigation, typography, surfaces, and interaction states for a more polished student product.
+- [ ] Redesign the priority Dashboard, Research, Notes, Practice, Planner, and Study Chat screens for a consistent premium experience.
+- [ ] Review the comprehensive UI redesign on desktop and mobile with authenticated academic data.
+- [x] Redesign StudentGPT sign-in, sign-up, reset, and confirmation states around the supplied blue glassmorphism reference while preserving all authentication behavior.
+- [x] Validate the redesigned authentication pages at desktop and mobile sizes with sign-in, sign-up, reset, and resend-confirmation controls intact.
+- [x] Replace the authentication redesign’s blue palette with only the supplied #FDF3F3, #F8E7E7, #A070A1, and #724060 colors.
+- [x] Review the palette-only authentication interface at desktop and mobile sizes for contrast and visual cohesion.
+- [ ] Redesign the Overview dashboard using the supplied compact rounded-dashboard references and the four-color mauve palette while preserving all real stored study data.
+- [ ] Add reference-inspired visual summaries for study metrics, activity, and focus without fabricating user data.
+- [ ] Review the mauve Overview dashboard on desktop and mobile with authenticated academic data.
+- [ ] Apply the four-color mauve palette to the shared desktop and mobile StudentGPT navigation shell for a cohesive Overview dashboard composition.
+- [ ] Replace every remaining legacy color across all StudentGPT pages, shared components, charts, icons, buttons, borders, and responsive navigation with only #FDF3F3, #F8E7E7, #A070A1, and #724060.
+- [ ] Audit rendered desktop and mobile pages to confirm no blue or non-palette visual color remains.
+- [ ] Remove the global palette override that created pale-on-pale text and rebuild high-contrast mauve semantic styles across every workspace screen.
+- [ ] Verify readable text, input, navigation, and action contrast on the Notes screen and all shared workspace patterns.
+- [ ] Replace the residual blue Subject card icon and "Manage courses & topics" action with mauve equivalents.
+- [ ] Replace the residual blue Planner session icon and elapsed-time accents with mauve equivalents.
+- [ ] Replace the residual blue Study Chat icon and active conversation surface with mauve equivalents.
+- [ ] Replace the residual blue Documents lock icon and Open action with mauve equivalents.
+- [ ] Replace the residual blue Practice tabs, icons, and study-history states with mauve equivalents.
+- [x] Generate several distinct StudentGPT logo options that use only #FDF3F3, #F8E7E7, #A070A1, and #724060, then obtain the user’s selection before integration.
+- [x] Generate a replacement logo set with unmistakably different monogram, mascot, geometric-emblem, and academic-crest directions for user selection.
+- [x] Confirm finished accessible previews for each replacement logo before asking the user to choose one.
+- [x] Integrate the user-selected open-book spark logo across StudentGPT’s sidebar, mobile navigation, and authentication branding, then validate it at small sizes.
+- [x] Add the selected open-book spark mark to an intentional mobile brand placement and visually verify all desktop, mobile, and authentication logo sizes.
+- [x] Add a regression test that verifies the selected open-book mark is wired into desktop shell, mobile navigation, and authentication branding.
+- [x] Create a coordinated StudentGPT social-media banner kit using the selected open-book spark mark and four-color mauve palette.
+- [x] Confirm the completed Instagram, Story, LinkedIn/X, and YouTube banner files are accessible and correctly branded before closing the asset task.
+- [x] Produce a polished StudentGPT brand-guidelines PDF documenting logo use, approved mauve palette, typography, spacing, accessibility contrast, and social-banner applications.
+- [x] Create a concise StudentGPT brand-identity presentation covering logo system, four-color mauve palette, typography, product direction, and social-media applications.
+- [x] Generate a natural spoken presentation script for every slide in the StudentGPT brand-identity deck.
+- [x] Define the full native StudentGPT Android parity scope, including the current mauve UI, logo, AI chat, research, planner, documents, notes, practice, authentication, and user data workflows.
+- [x] Prepare a mobile-safe backend API and authentication strategy for the Flutter client without exposing AI or service keys.
+- [x] Set up a Flutter and Android build environment capable of producing an installable StudentGPT APK.
+- [x] Build and validate the complete Flutter StudentGPT app against the active preview before delivering the APK.
+- [x] Create and package a standalone Flutter/Dart StudentGPT project ZIP with the current mauve visual system and backend-ready configuration.
+- [x] Attempt an Android release APK build from the generated Flutter project and deliver the APK only if compilation succeeds.
+- [x] Rebuild the Flutter Android client as a native StudentGPT WebView shell so it shows the current live preview with exact UI and feature parity.
+- [x] Capture final verification that the packaged WebView shell targets the live StudentGPT preview, then attach the APK and Flutter source archive to the user.
+- [x] Publish the completed StudentGPT APK at a direct mobile-download URL and generate a verified scannable QR code for installation.
+- [x] Diagnose the reported incomplete mobile APK download and publish a verified alternative download QR target.
+
+- [x] Package a clean FlutLab-ready Flutter project ZIP with machine-specific caches and local Android paths excluded.
+- [x] Validate the FlutLab import flag and running StudentGPT endpoint with Vitest.
+- [x] Verify the ZIP extracts with pubspec.yaml, lib/main.dart, Android configuration, and brand assets intact.
+- [ ] Repackage the Flutter project with the required ios/ directory so FlutLab accepts the ZIP import; structural verification is complete, but user-side FlutLab acceptance is still pending.
+- [ ] Review FlutLab-compatible Flutter/Dart constraints and repackage StudentGPT for the Dart 3.8.1 environment.
+- [ ] Resolve the FlutLab FlutterPlugin.kt fileMode/Kotlin compilation failure by aligning the Android Gradle configuration with FlutLab’s Flutter toolchain.
+- [x] Remove the incompatible app-level Kotlin compilerOptions block from the FlutLab Flutter Android project and verify the replacement ZIP builds.
+- [x] Verify the delivered FlutLab ZIP itself contains no app-level `kotlin { compilerOptions { ... } }` block before sending it again.
+- [ ] Diagnose and fix the installed StudentGPT APK launch failure on the user’s Android phone.
+- [ ] Isolate the Flutter WebView blank-screen-and-exit runtime failure and add a crash-resistant startup fallback before sending another ZIP.
+- [ ] Produce a real installed StudentGPT APK for the vivo Y04 that does not depend on the crashing WebView-only startup path.
+- [ ] Create and verify a vivo Y04 Android 15-targeted StudentGPT Flutter ZIP with a safer WebView startup configuration.
+- [x] Create a new GitHub repository for the complete StudentGPT Flutter project, document it in README, and push all source files.
+- [x] Push the original StudentGPT React full-stack project to the user-provided GitHub repository with source, backend, schema, tests, configuration, and documentation while excluding secrets and generated artifacts.
+- [ ] Set up and document an independent database for the original StudentGPT React project, apply its schema, and verify the backend can use it without production credentials.
+- [ ] Migrate the original StudentGPT application database layer from MySQL/TiDB to Supabase Postgres while preserving auth, storage, ownership, and academic workflows.
+- [ ] Use the existing Supabase project for StudentGPT application tables while preserving existing authentication and storage data.
+- [ ] Integrate Tavily server-side into StudentGPT research, validate the secret, add tests/documentation, and push the update to GitHub.
+- [x] Diagnose and fix any SerpAPI research integration error, including credential validation, endpoint behavior, response normalization, and regression coverage.
+- [x] Verify Groq availability, credential validity, model configuration, and whether StudentGPT generation is actually routed through Groq.
+- [ ] Replace the built-in text-generation provider with server-side OpenRouter, validate the key, preserve structured outputs, and push the integration to GitHub.
+- [ ] Reconcile OpenRouter dashboard status 200 with StudentGPT’s deployed 403 by checking request headers, model, endpoint, and secret propagation.
+- [ ] Resolve the OpenRouter deployment/request mismatch without asking the user to rotate or re-enter a key again.
+- [ ] Configure OpenRouter fallback across Gemma 4, OpenAI GPT-OSS, and NVIDIA Nemotron 3 Ultra for all StudentGPT generation features, with retryable-limit handling and tests.
+- [ ] Synchronize OpenRouter fallback routes and safe environment documentation across the React and Flutter repositories, make both GitHub repositories private, and verify no secrets are committed.
