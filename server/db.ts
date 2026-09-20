@@ -3,11 +3,25 @@ import { drizzle } from "drizzle-orm/mysql2";
 import { courses, InsertUser, profiles, progressEvents, studyPlanItems, studyPlans, studySessions, subjects, topics, users } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
+import mysql from "mysql2";
+
 let _db: ReturnType<typeof drizzle> | null = null;
 
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
-    try { _db = drizzle(process.env.DATABASE_URL); } catch (error) { console.warn("[Database] Failed to connect:", error); }
+    try {
+      const url = process.env.DATABASE_URL;
+      const baseUrl = url.split("?")[0];
+      const pool = mysql.createPool({
+        uri: baseUrl,
+        ssl: {
+          rejectUnauthorized: true,
+        },
+      });
+      _db = drizzle(pool);
+    } catch (error) {
+      console.warn("[Database] Failed to connect:", error);
+    }
   }
   return _db;
 }

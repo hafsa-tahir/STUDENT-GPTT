@@ -225,11 +225,7 @@ const resolveApiUrl = () => {
 
 const resolveApiKey = () => (hasOpenRouter() ? ENV.openrouterApiKey : ENV.forgeApiKey);
 
-const assertApiKey = () => {
-  if (!resolveApiKey()) {
-    throw new Error("No server-side LLM API key is configured");
-  }
-};
+
 
 const normalizeResponseFormat = ({
   responseFormat,
@@ -374,6 +370,89 @@ const fetchWithBackoff = async (
     : new Error("LLM request failed after exhausting retries");
 };
 
+type ProviderCandidate = {
+  name: string;
+  url: string;
+  key: string;
+  model: string;
+};
+
+function getProviderCandidates(requestedModel?: string): ProviderCandidate[] {
+  const candidates: ProviderCandidate[] = [];
+
+  // 1. Groq Keys
+  if (ENV.groqApiKeys.length > 0) {
+    for (let index = 0; index < ENV.groqApiKeys.length; index++) {
+      const key = ENV.groqApiKeys[index];
+      candidates.push({
+        name: `Groq (Key #${index + 1} - openai/gpt-oss-120b)`,
+        url: "https://api.groq.com/openai/v1/chat/completions",
+        key,
+        model: "openai/gpt-oss-120b",
+      });
+      candidates.push({
+        name: `Groq (Key #${index + 1} - openai/gpt-oss-20b)`,
+        url: "https://api.groq.com/openai/v1/chat/completions",
+        key,
+        model: "openai/gpt-oss-20b",
+      });
+    }
+  }
+
+  // 2. Gemini Keys
+  if (ENV.geminiApiKeys.length > 0) {
+    for (let index = 0; index < ENV.geminiApiKeys.length; index++) {
+      const key = ENV.geminiApiKeys[index];
+      candidates.push({
+        name: `Gemini (Key #${index + 1} - gemini-3.6-flash)`,
+        url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        key,
+        model: "gemini-3.6-flash",
+      });
+      candidates.push({
+        name: `Gemini (Key #${index + 1} - gemini-flash-latest)`,
+        url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        key,
+        model: "gemini-flash-latest",
+      });
+    }
+  }
+
+  // 3. OpenRouter Key & Models
+  if (ENV.openrouterApiKey) {
+    const models = openRouterModelCandidates(requestedModel);
+    for (const m of models) {
+      if (m) {
+        candidates.push({
+          name: `OpenRouter (${m})`,
+          url: resolveApiUrl(),
+          key: ENV.openrouterApiKey,
+          model: m,
+        });
+      }
+    }
+  }
+
+  // 4. Default Forge URL fallback if configured
+  if (candidates.length === 0 && ENV.forgeApiKey) {
+    candidates.push({
+      name: "Manus Forge",
+      url: resolveApiUrl(),
+      key: ENV.forgeApiKey,
+      model: requestedModel || "gpt-4o",
+    });
+  }
+
+  return candidates;
+}
+
+const assertApiKey = () => {
+  const candidates = getProviderCandidates();
+  if (candidates.length === 0) {
+    throw new Error("No LLM API keys configured. Please add OPENROUTER_API_KEY, GROQ_API_KEYS, or GEMINI_API_KEYS to .env.");
+  }
+};
+
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   assertApiKey();
 
@@ -396,10 +475,6 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   const payload: Record<string, unknown> = {
     messages: messages.map(normalizeMessage),
   };
-
-  if (model || hasOpenRouter()) {
-    payload.model = model || ENV.openrouterModel;
-  }
 
   if (tools && tools.length > 0) {
     payload.tools = tools;
@@ -436,74 +511,77 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     payload.response_format = normalizedResponseFormat;
   }
 
+  const candidates = getProviderCandidates(model);
   let lastError = "LLM invoke failed";
-  for (const candidate of openRouterModelCandidates(model)) {
-    if (candidate) payload.model = candidate;
-    const response = await fetchWithBackoff(
-      resolveApiUrl(),
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          authorization: `Bearer ${resolveApiKey()}`,
+
+  for (const candidate of candidates) {
+    payload.model = candidate.model;
+    try {
+      const response = await fetchWithBackoff(
+        candidate.url,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            authorization: `Bearer ${candidate.key}`,
+          },
+          body: JSON.stringify(payload),
         },
-        body: JSON.stringify(payload),
-      },
-      !hasOpenRouter()
-    );
+        true
+      );
 
-    if (response.ok) return (await response.json()) as InvokeResult;
+      if (response.ok) return (await response.json()) as InvokeResult;
 
-    const errorText = await response.text();
-    lastError = `LLM invoke failed: ${response.status} ${response.statusText} – ${errorText}`;
-    if (!hasOpenRouter() || !shouldFallbackModelStatus(response.status)) {
-      throw new Error(lastError);
+      const errorText = await response.text();
+      lastError = `[${candidate.name}] failed: ${response.status} ${response.statusText} – ${errorText}`;
+      console.warn(`Provider ${candidate.name} failed with ${response.status}; trying next provider candidate...`);
+    } catch (err) {
+      lastError = `[${candidate.name}] error: ${(err as Error).message}`;
+      console.warn(`Provider ${candidate.name} encountered error; trying next candidate...`);
     }
-    console.warn(`OpenRouter model ${candidate ?? "default"} failed with ${response.status}; trying the next configured model.`);
   }
 
   throw new Error(lastError);
 }
 
-/**
- * Opens an OpenAI-compatible server-sent event stream. Callers must keep this
- * server-side and proxy only sanitized text events to authenticated clients.
- */
 export async function streamLLM(params: InvokeParams): Promise<Response> {
   assertApiKey();
   const payload: Record<string, unknown> = {
     messages: params.messages.map(normalizeMessage),
     stream: true,
   };
-  if (hasOpenRouter()) payload.model = params.model || ENV.openrouterModel;
-  if (params.model && !hasOpenRouter()) payload.model = params.model;
   if (params.max_tokens ?? params.maxTokens) payload.max_tokens = params.max_tokens ?? params.maxTokens;
   if (params.tools?.length) payload.tools = params.tools;
   const normalizedToolChoice = normalizeToolChoice(params.toolChoice || params.tool_choice, params.tools);
   if (normalizedToolChoice) payload.tool_choice = normalizedToolChoice;
-  let lastError = "LLM stream failed";
-  for (const candidate of openRouterModelCandidates(params.model)) {
-    if (candidate) payload.model = candidate;
-    const response = await fetchWithBackoff(
-      resolveApiUrl(),
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          authorization: `Bearer ${resolveApiKey()}`,
-        },
-        body: JSON.stringify(payload),
-      },
-      !hasOpenRouter()
-    );
-    if (response.ok) return response;
 
-    const errorText = await response.text();
-    lastError = `LLM stream failed: ${response.status} ${response.statusText} – ${errorText}`;
-    if (!hasOpenRouter() || !shouldFallbackModelStatus(response.status)) {
-      throw new Error(lastError);
+  const candidates = getProviderCandidates(params.model);
+  let lastError = "LLM stream failed";
+
+  for (const candidate of candidates) {
+    payload.model = candidate.model;
+    try {
+      const response = await fetchWithBackoff(
+        candidate.url,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            authorization: `Bearer ${candidate.key}`,
+          },
+          body: JSON.stringify(payload),
+        },
+        true
+      );
+      if (response.ok) return response;
+
+      const errorText = await response.text();
+      lastError = `[${candidate.name}] stream failed: ${response.status} ${response.statusText} – ${errorText}`;
+      console.warn(`Stream provider ${candidate.name} failed with ${response.status}; trying next provider candidate...`);
+    } catch (err) {
+      lastError = `[${candidate.name}] stream error: ${(err as Error).message}`;
+      console.warn(`Stream provider ${candidate.name} error; trying next candidate...`);
     }
-    console.warn(`OpenRouter stream model ${candidate ?? "default"} failed with ${response.status}; trying the next configured model.`);
   }
   throw new Error(lastError);
 }
@@ -544,3 +622,113 @@ export async function listLLMModels(): Promise<ModelsResponse> {
 
   return (await response.json()) as ModelsResponse;
 }
+
+export function repairTruncatedJSON(jsonStr: string): string | null {
+  let str = jsonStr.trim();
+  if (!str.startsWith("{") && !str.startsWith("[")) return null;
+
+  let inString = false;
+  let isEscaped = false;
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i];
+    if (char === "\\" && !isEscaped) {
+      isEscaped = true;
+    } else {
+      if (char === '"' && !isEscaped) {
+        inString = !inString;
+      }
+      isEscaped = false;
+    }
+  }
+
+  if (inString) {
+    str += '"';
+  }
+
+  str = str.replace(/,\s*$/, "");
+  str = str.replace(/:\s*$/, ': ""');
+  str = str.replace(/,\s*("[^"]*")?\s*$/, "");
+
+  const stack: string[] = [];
+  inString = false;
+  isEscaped = false;
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i];
+    if (char === "\\" && !isEscaped) {
+      isEscaped = true;
+    } else {
+      if (char === '"' && !isEscaped) {
+        inString = !inString;
+      } else if (!inString) {
+        if (char === "{" || char === "[") {
+          stack.push(char === "{" ? "}" : "]");
+        } else if (char === "}" || char === "]") {
+          if (stack.length > 0 && stack[stack.length - 1] === char) {
+            stack.pop();
+          }
+        }
+      }
+      isEscaped = false;
+    }
+  }
+
+  while (stack.length > 0) {
+    str += stack.pop();
+  }
+
+  return str;
+}
+
+export function safeParseJSON<T>(raw: string, fallback?: Partial<T>): T {
+  if (!raw || typeof raw !== "string") {
+    if (fallback) return fallback as T;
+    throw new Error("Empty LLM response content");
+  }
+
+  let cleaned = raw.trim();
+  if (cleaned.startsWith("```")) {
+    cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+  }
+
+  try {
+    return JSON.parse(cleaned) as T;
+  } catch {
+    const firstBrace = cleaned.indexOf("{");
+    const lastBrace = cleaned.lastIndexOf("}");
+    const firstBracket = cleaned.indexOf("[");
+    const lastBracket = cleaned.lastIndexOf("]");
+
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      try {
+        return JSON.parse(cleaned.slice(firstBrace, lastBrace + 1)) as T;
+      } catch {
+        // Fallthrough to repair
+      }
+    }
+
+    if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+      try {
+        return JSON.parse(cleaned.slice(firstBracket, lastBracket + 1)) as T;
+      } catch {
+        // Fallthrough to repair
+      }
+    }
+
+    if (firstBrace !== -1) {
+      const fragment = cleaned.slice(firstBrace);
+      const repaired = repairTruncatedJSON(fragment);
+      if (repaired) {
+        try {
+          return JSON.parse(repaired) as T;
+        } catch {
+          // Fallthrough to fallback
+        }
+      }
+    }
+
+    if (fallback) return fallback as T;
+    throw new Error(`Invalid JSON output from AI provider.`);
+  }
+}
+
+

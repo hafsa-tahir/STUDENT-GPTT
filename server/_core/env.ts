@@ -10,8 +10,17 @@ export const ENV = {
   openrouterApiUrl: process.env.OPENROUTER_API_URL ?? "https://openrouter.ai/api/v1",
   openrouterApiKey: process.env.OPENROUTER_API_KEY ?? "",
   openrouterModel: process.env.OPENROUTER_MODEL ?? "google/gemma-4-31b-it:free",
-  openrouterFallbackModels: (process.env.OPENROUTER_FALLBACK_MODELS ?? "openai/gpt-oss-20b:free,nvidia/nemotron-3-ultra-550b-a55b:free")
+  openrouterFallbackModels: (process.env.OPENROUTER_FALLBACK_MODELS ?? "nvidia/nemotron-3.5-lightning:free,liquid/lfm-2.5-2.6b:free")
     .split(",")
     .map(model => model.trim())
     .filter(Boolean),
+  groqApiKeys: (process.env.GROQ_API_KEYS ?? process.env.GROQ_API_KEY ?? "")
+    .split(",")
+    .map(k => k.trim())
+    .filter(Boolean),
+  geminiApiKeys: (process.env.GEMINI_API_KEYS ?? process.env.GEMINI_API_KEY ?? "")
+    .split(",")
+    .map(k => k.trim())
+    .filter(Boolean),
 };
+

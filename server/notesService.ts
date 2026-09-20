@@ -1,6 +1,6 @@
 import { and, desc, eq, like } from "drizzle-orm";
 import { documentChunks, documents, revisionGuides, stickyNotes, studyNotes } from "../drizzle/schema";
-import { invokeLLM } from "./_core/llm";
+import { invokeLLM, safeParseJSON } from "./_core/llm";
 import { assertOwnedSubject, getDb } from "./db";
 
 function database<T>(value: T | null): T { if (!value) throw new Error("The database connection is not available."); return value; }
@@ -25,7 +25,7 @@ export async function getStudyNote(userId: number, noteId: number) { const db = 
 export async function generateStudyNotes(userId: number, input: SourceInput & { title: string }) {
   const source = await ownedSource(userId, input);
   const response = await invokeLLM({ messages: [{ role: "system", content: "Create clear and strictly source-grounded academic notes. Use a hierarchy of headings and bullets, explain difficult ideas in simple terms, and do not invent content absent from the supplied material." }, { role: "user", content: `Create polished study notes titled '${input.title}' for the requested ${input.scopeType}: '${input.scopeLabel}'. Include a concise overview, four to seven headed sections with key bullets, and three revision reminders.\n\n${source}` }], response_format: { type: "json_schema", json_schema: { name: "study_notes", strict: true, schema: { type: "object", properties: { overview: { type: "string" }, sections: { type: "array", minItems: 4, maxItems: 7, items: { type: "object", properties: { heading: { type: "string" }, explanation: { type: "string" }, bullets: { type: "array", minItems: 2, maxItems: 6, items: { type: "string" } } }, required: ["heading", "explanation", "bullets"], additionalProperties: false } }, revisionReminders: { type: "array", minItems: 3, maxItems: 5, items: { type: "string" } } }, required: ["overview", "sections", "revisionReminders"], additionalProperties: false } } }, maxTokens: 2800 });
-  const content = JSON.parse(text(response.choices[0]?.message.content)) as { overview: string; sections: unknown[]; revisionReminders: string[] };
+  const content = safeParseJSON<{ overview: string; sections: unknown[]; revisionReminders: string[] }>(text(response.choices[0]?.message.content));
   if (!content.overview || !Array.isArray(content.sections) || !Array.isArray(content.revisionReminders)) throw new Error("The notes generator returned an invalid result.");
   const db = database(await getDb()); const inserted = await db.insert(studyNotes).values({ userId, subjectId: input.subjectId ?? null, documentId: input.documentId ?? null, title: input.title, scopeType: input.scopeType, scopeLabel: input.scopeLabel, content, model: response.model }); return getStudyNote(userId, Number(inserted[0].insertId));
 }
@@ -35,7 +35,7 @@ export async function addStickyNote(userId: number, studyNoteId: number, input: 
 export async function generateRevisionGuide(userId: number, input: SourceInput & { title: string }) {
   const source = await ownedSource(userId, input);
   const response = await invokeLLM({ messages: [{ role: "system", content: "Create a pragmatic academic revision guide only from the supplied study source. It should prioritize retrieval practice, misconceptions, and short focused sessions." }, { role: "user", content: `Create a revision guide titled '${input.title}' for '${input.scopeLabel}'. Return a short overview, four to six revision blocks, and an end-of-session self-check list.\n\n${source}` }], response_format: { type: "json_schema", json_schema: { name: "revision_guide", strict: true, schema: { type: "object", properties: { overview: { type: "string" }, blocks: { type: "array", minItems: 4, maxItems: 6, items: { type: "object", properties: { title: { type: "string" }, focus: { type: "string" }, questions: { type: "array", minItems: 2, maxItems: 4, items: { type: "string" } } }, required: ["title", "focus", "questions"], additionalProperties: false } }, selfCheck: { type: "array", minItems: 3, maxItems: 5, items: { type: "string" } } }, required: ["overview", "blocks", "selfCheck"], additionalProperties: false } } }, maxTokens: 2400 });
-  const content = JSON.parse(text(response.choices[0]?.message.content));
+  const content = safeParseJSON<unknown>(text(response.choices[0]?.message.content));
   const db = database(await getDb()); const inserted = await db.insert(revisionGuides).values({ userId, subjectId: input.subjectId ?? null, documentId: input.documentId ?? null, title: input.title, scopeLabel: input.scopeLabel, content, model: response.model }); const stored = await db.select().from(revisionGuides).where(and(eq(revisionGuides.id, Number(inserted[0].insertId)), eq(revisionGuides.userId, userId))).limit(1); return stored[0]!;
 }
 

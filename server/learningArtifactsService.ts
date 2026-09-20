@@ -1,6 +1,6 @@
 import { and, asc, eq } from "drizzle-orm";
 import { attemptAnswers, documentChunks, documents, flashcardReviews, flashcards, quizAttempts, quizQuestions, quizzes } from "../drizzle/schema";
-import { invokeLLM } from "./_core/llm";
+import { invokeLLM, safeParseJSON } from "./_core/llm";
 import { assertOwnedSubject, getDb } from "./db";
 
 function dbOrThrow<T>(db: T | null): T { if (!db) throw new Error("The database connection is not available."); return db; }
@@ -23,7 +23,7 @@ export async function generateQuiz(userId: number, input: { title: string; topic
     response_format: { type: "json_schema", json_schema: { name: "quiz", strict: true, schema: { type: "object", properties: { questions: { type: "array", minItems: count, maxItems: count, items: { type: "object", properties: { prompt: { type: "string" }, options: { type: "array", minItems: 4, maxItems: 4, items: { type: "string" } }, correctAnswer: { type: "string" }, explanation: { type: "string" } }, required: ["prompt", "options", "correctAnswer", "explanation"], additionalProperties: false } } }, required: ["questions"], additionalProperties: false } } },
     maxTokens: 1800,
   });
-  const raw = text(response.choices[0]?.message.content); const generated = JSON.parse(raw) as { questions: Array<{ prompt: string; options: string[]; correctAnswer: string; explanation: string }> };
+  const raw = text(response.choices[0]?.message.content); const generated = safeParseJSON<{ questions: Array<{ prompt: string; options: string[]; correctAnswer: string; explanation: string }> }>(raw);
   if (!Array.isArray(generated.questions) || generated.questions.length !== count) throw new Error("The quiz generator returned an invalid result. Please try again.");
   const db = dbOrThrow(await getDb());
   const inserted = await db.insert(quizzes).values({ userId, subjectId: input.subjectId ?? null, documentId: input.documentId ?? null, title: input.title, difficulty: input.difficulty, sourceType: input.documentId ? "document" : "topic" });
@@ -50,7 +50,7 @@ export async function generateFlashcards(userId: number, input: { topic: string;
   if (input.subjectId) await assertOwnedSubject(userId, input.subjectId);
   const source = await studySource(userId, input.topic, input.documentId ?? undefined, input.scopeLabel || input.topic);
   const response = await invokeLLM({ messages: [{ role: "system", content: "Create concise, high-value academic flashcards from the supplied source. Return only valid structured data." }, { role: "user", content: `Create exactly 8 flashcards with a direct question on the front and a concise correct answer on the back.\n\n${source}` }], response_format: { type: "json_schema", json_schema: { name: "flashcards", strict: true, schema: { type: "object", properties: { cards: { type: "array", minItems: 8, maxItems: 8, items: { type: "object", properties: { front: { type: "string" }, back: { type: "string" } }, required: ["front", "back"], additionalProperties: false } } }, required: ["cards"], additionalProperties: false } } }, maxTokens: 1500 });
-  const raw = text(response.choices[0]?.message.content); const generated = JSON.parse(raw) as { cards: Array<{ front: string; back: string }> }; if (!Array.isArray(generated.cards) || generated.cards.length !== 8) throw new Error("The flashcard generator returned an invalid result. Please try again.");
+  const raw = text(response.choices[0]?.message.content); const generated = safeParseJSON<{ cards: Array<{ front: string; back: string }> }>(raw); if (!Array.isArray(generated.cards) || generated.cards.length !== 8) throw new Error("The flashcard generator returned an invalid result. Please try again.");
   const db = dbOrThrow(await getDb()); const created = [];
   for (const card of generated.cards) { const result = await db.insert(flashcards).values({ userId, subjectId: input.subjectId ?? null, documentId: input.documentId ?? null, front: card.front, back: card.back, sourceType: input.documentId ? "document" : "topic" }); const id = Number(result[0].insertId); const stored = await db.select().from(flashcards).where(and(eq(flashcards.id, id), eq(flashcards.userId, userId))).limit(1); created.push(stored[0]!); }
   return created;
