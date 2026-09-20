@@ -7,16 +7,23 @@ import { createContext, authenticateSupabaseRequest } from "./_core/context";
 import { getPrivateDocumentDownload, uploadPrivatePdf } from "./documentService";
 import { getResearchExportFile } from "./researchService";
 import { streamLLM } from "./_core/llm";
-import { serveStatic, setupVite } from "./_core/vite";
 
 export function createExpressApp() {
   const app = express();
   
+  // Normalize Netlify / Vercel serverless function path prefixes
+  app.use((req, _res, next) => {
+    if (req.url.startsWith("/.netlify/functions/api")) {
+      req.url = req.url.replace("/.netlify/functions/api", "/api");
+    }
+    next();
+  });
+
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-  app.post("/api/documents/upload", express.raw({ type: "application/pdf", limit: "12mb" }), async (req, res) => {
+  app.post(["/api/documents/upload", "/documents/upload"], express.raw({ type: "application/pdf", limit: "12mb" }), async (req, res) => {
     try {
       const user = await authenticateSupabaseRequest(req);
       if (!user) return res.status(401).json({ error: "Authentication is required." });
@@ -28,7 +35,7 @@ export function createExpressApp() {
     } catch (error) { return res.status(400).json({ error: error instanceof Error ? error.message : "Upload failed." }); }
   });
 
-  app.get("/api/documents/:documentId/download", async (req, res) => {
+  app.get(["/api/documents/:documentId/download", "/documents/:documentId/download"], async (req, res) => {
     try {
       const user = await authenticateSupabaseRequest(req);
       if (!user) return res.status(401).json({ error: "Authentication is required." });
@@ -39,7 +46,7 @@ export function createExpressApp() {
     } catch { return res.status(404).json({ error: "Document not found." }); }
   });
 
-  app.get("/api/research-exports/:exportId/download", async (req, res) => {
+  app.get(["/api/research-exports/:exportId/download", "/research-exports/:exportId/download"], async (req, res) => {
     try {
       const user = await authenticateSupabaseRequest(req);
       if (!user) return res.status(401).json({ error: "Authentication is required." });
@@ -52,7 +59,7 @@ export function createExpressApp() {
     } catch { return res.status(404).json({ error: "Research export not found." }); }
   });
 
-  app.post("/api/chat/stream", async (req, res) => {
+  app.post(["/api/chat/stream", "/chat/stream"], async (req, res) => {
     try {
       const user = await authenticateSupabaseRequest(req);
       if (!user) return res.status(401).json({ error: "Authentication is required." });
@@ -68,7 +75,7 @@ export function createExpressApp() {
     } catch (error) { if (!res.headersSent) res.status(500).json({ error: error instanceof Error ? error.message : "Stream unavailable." }); else res.end(); }
   });
 
-  app.get("/api/auth/supabase-config", (_req, res) => {
+  app.get(["/api/auth/supabase-config", "/auth/supabase-config"], (_req, res) => {
     const url = process.env.SUPABASE_URL;
     const anonKey = process.env.SUPABASE_ANON_KEY;
     if (!url || !anonKey) {
@@ -80,14 +87,14 @@ export function createExpressApp() {
   registerStorageProxy(app);
   registerOAuthRoutes(app);
 
-  // tRPC API
-  app.use(
-    "/api/trpc",
-    createExpressMiddleware({
-      router: appRouter,
-      createContext,
-    })
-  );
+  // tRPC API middleware mounted on all route variations
+  const trpcHandler = createExpressMiddleware({
+    router: appRouter,
+    createContext,
+  });
+
+  app.use("/api/trpc", trpcHandler);
+  app.use("/trpc", trpcHandler);
 
   return app;
 }
