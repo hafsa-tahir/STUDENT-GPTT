@@ -268,3 +268,5 @@ export async function updateStudySession(userId: number, sessionId: number, inpu
   if (!updated[0]) throw new Error("Study session not found.");
   return updated[0];
 }
+
+

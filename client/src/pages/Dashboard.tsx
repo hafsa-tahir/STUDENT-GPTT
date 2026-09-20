@@ -19,8 +19,9 @@ export default function Dashboard() {
   if (!user) return <AppLoading />;
   if (dashboard.error) return <StudentAppShell><section className="p-8"><h1 className="text-2xl font-semibold">We couldn’t load your workspace</h1><p className="mt-2 text-sm text-muted-foreground">{dashboard.error.message}</p></section></StudentAppShell>;
 
-  const data = dashboard.data!;
-  const name = data.profile.preferredName || (user.user_metadata?.full_name as string | undefined)?.split(" ")[0] || "there";
+  if (!dashboard.data || !dashboard.data.profile) return <AppLoading />;
+  const data = dashboard.data;
+  const name = data.profile?.preferredName || (user.user_metadata?.full_name as string | undefined)?.split(" ")[0] || "there";
   const completed = data.todayItems.filter(item => item.completedAt).length;
   const completion = data.todayItems.length ? Math.round((completed / data.todayItems.length) * 100) : 0;
   const trend = Array.from({ length: 5 }, (_, index) => {
