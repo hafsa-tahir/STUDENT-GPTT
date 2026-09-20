@@ -5,6 +5,8 @@
 [build.environment]
   NODE_VERSION = "20"
   SECRETS_SCAN_ENABLED = "false"
+  SUPABASE_URL = "REDACTED"
+  SUPABASE_ANON_KEY = "REDACTED"
 
 [[redirects]]
   from = "/api/*"
