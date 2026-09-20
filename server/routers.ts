@@ -17,8 +17,9 @@ import { chatConversationInput, chatMessageInput, courseInput, flashcardGenerati
 function toApiError(error: unknown): never {
   const message = error instanceof Error ? error.message : "Unexpected server error.";
   if (message.endsWith("not found.")) throw new TRPCError({ code: "NOT_FOUND", message });
-  throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "We could not complete that action. Please try again." });
+  throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message });
 }
+
 
 export const appRouter = router({
   system: systemRouter,

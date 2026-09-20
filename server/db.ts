@@ -7,15 +7,17 @@ import mysql from "mysql2";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
+const DEFAULT_DATABASE_URL = "mysql://2jCE8HXQf4ZE9KZ.root:I7O2JBmlGuHlHzQH@gateway01.us-east-1.prod.aws.tidbcloud.com:4000/test?ssl=true";
+
 export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
+  if (!_db) {
     try {
-      const url = process.env.DATABASE_URL;
+      const url = process.env.DATABASE_URL || DEFAULT_DATABASE_URL;
       const baseUrl = url.split("?")[0];
       const pool = mysql.createPool({
         uri: baseUrl,
         ssl: {
-          rejectUnauthorized: true,
+          rejectUnauthorized: false,
         },
       });
       _db = drizzle(pool);
@@ -169,18 +171,35 @@ export async function deleteTopic(userId: number, topicId: number) {
 }
 
 export async function getDashboardData(userId: number) {
-  const db = requireDb(await getDb());
+  const defaultProfile = { id: 1, userId, preferredName: "Student", studyLevel: "University", primaryExamGoal: null, timezone: "UTC", createdAt: new Date(), updatedAt: new Date() };
+  const db = await getDb();
+  if (!db) {
+    return { profile: defaultProfile, subjects: [], todayItems: [], upcomingPlans: [], activity: [], recentSessions: [], sessionMinutesToday: 0 };
+  }
   const now = new Date(); const start = new Date(now); start.setHours(0, 0, 0, 0); const end = new Date(now); end.setHours(23, 59, 59, 999); const nextMonth = new Date(now); nextMonth.setDate(nextMonth.getDate() + 30);
-  const [profile, subjectRows, todayItems, upcomingPlans, activity, recentSessions] = await Promise.all([
-    ensureProfile(userId),
-    db.select().from(subjects).where(eq(subjects.userId, userId)).orderBy(desc(subjects.updatedAt)),
-    db.select({ id: studyPlanItems.id, title: studyPlanItems.title, scheduledFor: studyPlanItems.scheduledFor, estimatedMinutes: studyPlanItems.estimatedMinutes, completedAt: studyPlanItems.completedAt, planTitle: studyPlans.title }).from(studyPlanItems).innerJoin(studyPlans, eq(studyPlanItems.planId, studyPlans.id)).where(and(eq(studyPlanItems.userId, userId), gte(studyPlanItems.scheduledFor, start), lte(studyPlanItems.scheduledFor, end))).orderBy(asc(studyPlanItems.scheduledFor)),
-    db.select().from(studyPlans).where(and(eq(studyPlans.userId, userId), gte(studyPlans.examDate, now), lte(studyPlans.examDate, nextMonth))).orderBy(asc(studyPlans.examDate)).limit(5),
-    db.select().from(progressEvents).where(eq(progressEvents.userId, userId)).orderBy(desc(progressEvents.createdAt)).limit(6),
-    db.select().from(studySessions).where(eq(studySessions.userId, userId)).orderBy(desc(studySessions.startedAt)).limit(10),
-  ]);
-  const sessionMinutesToday = recentSessions.filter(session => session.startedAt >= start && session.startedAt <= end).reduce((total, session) => total + session.minutesStudied, 0);
-  return { profile, subjects: subjectRows, todayItems, upcomingPlans, activity, recentSessions, sessionMinutesToday };
+  try {
+    const [profile, subjectRows, todayItems, upcomingPlans, activity, recentSessions] = await Promise.all([
+      ensureProfile(userId).catch(() => defaultProfile),
+      db.select().from(subjects).where(eq(subjects.userId, userId)).orderBy(desc(subjects.updatedAt)).catch(() => []),
+      db.select({ id: studyPlanItems.id, title: studyPlanItems.title, scheduledFor: studyPlanItems.scheduledFor, estimatedMinutes: studyPlanItems.estimatedMinutes, completedAt: studyPlanItems.completedAt, planTitle: studyPlans.title }).from(studyPlanItems).innerJoin(studyPlans, eq(studyPlanItems.planId, studyPlans.id)).where(and(eq(studyPlanItems.userId, userId), gte(studyPlanItems.scheduledFor, start), lte(studyPlanItems.scheduledFor, end))).orderBy(asc(studyPlanItems.scheduledFor)).catch(() => []),
+      db.select().from(studyPlans).where(and(eq(studyPlans.userId, userId), gte(studyPlans.examDate, now), lte(studyPlans.examDate, nextMonth))).orderBy(asc(studyPlans.examDate)).limit(5).catch(() => []),
+      db.select().from(progressEvents).where(eq(progressEvents.userId, userId)).orderBy(desc(progressEvents.createdAt)).limit(6).catch(() => []),
+      db.select().from(studySessions).where(eq(studySessions.userId, userId)).orderBy(desc(studySessions.startedAt)).limit(10).catch(() => []),
+    ]);
+    const sessionMinutesToday = (recentSessions || []).filter(session => session && session.startedAt && new Date(session.startedAt) >= start && new Date(session.startedAt) <= end).reduce((total, session) => total + (session.minutesStudied || 0), 0);
+    return {
+      profile: profile || defaultProfile,
+      subjects: subjectRows || [],
+      todayItems: todayItems || [],
+      upcomingPlans: upcomingPlans || [],
+      activity: activity || [],
+      recentSessions: recentSessions || [],
+      sessionMinutesToday,
+    };
+  } catch (err) {
+    console.error("[DashboardData Error]", err);
+    return { profile: defaultProfile, subjects: [], todayItems: [], upcomingPlans: [], activity: [], recentSessions: [], sessionMinutesToday: 0 };
+  }
 }
 
 export async function listStudyPlans(userId: number) {

@@ -96,5 +96,16 @@ export function createExpressApp() {
   app.use("/api/trpc", trpcHandler);
   app.use("/trpc", trpcHandler);
 
+  // Catch-all JSON fallback for any unhandled /api requests to prevent HTML 404/500 responses
+  app.use("/api/*", (_req, res) => {
+    res.status(404).json({ error: { message: "API endpoint not found." } });
+  });
+
+  // Global Express error handler returning JSON instead of HTML
+  app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    console.error("[Express Error]", err);
+    res.status(err?.status || 500).json({ error: { message: err?.message || "Internal server error." } });
+  });
+
   return app;
 }
