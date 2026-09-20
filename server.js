@@ -2964,9 +2964,15 @@ async function createContext(opts) {
 // server/app.ts
 function createExpressApp() {
   const app2 = express2();
+  app2.use((req, _res, next) => {
+    if (req.url.startsWith("/.netlify/functions/api")) {
+      req.url = req.url.replace("/.netlify/functions/api", "/api");
+    }
+    next();
+  });
   app2.use(express2.json({ limit: "50mb" }));
   app2.use(express2.urlencoded({ limit: "50mb", extended: true }));
-  app2.post("/api/documents/upload", express2.raw({ type: "application/pdf", limit: "12mb" }), async (req, res) => {
+  app2.post(["/api/documents/upload", "/documents/upload"], express2.raw({ type: "application/pdf", limit: "12mb" }), async (req, res) => {
     try {
       const user = await authenticateSupabaseRequest(req);
       if (!user) return res.status(401).json({ error: "Authentication is required." });
@@ -2979,7 +2985,7 @@ function createExpressApp() {
       return res.status(400).json({ error: error instanceof Error ? error.message : "Upload failed." });
     }
   });
-  app2.get("/api/documents/:documentId/download", async (req, res) => {
+  app2.get(["/api/documents/:documentId/download", "/documents/:documentId/download"], async (req, res) => {
     try {
       const user = await authenticateSupabaseRequest(req);
       if (!user) return res.status(401).json({ error: "Authentication is required." });
@@ -2991,7 +2997,7 @@ function createExpressApp() {
       return res.status(404).json({ error: "Document not found." });
     }
   });
-  app2.get("/api/research-exports/:exportId/download", async (req, res) => {
+  app2.get(["/api/research-exports/:exportId/download", "/research-exports/:exportId/download"], async (req, res) => {
     try {
       const user = await authenticateSupabaseRequest(req);
       if (!user) return res.status(401).json({ error: "Authentication is required." });
@@ -3005,7 +3011,7 @@ function createExpressApp() {
       return res.status(404).json({ error: "Research export not found." });
     }
   });
-  app2.post("/api/chat/stream", async (req, res) => {
+  app2.post(["/api/chat/stream", "/chat/stream"], async (req, res) => {
     try {
       const user = await authenticateSupabaseRequest(req);
       if (!user) return res.status(401).json({ error: "Authentication is required." });
@@ -3032,7 +3038,7 @@ function createExpressApp() {
       else res.end();
     }
   });
-  app2.get("/api/auth/supabase-config", (_req, res) => {
+  app2.get(["/api/auth/supabase-config", "/auth/supabase-config"], (_req, res) => {
     const url = process.env.SUPABASE_URL;
     const anonKey = process.env.SUPABASE_ANON_KEY;
     if (!url || !anonKey) {
@@ -3042,13 +3048,12 @@ function createExpressApp() {
   });
   registerStorageProxy(app2);
   registerOAuthRoutes(app2);
-  app2.use(
-    "/api/trpc",
-    createExpressMiddleware({
-      router: appRouter,
-      createContext
-    })
-  );
+  const trpcHandler = createExpressMiddleware({
+    router: appRouter,
+    createContext
+  });
+  app2.use("/api/trpc", trpcHandler);
+  app2.use("/trpc", trpcHandler);
   return app2;
 }
 
