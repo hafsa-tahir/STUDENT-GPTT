@@ -2,17 +2,10 @@ import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
 import net from "net";
-import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { registerOAuthRoutes } from "./oauth";
-import { registerStorageProxy } from "./storageProxy";
-import { appRouter } from "../routers";
-import { createContext } from "./context";
-import { authenticateSupabaseRequest } from "./context";
-import { getPrivateDocumentDownload, uploadPrivatePdf } from "../documentService";
-import { getResearchExportFile } from "../researchService";
-import { streamLLM } from "./llm";
 import { serveStatic, setupVite } from "./vite";
 import { createExpressApp } from "../app";
+
+export const app = createExpressApp();
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -34,16 +27,13 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
-  const app = createExpressApp();
   const server = createServer(app);
 
-  // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
-
 
   const preferredPort = parseInt(process.env.PORT || "3000");
   const port = await findAvailablePort(preferredPort);
@@ -57,4 +47,8 @@ async function startServer() {
   });
 }
 
-startServer().catch(console.error);
+if (process.env.VERCEL !== "1") {
+  startServer().catch(console.error);
+}
+
+export default app;
