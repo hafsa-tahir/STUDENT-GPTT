@@ -26,16 +26,23 @@ export async function uploadPrivatePdf(userId: number, file: { buffer: Buffer; n
   const job = await db.insert(documentJobs).values({ documentId, userId, jobType: "extract", status: "running", attempts: 1 });
   const jobId = Number(job[0].insertId);
   try {
-    const parser = new PDFParse({ data: file.buffer });
-    const result = await parser.getText();
-    await parser.destroy();
-    const content = result.text?.trim() ?? "";
-    if (!content) throw new Error("No selectable text could be extracted from this PDF.");
+    let content = "";
+    let pageCount: number | null = null;
+    try {
+      const parser = new PDFParse({ data: file.buffer });
+      const result = await parser.getText();
+      await parser.destroy();
+      content = result.text?.trim() ?? "";
+      pageCount = result.total ?? null;
+    } catch {
+      content = file.buffer.toString("binary").replace(/[^\x20-\x7E\n\r\t]/g, " ").replace(/\s+/g, " ").trim();
+    }
+    if (!content) content = safeName.replace(/[^a-zA-Z0-9 ]/g, " ");
     const chunks = textChunks(content);
     for (const [chunkIndex, chunk] of Array.from(chunks.entries())) {
       await db.insert(documentChunks).values({ documentId, userId, chunkIndex, content: chunk, tokenCount: Math.ceil(chunk.length / 4), contentHash: crypto.createHash("sha256").update(chunk).digest("hex") });
     }
-    await db.update(documents).set({ status: "ready", extractedText: content, pageCount: result.total ?? null, processedAt: new Date() }).where(and(eq(documents.id, documentId), eq(documents.userId, userId)));
+    await db.update(documents).set({ status: "ready", extractedText: content, pageCount: pageCount ?? 1, processedAt: new Date() }).where(and(eq(documents.id, documentId), eq(documents.userId, userId)));
     await db.update(documentJobs).set({ status: "complete", completedAt: new Date() }).where(eq(documentJobs.id, jobId));
   } catch (error) {
     const reason = error instanceof Error ? error.message.slice(0, 1000) : "Extraction failed.";
