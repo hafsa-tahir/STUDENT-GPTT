@@ -1688,7 +1688,6 @@ async function availableChatModels() {
 // server/documentService.ts
 import crypto2 from "node:crypto";
 import { and as and3, desc as desc3, eq as eq3 } from "drizzle-orm";
-import { PDFParse } from "pdf-parse";
 
 // server/storage.ts
 import fs3 from "node:fs";
@@ -1792,11 +1791,15 @@ async function uploadPrivatePdf(userId, file) {
     let content2 = "";
     let pageCount = null;
     try {
-      const parser = new PDFParse({ data: file.buffer });
-      const result = await parser.getText();
-      await parser.destroy();
-      content2 = result.text?.trim() ?? "";
-      pageCount = result.total ?? null;
+      const pdfModule = await import("pdf-parse");
+      const PDFParseClass = pdfModule.PDFParse || pdfModule.default;
+      if (PDFParseClass) {
+        const parser = new PDFParseClass({ data: file.buffer });
+        const result = await parser.getText();
+        await parser.destroy();
+        content2 = result.text?.trim() ?? "";
+        pageCount = result.total ?? null;
+      }
     } catch {
       content2 = file.buffer.toString("binary").replace(/[^\x20-\x7E\n\r\t]/g, " ").replace(/\s+/g, " ").trim();
     }
