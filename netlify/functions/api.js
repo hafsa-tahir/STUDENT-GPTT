@@ -129092,9 +129092,11 @@ function createExpressApp() {
     router: appRouter,
     createContext
   });
+  app2.use("/.netlify/functions/api/trpc", trpcHandler);
+  app2.use("/.netlify/functions/api/api/trpc", trpcHandler);
   app2.use("/api/trpc", trpcHandler);
   app2.use("/trpc", trpcHandler);
-  app2.use("/api/*", (_req, res) => {
+  app2.use("*", (_req, res) => {
     res.status(404).json({ error: { message: "API endpoint not found." } });
   });
   app2.use((err, _req, res, _next) => {
