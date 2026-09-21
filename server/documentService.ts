@@ -1,6 +1,5 @@
 import crypto from "node:crypto";
 import { and, desc, eq } from "drizzle-orm";
-import { PDFParse } from "pdf-parse";
 import { documentChunks, documentJobs, documents } from "../drizzle/schema";
 import { getDb } from "./db";
 import { storageGetSignedUrl, storagePut } from "./storage";
@@ -29,11 +28,15 @@ export async function uploadPrivatePdf(userId: number, file: { buffer: Buffer; n
     let content = "";
     let pageCount: number | null = null;
     try {
-      const parser = new PDFParse({ data: file.buffer });
-      const result = await parser.getText();
-      await parser.destroy();
-      content = result.text?.trim() ?? "";
-      pageCount = result.total ?? null;
+      const pdfModule = await import("pdf-parse");
+      const PDFParseClass = pdfModule.PDFParse || pdfModule.default;
+      if (PDFParseClass) {
+        const parser = new PDFParseClass({ data: file.buffer });
+        const result = await parser.getText();
+        await parser.destroy();
+        content = result.text?.trim() ?? "";
+        pageCount = result.total ?? null;
+      }
     } catch {
       content = file.buffer.toString("binary").replace(/[^\x20-\x7E\n\r\t]/g, " ").replace(/\s+/g, " ").trim();
     }
