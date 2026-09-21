@@ -19,6 +19,9 @@ export async function getDb() {
         ssl: {
           rejectUnauthorized: false,
         },
+        connectTimeout: 5000,
+        waitForConnections: true,
+        connectionLimit: 5,
       });
       _db = drizzle(pool);
     } catch (error) {
@@ -26,6 +29,14 @@ export async function getDb() {
     }
   }
   return _db;
+}
+
+export async function withTimeout<T>(promise: Promise<T>, timeoutMs: number = 3500, fallback: T): Promise<T> {
+  let timer: NodeJS.Timeout;
+  const timeoutPromise = new Promise<T>((resolve) => {
+    timer = setTimeout(() => resolve(fallback), timeoutMs);
+  });
+  return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timer));
 }
 
 function requireDb<T>(db: T | null): T {
@@ -179,12 +190,12 @@ export async function getDashboardData(userId: number) {
   const now = new Date(); const start = new Date(now); start.setHours(0, 0, 0, 0); const end = new Date(now); end.setHours(23, 59, 59, 999); const nextMonth = new Date(now); nextMonth.setDate(nextMonth.getDate() + 30);
   try {
     const [profile, subjectRows, todayItems, upcomingPlans, activity, recentSessions] = await Promise.all([
-      ensureProfile(userId).catch(() => defaultProfile),
-      db.select().from(subjects).where(eq(subjects.userId, userId)).orderBy(desc(subjects.updatedAt)).catch(() => []),
-      db.select({ id: studyPlanItems.id, title: studyPlanItems.title, scheduledFor: studyPlanItems.scheduledFor, estimatedMinutes: studyPlanItems.estimatedMinutes, completedAt: studyPlanItems.completedAt, planTitle: studyPlans.title }).from(studyPlanItems).innerJoin(studyPlans, eq(studyPlanItems.planId, studyPlans.id)).where(and(eq(studyPlanItems.userId, userId), gte(studyPlanItems.scheduledFor, start), lte(studyPlanItems.scheduledFor, end))).orderBy(asc(studyPlanItems.scheduledFor)).catch(() => []),
-      db.select().from(studyPlans).where(and(eq(studyPlans.userId, userId), gte(studyPlans.examDate, now), lte(studyPlans.examDate, nextMonth))).orderBy(asc(studyPlans.examDate)).limit(5).catch(() => []),
-      db.select().from(progressEvents).where(eq(progressEvents.userId, userId)).orderBy(desc(progressEvents.createdAt)).limit(6).catch(() => []),
-      db.select().from(studySessions).where(eq(studySessions.userId, userId)).orderBy(desc(studySessions.startedAt)).limit(10).catch(() => []),
+      withTimeout(ensureProfile(userId).catch(() => defaultProfile), 3000, defaultProfile),
+      withTimeout(db.select().from(subjects).where(eq(subjects.userId, userId)).orderBy(desc(subjects.updatedAt)).catch(() => []), 3000, []),
+      withTimeout(db.select({ id: studyPlanItems.id, title: studyPlanItems.title, scheduledFor: studyPlanItems.scheduledFor, estimatedMinutes: studyPlanItems.estimatedMinutes, completedAt: studyPlanItems.completedAt, planTitle: studyPlans.title }).from(studyPlanItems).innerJoin(studyPlans, eq(studyPlanItems.planId, studyPlans.id)).where(and(eq(studyPlanItems.userId, userId), gte(studyPlanItems.scheduledFor, start), lte(studyPlanItems.scheduledFor, end))).orderBy(asc(studyPlanItems.scheduledFor)).catch(() => []), 3000, []),
+      withTimeout(db.select().from(studyPlans).where(and(eq(studyPlans.userId, userId), gte(studyPlans.examDate, now), lte(studyPlans.examDate, nextMonth))).orderBy(asc(studyPlans.examDate)).limit(5).catch(() => []), 3000, []),
+      withTimeout(db.select().from(progressEvents).where(eq(progressEvents.userId, userId)).orderBy(desc(progressEvents.createdAt)).limit(6).catch(() => []), 3000, []),
+      withTimeout(db.select().from(studySessions).where(eq(studySessions.userId, userId)).orderBy(desc(studySessions.startedAt)).limit(10).catch(() => []), 3000, []),
     ]);
     const sessionMinutesToday = (recentSessions || []).filter(session => session && session.startedAt && new Date(session.startedAt) >= start && new Date(session.startedAt) <= end).reduce((total, session) => total + (session.minutesStudied || 0), 0);
     return {

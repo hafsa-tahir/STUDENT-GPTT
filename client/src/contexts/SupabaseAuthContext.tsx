@@ -28,9 +28,14 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     let active = true;
     let unsubscribe: (() => void) | undefined;
+    const authTimeout = setTimeout(() => {
+      if (active) setLoading(false);
+    }, 3500);
+
     getSupabaseBrowserClient()
       .then(async client => {
         const { data, error } = await client.auth.getSession();
+        clearTimeout(authTimeout);
         if (!active) return;
         if (error) setAuthError(error.message);
         setSession(data.session);
@@ -44,11 +49,12 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
         unsubscribe = () => listener.subscription.unsubscribe();
       })
       .catch(error => {
+        clearTimeout(authTimeout);
         if (!active) return;
         setAuthError(toMessage(error));
         setLoading(false);
       });
-    return () => { active = false; unsubscribe?.(); };
+    return () => { active = false; clearTimeout(authTimeout); unsubscribe?.(); };
   }, []);
 
   const value = useMemo<AuthContextValue>(() => ({
