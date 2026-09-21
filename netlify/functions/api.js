@@ -129104,10 +129104,10 @@ if (shouldShowDeprecationWarning()) console.warn("\u26A0\uFE0F  Node.js 20 and b
 // server/_core/context.ts
 var supabaseAdmin = null;
 var DEFAULT_SUPABASE_URL = "REDACTED";
-var DEFAULT_SUPABASE_ANON_KEY = "REDACTED";
+var DEFAULT_SUPABASE_SERVICE_ROLE_KEY = "REDACTED";
 function getSupabaseAdmin() {
   const url3 = process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || DEFAULT_SUPABASE_SERVICE_ROLE_KEY;
   if (!supabaseAdmin) {
     supabaseAdmin = createClient(url3, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false }
