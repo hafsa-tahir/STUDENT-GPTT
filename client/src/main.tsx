@@ -39,10 +39,17 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
+const getTrpcUrl = () => {
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}/api/trpc`;
+  }
+  return "/api/trpc";
+};
+
 const trpcClient = trpc.createClient({
   links: [
     httpLink({
-      url: "/api/trpc",
+      url: getTrpcUrl(),
       transformer: superjson,
       headers() {
         const supabaseToken = getSupabaseAccessToken();
