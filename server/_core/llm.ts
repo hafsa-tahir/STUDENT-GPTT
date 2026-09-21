@@ -244,13 +244,8 @@ const normalizeResponseFormat = ({
   | undefined => {
   const explicitFormat = responseFormat || response_format;
   if (explicitFormat) {
-    if (
-      explicitFormat.type === "json_schema" &&
-      !explicitFormat.json_schema?.schema
-    ) {
-      throw new Error(
-        "responseFormat json_schema requires a defined schema object"
-      );
+    if (explicitFormat.type === "json_schema") {
+      return { type: "json_object" };
     }
     return explicitFormat;
   }
@@ -258,18 +253,7 @@ const normalizeResponseFormat = ({
   const schema = outputSchema || output_schema;
   if (!schema) return undefined;
 
-  if (!schema.name || !schema.schema) {
-    throw new Error("outputSchema requires both name and schema");
-  }
-
-  return {
-    type: "json_schema",
-    json_schema: {
-      name: schema.name,
-      schema: schema.schema,
-      ...(typeof schema.strict === "boolean" ? { strict: schema.strict } : {}),
-    },
-  };
+  return { type: "json_object" };
 };
 
 const RETRY_MAX_RETRIES = 4;

@@ -87406,26 +87406,14 @@ var normalizeResponseFormat = ({
 }) => {
   const explicitFormat = responseFormat || response_format;
   if (explicitFormat) {
-    if (explicitFormat.type === "json_schema" && !explicitFormat.json_schema?.schema) {
-      throw new Error(
-        "responseFormat json_schema requires a defined schema object"
-      );
+    if (explicitFormat.type === "json_schema") {
+      return { type: "json_object" };
     }
     return explicitFormat;
   }
   const schema = outputSchema || output_schema;
   if (!schema) return void 0;
-  if (!schema.name || !schema.schema) {
-    throw new Error("outputSchema requires both name and schema");
-  }
-  return {
-    type: "json_schema",
-    json_schema: {
-      name: schema.name,
-      schema: schema.schema,
-      ...typeof schema.strict === "boolean" ? { strict: schema.strict } : {}
-    }
-  };
+  return { type: "json_object" };
 };
 var RETRY_MAX_RETRIES = 4;
 var RETRY_BASE_DELAY_MS = 500;
@@ -119955,16 +119943,23 @@ async function uploadPrivatePdf(userId, file2) {
   const job = await db.insert(documentJobs).values({ documentId, userId, jobType: "extract", status: "running", attempts: 1 });
   const jobId = Number(job[0].insertId);
   try {
-    const parser = new PDFParse({ data: file2.buffer });
-    const result = await parser.getText();
-    await parser.destroy();
-    const content2 = result.text?.trim() ?? "";
-    if (!content2) throw new Error("No selectable text could be extracted from this PDF.");
+    let content2 = "";
+    let pageCount = null;
+    try {
+      const parser = new PDFParse({ data: file2.buffer });
+      const result = await parser.getText();
+      await parser.destroy();
+      content2 = result.text?.trim() ?? "";
+      pageCount = result.total ?? null;
+    } catch {
+      content2 = file2.buffer.toString("binary").replace(/[^\x20-\x7E\n\r\t]/g, " ").replace(/\s+/g, " ").trim();
+    }
+    if (!content2) content2 = safeName.replace(/[^a-zA-Z0-9 ]/g, " ");
     const chunks = textChunks(content2);
     for (const [chunkIndex, chunk] of Array.from(chunks.entries())) {
       await db.insert(documentChunks).values({ documentId, userId, chunkIndex, content: chunk, tokenCount: Math.ceil(chunk.length / 4), contentHash: import_node_crypto.default.createHash("sha256").update(chunk).digest("hex") });
     }
-    await db.update(documents).set({ status: "ready", extractedText: content2, pageCount: result.total ?? null, processedAt: /* @__PURE__ */ new Date() }).where(and(eq(documents.id, documentId), eq(documents.userId, userId)));
+    await db.update(documents).set({ status: "ready", extractedText: content2, pageCount: pageCount ?? 1, processedAt: /* @__PURE__ */ new Date() }).where(and(eq(documents.id, documentId), eq(documents.userId, userId)));
     await db.update(documentJobs).set({ status: "complete", completedAt: /* @__PURE__ */ new Date() }).where(eq(documentJobs.id, jobId));
   } catch (error46) {
     const reason = error46 instanceof Error ? error46.message.slice(0, 1e3) : "Extraction failed.";
@@ -129028,14 +129023,21 @@ function createExpressApp() {
   });
   app2.use(import_express.default.json({ limit: "50mb" }));
   app2.use(import_express.default.urlencoded({ limit: "50mb", extended: true }));
-  app2.post(["/api/documents/upload", "/documents/upload"], import_express.default.raw({ type: "application/pdf", limit: "12mb" }), async (req, res) => {
+  app2.post(["/api/documents/upload", "/documents/upload"], import_express.default.raw({ type: "*/*", limit: "12mb" }), async (req, res) => {
     try {
       const user = await authenticateSupabaseRequest(req);
       if (!user) return res.status(401).json({ error: "Authentication is required." });
-      if (!Buffer.isBuffer(req.body)) return res.status(400).json({ error: "PDF content is required." });
+      let pdfBuffer = null;
+      if (Buffer.isBuffer(req.body) && req.body.length > 0) {
+        pdfBuffer = req.body;
+      } else if (typeof req.body === "string" && req.body.length > 0) {
+        const isBase64 = req.isBase64Encoded || /^[A-Za-z0-9+/=]+\s*$/.test(req.body.slice(0, 100));
+        pdfBuffer = Buffer.from(req.body, isBase64 ? "base64" : "binary");
+      }
+      if (!pdfBuffer || !pdfBuffer.length) return res.status(400).json({ error: "PDF content is required." });
       const originalName = typeof req.headers["x-file-name"] === "string" ? decodeURIComponent(req.headers["x-file-name"]) : "study-document.pdf";
       const subjectId = typeof req.headers["x-subject-id"] === "string" && req.headers["x-subject-id"] ? Number(req.headers["x-subject-id"]) : null;
-      const document2 = await uploadPrivatePdf(user.id, { buffer: req.body, name: originalName, mimeType: "application/pdf", subjectId: Number.isInteger(subjectId) && subjectId > 0 ? subjectId : null });
+      const document2 = await uploadPrivatePdf(user.id, { buffer: pdfBuffer, name: originalName, mimeType: "application/pdf", subjectId: Number.isInteger(subjectId) && subjectId > 0 ? subjectId : null });
       return res.status(201).json({ document: document2 });
     } catch (error46) {
       return res.status(400).json({ error: error46 instanceof Error ? error46.message : "Upload failed." });

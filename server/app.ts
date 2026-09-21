@@ -23,14 +23,23 @@ export function createExpressApp() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-  app.post(["/api/documents/upload", "/documents/upload"], express.raw({ type: "application/pdf", limit: "12mb" }), async (req, res) => {
+  app.post(["/api/documents/upload", "/documents/upload"], express.raw({ type: "*/*", limit: "12mb" }), async (req, res) => {
     try {
       const user = await authenticateSupabaseRequest(req);
       if (!user) return res.status(401).json({ error: "Authentication is required." });
-      if (!Buffer.isBuffer(req.body)) return res.status(400).json({ error: "PDF content is required." });
+      
+      let pdfBuffer: Buffer | null = null;
+      if (Buffer.isBuffer(req.body) && req.body.length > 0) {
+        pdfBuffer = req.body;
+      } else if (typeof req.body === "string" && req.body.length > 0) {
+        const isBase64 = (req as any).isBase64Encoded || /^[A-Za-z0-9+/=]+\s*$/.test(req.body.slice(0, 100));
+        pdfBuffer = Buffer.from(req.body, isBase64 ? "base64" : "binary");
+      }
+      
+      if (!pdfBuffer || !pdfBuffer.length) return res.status(400).json({ error: "PDF content is required." });
       const originalName = typeof req.headers["x-file-name"] === "string" ? decodeURIComponent(req.headers["x-file-name"]) : "study-document.pdf";
       const subjectId = typeof req.headers["x-subject-id"] === "string" && req.headers["x-subject-id"] ? Number(req.headers["x-subject-id"]) : null;
-      const document = await uploadPrivatePdf(user.id, { buffer: req.body, name: originalName, mimeType: "application/pdf", subjectId: Number.isInteger(subjectId) && subjectId! > 0 ? subjectId : null });
+      const document = await uploadPrivatePdf(user.id, { buffer: pdfBuffer, name: originalName, mimeType: "application/pdf", subjectId: Number.isInteger(subjectId) && subjectId! > 0 ? subjectId : null });
       return res.status(201).json({ document });
     } catch (error) { return res.status(400).json({ error: error instanceof Error ? error.message : "Upload failed." }); }
   });
