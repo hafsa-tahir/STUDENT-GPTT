@@ -2960,10 +2960,10 @@ var appRouter = router({
 import { createClient } from "@supabase/supabase-js";
 var supabaseAdmin = null;
 var DEFAULT_SUPABASE_URL = "https://cfboullooogzodvrqevy.supabase.co";
-var DEFAULT_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNmYm91bGxvb29nem9kdnJxZXZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY2NDcwNjEsImV4cCI6MjEwMjIyMzA2MX0.-S1AWtxFoTDB_9pMTHrjD0XnlCSpveZxQZroMjLbBZM";
+var DEFAULT_SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNmYm91bGxvb29nem9kdnJxZXZ5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NjY0NzA2MSwiZXhwIjoyMTAyMjIzMDYxfQ.W-X4GC7GIE2Nz7_3h4IRWCWxRQ2PPGZBLcD388Xs9Jo";
 function getSupabaseAdmin() {
   const url = process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || DEFAULT_SUPABASE_SERVICE_ROLE_KEY;
   if (!supabaseAdmin) {
     supabaseAdmin = createClient(url, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false }
