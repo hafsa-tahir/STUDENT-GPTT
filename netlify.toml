@@ -11,6 +11,7 @@
   SECRETS_SCAN_ENABLED = "false"
   SUPABASE_URL = "REDACTED"
   SUPABASE_ANON_KEY = "REDACTED"
+  SUPABASE_SERVICE_ROLE_KEY = "REDACTED"
 
 [[redirects]]
   from = "/api/*"
