@@ -1,11 +1,10 @@
 import { trpc } from "@/lib/trpc";
-import { COOKIE_NAME } from '@shared/const';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpLink } from "@trpc/client";
 import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
-import { getSupabaseAccessToken } from "./lib/supabase";
+import { getSupabaseAccessToken, setSupabaseAccessToken } from "./lib/supabase";
 import "./index.css";
 
 const queryClient = new QueryClient({
@@ -28,24 +27,27 @@ const trpcClient = trpc.createClient({
       url: getTrpcUrl(),
       transformer: superjson,
       headers() {
+        // First try the in-memory token set by SupabaseAuthContext
         const supabaseToken = getSupabaseAccessToken();
         if (supabaseToken) return { Authorization: `Bearer ${supabaseToken}` };
-        // Preview auto-login fallback: when the browser blocks iframe cookies
-        // (Safari ITP / private browsing / WebView), the runtime mirrors the
-        // session into sessionStorage so we can forward it as a Bearer token.
-        // The regular OAuth cookie flow keeps working and takes priority server-side.
+
+        // Fallback: read directly from Supabase's localStorage key
+        // (handles race where query fires before SupabaseAuthContext sets the token)
         try {
-          const raw = sessionStorage.getItem("manus-cookie");
+          const SUPABASE_URL = "https://cfboullooogzodvrqevy.supabase.co";
+          const projectRef = SUPABASE_URL.match(/https:\/\/([^.]+)/)?.[1] ?? "";
+          const storageKey = `sb-${projectRef}-auth-token`;
+          const raw = localStorage.getItem(storageKey);
           if (raw) {
-            const prefix = `${COOKIE_NAME}=`;
-            const pair = raw.split(";").find(s => s.trim().startsWith(prefix));
-            const token = pair?.trim().slice(prefix.length);
+            const parsed = JSON.parse(raw);
+            const token = parsed?.access_token;
             if (token) {
+              setSupabaseAccessToken(token);
               return { Authorization: `Bearer ${token}` };
             }
           }
         } catch {
-          // sessionStorage unavailable
+          // localStorage unavailable or parse error
         }
         return {};
       },
