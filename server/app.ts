@@ -107,8 +107,8 @@ export function createExpressApp() {
   app.use("/api/trpc", trpcHandler);
   app.use("/trpc", trpcHandler);
 
-  // Catch-all JSON fallback for any unhandled requests to prevent HTML responses
-  app.use("*", (_req, res) => {
+  // Catch-all JSON fallback for any unhandled API requests
+  app.use(["/api/*", "/trpc/*", "/.netlify/*"], (_req, res) => {
     res.status(404).json({ error: { message: "API endpoint not found." } });
   });
 
