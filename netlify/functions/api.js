@@ -120714,8 +120714,8 @@ var publicProcedure = t.procedure;
 var requireUser = t.middleware(async (opts) => {
   const { ctx, next } = opts;
   if (!ctx.user) {
-    const hasAuth = Boolean(ctx.req?.headers?.authorization);
-    throw new TRPCError({ code: "UNAUTHORIZED", message: hasAuth ? "Token sent but rejected (10002)" : UNAUTHED_ERR_MSG });
+    const reason = ctx.authFailureReason ? `Auth Error: ${ctx.authFailureReason}` : UNAUTHED_ERR_MSG;
+    throw new TRPCError({ code: "UNAUTHORIZED", message: reason });
   }
   return next({
     ctx: {
@@ -129116,15 +129116,31 @@ function getSupabaseAdmin() {
   }
   return supabaseAdmin;
 }
-async function authenticateSupabaseRequest(req) {
+async function authenticateSupabaseRequest(req, failureHolder) {
   const authorization = req.headers.authorization;
-  if (!authorization?.startsWith("Bearer ")) return null;
+  if (!authorization) {
+    if (failureHolder) failureHolder.reason = "No Authorization header sent by client";
+    return null;
+  }
+  if (!authorization.startsWith("Bearer ")) {
+    if (failureHolder) failureHolder.reason = "Authorization header missing 'Bearer ' prefix";
+    return null;
+  }
   const supabase = getSupabaseAdmin();
-  if (!supabase) return null;
+  if (!supabase) {
+    if (failureHolder) failureHolder.reason = "Supabase admin client not available";
+    return null;
+  }
   const token = authorization.slice("Bearer ".length).trim();
-  if (!token) return null;
+  if (!token) {
+    if (failureHolder) failureHolder.reason = "Bearer token is empty";
+    return null;
+  }
   const { data, error: error46 } = await supabase.auth.getUser(token);
-  if (error46 || !data.user) return null;
+  if (error46 || !data.user) {
+    if (failureHolder) failureHolder.reason = `Supabase auth.getUser error: ${error46?.message || "User not found"}`;
+    return null;
+  }
   const externalId = `supabase:${data.user.id}`;
   const displayName = typeof data.user.user_metadata?.full_name === "string" ? data.user.user_metadata.full_name : typeof data.user.user_metadata?.name === "string" ? data.user.user_metadata.name : null;
   try {
@@ -129152,15 +129168,17 @@ async function authenticateSupabaseRequest(req) {
 }
 async function createContext(opts) {
   let user = null;
+  const failureHolder = {};
   try {
-    user = await authenticateSupabaseRequest(opts.req);
+    user = await authenticateSupabaseRequest(opts.req, failureHolder);
   } catch {
     user = null;
   }
   return {
     req: opts.req,
     res: opts.res,
-    user
+    user,
+    authFailureReason: failureHolder.reason
   };
 }
 

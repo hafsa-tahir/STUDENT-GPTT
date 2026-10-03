@@ -7,6 +7,7 @@ export type TrpcContext = {
   req: CreateExpressContextOptions["req"];
   res: CreateExpressContextOptions["res"];
   user: User | null;
+  authFailureReason?: string;
 };
 
 let supabaseAdmin: ReturnType<typeof createClient> | null = null;
@@ -26,15 +27,34 @@ function getSupabaseAdmin() {
   return supabaseAdmin;
 }
 
-export async function authenticateSupabaseRequest(req: CreateExpressContextOptions["req"]): Promise<User | null> {
+export async function authenticateSupabaseRequest(
+  req: CreateExpressContextOptions["req"],
+  failureHolder?: { reason?: string }
+): Promise<User | null> {
   const authorization = req.headers.authorization;
-  if (!authorization?.startsWith("Bearer ")) return null;
+  if (!authorization) {
+    if (failureHolder) failureHolder.reason = "No Authorization header sent by client";
+    return null;
+  }
+  if (!authorization.startsWith("Bearer ")) {
+    if (failureHolder) failureHolder.reason = "Authorization header missing 'Bearer ' prefix";
+    return null;
+  }
   const supabase = getSupabaseAdmin();
-  if (!supabase) return null;
+  if (!supabase) {
+    if (failureHolder) failureHolder.reason = "Supabase admin client not available";
+    return null;
+  }
   const token = authorization.slice("Bearer ".length).trim();
-  if (!token) return null;
+  if (!token) {
+    if (failureHolder) failureHolder.reason = "Bearer token is empty";
+    return null;
+  }
   const { data, error } = await supabase.auth.getUser(token);
-  if (error || !data.user) return null;
+  if (error || !data.user) {
+    if (failureHolder) failureHolder.reason = `Supabase auth.getUser error: ${error?.message || "User not found"}`;
+    return null;
+  }
   const externalId = `supabase:${data.user.id}`;
   const displayName = typeof data.user.user_metadata?.full_name === "string"
     ? data.user.user_metadata.full_name
@@ -69,12 +89,14 @@ export async function createContext(
   opts: CreateExpressContextOptions
 ): Promise<TrpcContext> {
   let user: User | null = null;
+  const failureHolder: { reason?: string } = {};
 
-  try { user = await authenticateSupabaseRequest(opts.req); } catch { user = null; }
+  try { user = await authenticateSupabaseRequest(opts.req, failureHolder); } catch { user = null; }
 
   return {
     req: opts.req,
     res: opts.res,
     user,
+    authFailureReason: failureHolder.reason,
   };
 }
