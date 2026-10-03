@@ -4,14 +4,24 @@ import { httpLink } from "@trpc/client";
 import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
-import { getSupabaseAccessToken, setSupabaseAccessToken } from "./lib/supabase";
+import { getSupabaseAccessToken, setSupabaseAccessToken, getSupabaseBrowserClient } from "./lib/supabase";
 import "./index.css";
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry(failureCount, error: any) {
-        if (failureCount < 2 && (error?.data?.code === "UNAUTHORIZED" || error?.message?.includes("10001"))) {
+      async retry(failureCount, error: any) {
+        if (failureCount < 2 && (error?.data?.code === "UNAUTHORIZED" || error?.message?.includes("10001") || error?.message?.includes("Auth Error") || error?.message?.includes("expired"))) {
+          try {
+            const client = await getSupabaseBrowserClient();
+            const { data } = await client.auth.refreshSession();
+            if (data.session?.access_token) {
+              setSupabaseAccessToken(data.session.access_token);
+              return true;
+            }
+          } catch {
+            // refresh failed
+          }
           return true;
         }
         return false;
