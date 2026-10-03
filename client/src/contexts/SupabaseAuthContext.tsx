@@ -39,11 +39,19 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
         if (!active) return;
         if (error) setAuthError(error.message);
         setSession(data.session);
-        setSupabaseAccessToken(data.session?.access_token ?? null);
+        const token = data.session?.access_token ?? null;
+        setSupabaseAccessToken(token);
+        if (token && typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("supabase-token-ready", { detail: token }));
+        }
         setLoading(false);
         const { data: listener } = client.auth.onAuthStateChange((_event, nextSession) => {
           setSession(nextSession);
-          setSupabaseAccessToken(nextSession?.access_token ?? null);
+          const newToken = nextSession?.access_token ?? null;
+          setSupabaseAccessToken(newToken);
+          if (newToken && typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("supabase-token-ready", { detail: newToken }));
+          }
           setAuthError(null);
         });
         unsubscribe = () => listener.subscription.unsubscribe();

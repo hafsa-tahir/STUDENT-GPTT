@@ -10,8 +10,29 @@ export function setSupabaseAccessToken(token: string | null) {
   accessToken = token;
 }
 
-export function getSupabaseAccessToken() {
-  return accessToken;
+export function getSupabaseAccessToken(): string | null {
+  if (accessToken) return accessToken;
+  if (typeof window !== "undefined") {
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith("sb-") || key.includes("auth-token") || key.includes("supabase"))) {
+          const raw = localStorage.getItem(key);
+          if (raw && raw.includes("access_token")) {
+            const parsed = JSON.parse(raw);
+            const found = parsed?.access_token || parsed?.currentSession?.access_token;
+            if (found && typeof found === "string") {
+              accessToken = found;
+              return found;
+            }
+          }
+        }
+      }
+    } catch {
+      // localStorage error
+    }
+  }
+  return null;
 }
 
 export function getSupabaseBrowserClient() {

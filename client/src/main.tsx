@@ -9,7 +9,15 @@ import "./index.css";
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { retry: false, refetchOnWindowFocus: false },
+    queries: {
+      retry(failureCount, error: any) {
+        if (failureCount < 2 && (error?.data?.code === "UNAUTHORIZED" || error?.message?.includes("10001"))) {
+          return true;
+        }
+        return false;
+      },
+      refetchOnWindowFocus: false,
+    },
     mutations: { retry: false },
   },
 });
@@ -27,29 +35,29 @@ const trpcClient = trpc.createClient({
       url: getTrpcUrl(),
       transformer: superjson,
       headers() {
-        // First try the in-memory token set by SupabaseAuthContext
-        const supabaseToken = getSupabaseAccessToken();
-        if (supabaseToken) return { Authorization: `Bearer ${supabaseToken}` };
-
-        // Fallback: read directly from Supabase's localStorage key
-        // (handles race where query fires before SupabaseAuthContext sets the token)
-        try {
-          const SUPABASE_URL = "https://cfboullooogzodvrqevy.supabase.co";
-          const projectRef = SUPABASE_URL.match(/https:\/\/([^.]+)/)?.[1] ?? "";
-          const storageKey = `sb-${projectRef}-auth-token`;
-          const raw = localStorage.getItem(storageKey);
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            const token = parsed?.access_token;
-            if (token) {
-              setSupabaseAccessToken(token);
-              return { Authorization: `Bearer ${token}` };
+        let token = getSupabaseAccessToken();
+        if (!token && typeof window !== "undefined") {
+          try {
+            for (let i = 0; i < localStorage.length; i++) {
+              const key = localStorage.key(i);
+              if (key && (key.startsWith("sb-") || key.includes("auth-token") || key.includes("supabase"))) {
+                const raw = localStorage.getItem(key);
+                if (raw && raw.includes("access_token")) {
+                  const parsed = JSON.parse(raw);
+                  const found = parsed?.access_token || parsed?.currentSession?.access_token;
+                  if (found && typeof found === "string") {
+                    token = found;
+                    setSupabaseAccessToken(found);
+                    break;
+                  }
+                }
+              }
             }
+          } catch {
+            // localStorage unavailable or parse error
           }
-        } catch {
-          // localStorage unavailable or parse error
         }
-        return {};
+        return token ? { Authorization: `Bearer ${token}` } : {};
       },
       fetch(input, init) {
         return globalThis.fetch(input, {
@@ -60,6 +68,12 @@ const trpcClient = trpc.createClient({
     }),
   ],
 });
+
+if (typeof window !== "undefined") {
+  window.addEventListener("supabase-token-ready", () => {
+    queryClient.invalidateQueries();
+  });
+}
 
 createRoot(document.getElementById("root")!).render(
   <trpc.Provider client={trpcClient} queryClient={queryClient}>
