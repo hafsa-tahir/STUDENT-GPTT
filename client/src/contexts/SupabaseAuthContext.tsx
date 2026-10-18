@@ -77,7 +77,7 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
   }, []);
 
   const value = useMemo<AuthContextValue>(() => ({
-    user: session?.user ?? (import.meta.env.DEV ? DEV_FALLBACK_USER : null),
+    user: session?.user ?? null,
     session,
     loading,
     authError,

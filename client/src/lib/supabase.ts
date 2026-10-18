@@ -31,9 +31,9 @@ export function getSupabaseAccessToken(): string | null {
     } catch {
       // localStorage error
     }
-    return "dev-local-token";
+    return null;
   }
-  return "dev-local-token";
+  return null;
 }
 
 export function getSupabaseBrowserClient() {

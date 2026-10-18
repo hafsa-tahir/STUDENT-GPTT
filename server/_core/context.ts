@@ -61,22 +61,26 @@ export async function authenticateSupabaseRequest(
   const authorization = req.headers.authorization;
 
   if (!authorization || !authorization.startsWith("Bearer ")) {
-    return await getOrCreateDevUser();
+    if (failureHolder) failureHolder.reason = "Missing or malformed Authorization header";
+    return null;
   }
 
   const token = authorization.slice("Bearer ".length).trim();
   if (!token) {
-    return await getOrCreateDevUser();
+    if (failureHolder) failureHolder.reason = "Empty token";
+    return null;
   }
 
   const supabase = getSupabaseAdmin();
   if (!supabase) {
-    return await getOrCreateDevUser();
+    if (failureHolder) failureHolder.reason = "Supabase client initialization failed";
+    return null;
   }
 
   const { data, error } = await supabase.auth.getUser(token);
   if (error || !data.user) {
-    return await getOrCreateDevUser();
+    if (failureHolder) failureHolder.reason = error?.message || "Invalid Supabase token";
+    return null;
   }
   const externalId = `supabase:${data.user.id}`;
   const displayName = typeof data.user.user_metadata?.full_name === "string"
