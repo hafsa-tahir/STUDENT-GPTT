@@ -1,3 +1,4 @@
+import { CardNav } from "@/components/CardNav";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { useStudyTimeTracker } from "@/hooks/useStudyTimeTracker";
 import { trpc } from "@/lib/trpc";
@@ -9,11 +10,9 @@ import {
   FileText,
   LayoutDashboard,
   LogOut,
-  Menu,
   MessageCircle,
   NotebookPen,
   Search,
-  Sparkles,
   X,
   Zap
 } from "lucide-react";
@@ -21,7 +20,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 
-export const navigation = [
+const navigation = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
   { href: "/chat", label: "Study Chat", icon: MessageCircle },
   { href: "/documents", label: "Documents", icon: FileText },
@@ -36,7 +35,6 @@ export function StudentAppShell({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const { user, signOut } = useSupabaseAuth();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Live active study tracker
   const tracker = useStudyTimeTracker();
@@ -64,176 +62,131 @@ export function StudentAppShell({ children }: { children: React.ReactNode }) {
     setLocation("/login");
   }
 
+  const cardNavItems = [
+    {
+      label: "Study Spaces",
+      description: "Your daily rhythm, focus sessions, and AI tutoring.",
+      links: [
+        { label: "Overview & Activity", href: "/" },
+        { label: "Study Chat Assistant", href: "/chat" },
+        { label: "Planner & Schedule", href: "/planner" }
+      ]
+    },
+    {
+      label: "Learning Engine",
+      description: "Exhaustive notes, active recall, and course docs.",
+      links: [
+        { label: "Notes & Revision Guides", href: "/notes" },
+        { label: "Practice Quizzes & Cards", href: "/practice" },
+        { label: "Documents Library", href: "/documents" }
+      ]
+    },
+    {
+      label: "Academic Studio",
+      description: "Deep research, scholarly papers, and curriculum.",
+      links: [
+        { label: "Research Paper Studio", href: "/research" },
+        { label: "Subjects & Activity Hub", href: "/subjects" },
+        { label: "Add New Subject", href: "/subjects?create=1" }
+      ]
+    }
+  ];
+
   return (
     <div className="min-h-screen bg-[#FDF3F3] text-[#724060]">
-      {/* Top Navbar — Card-Like, Clean, Organized Island Dock */}
-      <header className="sticky top-0 z-50 w-full px-3 py-2.5 sm:px-6 sm:py-3 transition-all">
-        <div className="mx-auto flex max-w-[1520px] items-center justify-between rounded-2xl sm:rounded-[22px] border border-[#F8E7E7] bg-white/95 px-3 py-2 sm:px-5 shadow-[0_8px_30px_rgba(114,64,96,0.08)] backdrop-blur-xl transition-all">
-          {/* Brand Logo & Title */}
-          <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-2.5 transition-transform hover:scale-[1.02]">
-              <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#F8E7E7] shadow-[0_3px_10px_rgba(114,64,96,0.12)]">
-                <img src="/logo.svg" alt="StudentGPT" className="h-6 w-6 object-contain" />
+      {/* Top React Bits <CardNav /> Integration */}
+      <header className="sticky top-0 z-50 w-full px-3 py-3 sm:px-6 transition-all">
+        <CardNav
+          logo={
+            <div className="flex items-center gap-2">
+              <div className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#F8E7E7] shadow-[0_2px_8px_rgba(114,64,96,0.12)]">
+                <img src="/logo.svg" alt="StudentGPT" className="h-5 w-5 object-contain" />
               </div>
-              <div className="flex flex-col">
-                <span className="text-[16px] font-bold leading-tight tracking-tight text-[#724060]">
+              <div className="flex flex-col text-left">
+                <span className="text-[15px] font-bold leading-none tracking-tight text-[#724060]">
                   StudentGPT
                 </span>
-                <span className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[#A070A1]">
+                <span className="text-[8px] font-bold uppercase tracking-[0.14em] text-[#A070A1]">
                   Academic Studio
                 </span>
               </div>
-            </Link>
-          </div>
-
-          {/* Desktop Navigation Links — Centered Segmented Card Dock */}
-          <nav
-            className="hidden items-center gap-0.5 xl:gap-1 lg:flex rounded-xl bg-[#FDF3F3]/90 p-1 border border-[#F8E7E7]"
-            aria-label="Top navigation"
-          >
-            {navigation.map(item => {
-              const active = location === item.href || (item.href !== "/" && location.startsWith(item.href));
-              return (
+            </div>
+          }
+          logoHref="/"
+          items={cardNavItems}
+          cta={{
+            element: (
+              <div className="flex items-center gap-2">
+                {/* Live Active Study Timer Pill */}
                 <Link
-                  key={item.href}
-                  href={item.href}
-                  title={item.label}
-                  className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-medium transition-all ${
-                    active
-                      ? "bg-[#724060] font-semibold text-white shadow-xs"
-                      : "text-[#724060]/75 hover:bg-[#F8E7E7] hover:text-[#724060]"
-                  }`}
+                  href="/"
+                  title={tracker.isActive ? "Actively tracking study time" : "Study timer ready"}
+                  className="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-[#F8E7E7] bg-[#FDF3F3] px-2.5 py-1.5 text-[11px] font-bold text-[#724060] hover:bg-[#F8E7E7] transition"
                 >
-                  <item.icon className={`h-3.5 w-3.5 shrink-0 ${active ? "text-white" : "text-[#A070A1]"}`} />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
-
-          {/* Right Header Actions: Live Study Pill, Quick Action & User Profile */}
-          <div className="flex items-center gap-2 sm:gap-2.5">
-            {/* Live Study Time Tracking Badge */}
-            <Link
-              href="/"
-              title={tracker.isActive ? "Actively tracking study time" : "Study timer ready"}
-              className="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-[#F8E7E7] bg-[#FDF3F3] px-2.5 py-1.5 text-[11.5px] font-semibold text-[#724060] transition hover:bg-[#F8E7E7]"
-            >
-              <span
-                className={`h-2 w-2 rounded-full ${
-                  tracker.isActive ? "bg-emerald-500 animate-pulse ring-2 ring-emerald-500/20" : "bg-[#A070A1]"
-                }`}
-              />
-              <Clock3 className="h-3.5 w-3.5 text-[#A070A1]" />
-              <span>{minutesToday}m Today</span>
-            </Link>
-
-            <Link
-              href="/research"
-              className="hidden items-center gap-1.5 rounded-xl bg-[#724060] px-3 py-1.5 text-[12px] font-semibold text-[#FDF3F3] shadow-xs transition hover:bg-[#5a334c] md:inline-flex"
-            >
-              <Sparkles className="h-3.5 w-3.5 text-[#F8E7E7]" />
-              <span>Research</span>
-            </Link>
-
-            {/* User Profile Pill & Dropdown */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setUserMenuOpen(prev => !prev)}
-                className="flex items-center gap-2 rounded-xl border border-[#F8E7E7] bg-[#FDF3F3] px-2 py-1 transition hover:bg-[#F8E7E7]"
-                aria-expanded={userMenuOpen}
-              >
-                <Avatar className="h-7 w-7 border border-[#F8E7E7]">
-                  <AvatarFallback className="bg-[#724060] text-[11px] font-bold text-[#FDF3F3]">
-                    {initial}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="hidden max-w-[90px] truncate text-[12px] font-medium text-[#724060] sm:inline-block">
-                  {name}
-                </span>
-                <ChevronDown className="h-3.5 w-3.5 text-[#A070A1]" />
-              </button>
-
-              {userMenuOpen && (
-                <div
-                  className="absolute right-0 top-11 z-50 w-56 rounded-2xl border border-[#F8E7E7] bg-white p-2 text-[#724060] shadow-[0_12px_36px_rgba(114,64,96,0.18)]"
-                  onMouseLeave={() => setUserMenuOpen(false)}
-                >
-                  <div className="border-b border-[#F8E7E7] px-3 py-2">
-                    <p className="truncate text-[13px] font-semibold">{name}</p>
-                    <p className="truncate text-[11px] text-[#A070A1]">{user?.email}</p>
-                    <div className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-[#724060]">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                      <span>{minutesToday}m active study today</span>
-                    </div>
-                  </div>
-                  <div className="pt-1">
-                    <button
-                      type="button"
-                      onClick={handleSignOut}
-                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[12px] font-medium text-[#724060] transition hover:bg-[#FDF3F3]"
-                    >
-                      <LogOut className="h-3.5 w-3.5 text-[#A070A1]" />
-                      Sign out
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Mobile Hamburger Menu Button */}
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(prev => !prev)}
-              className="grid h-9 w-9 place-items-center rounded-xl border border-[#F8E7E7] bg-[#FDF3F3] text-[#724060] hover:bg-[#F8E7E7] lg:hidden"
-              aria-label="Toggle navigation menu"
-            >
-              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Dropdown Panel Card */}
-        {mobileMenuOpen && (
-          <div className="mx-auto mt-2 max-w-[1520px] rounded-2xl border border-[#F8E7E7] bg-white p-4 shadow-[0_12px_36px_rgba(114,64,96,0.12)] lg:hidden">
-            <div className="mb-3 flex items-center justify-between border-b border-[#F8E7E7] pb-2 text-[12px] text-[#724060]">
-              <span className="font-semibold">{name}</span>
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#A070A1]">
-                <Clock3 className="h-3 w-3" /> {minutesToday}m today
-              </span>
-            </div>
-            <nav className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-              {navigation.map(item => {
-                const active = location === item.href || (item.href !== "/" && location.startsWith(item.href));
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-[12px] font-medium transition ${
-                      active
-                        ? "bg-[#724060] font-semibold text-white"
-                        : "text-[#724060] hover:bg-[#FDF3F3]"
+                  <span
+                    className={`h-2 w-2 rounded-full ${
+                      tracker.isActive
+                        ? "bg-emerald-500 animate-pulse ring-2 ring-emerald-500/20"
+                        : "bg-[#A070A1]"
                     }`}
+                  />
+                  <Clock3 className="h-3.5 w-3.5 text-[#A070A1]" />
+                  <span>{minutesToday}m Today</span>
+                </Link>
+
+                {/* User Profile Pill & Dropdown */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setUserMenuOpen(prev => !prev)}
+                    className="flex items-center gap-1.5 rounded-xl bg-[#724060] px-3 py-1.5 text-[12px] font-bold text-white shadow-xs hover:bg-[#5a334c] transition"
+                    aria-expanded={userMenuOpen}
                   >
-                    <item.icon className="h-4 w-4 shrink-0" />
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
-            </nav>
-            <div className="mt-3 flex items-center justify-end border-t border-[#F8E7E7] pt-2">
-              <button
-                type="button"
-                onClick={handleSignOut}
-                className="inline-flex items-center gap-1 rounded-lg bg-[#FDF3F3] px-3 py-1.5 text-[11px] font-medium text-[#724060] hover:bg-[#F8E7E7]"
-              >
-                <LogOut className="h-3 w-3 text-[#A070A1]" /> Sign out
-              </button>
-            </div>
-          </div>
-        )}
+                    <Avatar className="h-5 w-5 border border-white/20">
+                      <AvatarFallback className="bg-white/20 text-[10px] font-bold text-white">
+                        {initial}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="max-w-[75px] truncate hidden sm:inline-block">{name}</span>
+                    <ChevronDown className="h-3 w-3 text-white/80" />
+                  </button>
+
+                  {userMenuOpen && (
+                    <div
+                      className="absolute right-0 top-11 z-50 w-56 rounded-2xl border border-[#F8E7E7] bg-white p-2 text-[#724060] shadow-[0_16px_40px_rgba(114,64,96,0.18)]"
+                      onMouseLeave={() => setUserMenuOpen(false)}
+                    >
+                      <div className="border-b border-[#F8E7E7] px-3 py-2">
+                        <p className="truncate text-[13px] font-semibold">{name}</p>
+                        <p className="truncate text-[11px] text-[#A070A1]">{user?.email}</p>
+                        <div className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-[#724060]">
+                          <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                          <span>{minutesToday}m active study today</span>
+                        </div>
+                      </div>
+                      <div className="pt-1">
+                        <button
+                          type="button"
+                          onClick={handleSignOut}
+                          className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[12px] font-medium text-[#724060] transition hover:bg-[#FDF3F3]"
+                        >
+                          <LogOut className="h-3.5 w-3.5 text-[#A070A1]" />
+                          Sign out
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          }}
+          theme="academic"
+          surface="glass"
+          cardEffect="rise"
+          openOn="click"
+          maxWidth={960}
+          linkComponent={Link}
+        />
       </header>
 
       {/* Main Content Area */}
@@ -241,7 +194,7 @@ export function StudentAppShell({ children }: { children: React.ReactNode }) {
         {children}
       </main>
 
-      {/* Mobile Quick-Bar (Small Screens) */}
+      {/* Mobile Quick-Bar (Small Screens for instant one-thumb navigation) */}
       <nav
         className="fixed inset-x-3 bottom-3 z-40 flex h-14 items-center justify-around rounded-2xl border border-[#F8E7E7] bg-white/95 px-2 text-[#724060] shadow-[0_8px_30px_rgba(114,64,96,0.12)] backdrop-blur lg:hidden"
         aria-label="Mobile bottom navigation"
