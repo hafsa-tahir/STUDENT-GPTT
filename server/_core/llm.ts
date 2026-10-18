@@ -67,6 +67,7 @@ export type InvokeParams = {
   responseFormat?: ResponseFormat;
   response_format?: ResponseFormat;
   model?: string;
+  temperature?: number;
   thinking?: Record<string, unknown>;
   reasoning?: Record<string, unknown>;
 };
@@ -395,7 +396,7 @@ function getProviderCandidates(requestedModel?: string): ProviderCandidate[] {
   if (ENV.geminiApiKeys.length > 0) {
     const geminiModel = requestedModel && requestedModel.includes("gemini")
       ? requestedModel
-      : "gemini-2.5-flash";
+      : "gemini-3.8-flash";
     for (let index = 0; index < ENV.geminiApiKeys.length; index++) {
       const key = ENV.geminiApiKeys[index];
       candidates.push({
@@ -483,6 +484,10 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   const resolvedMaxTokens = max_tokens ?? maxTokens;
   if (typeof resolvedMaxTokens === "number") {
     payload.max_tokens = resolvedMaxTokens;
+  }
+
+  if (typeof params.temperature === "number") {
+    payload.temperature = params.temperature;
   }
 
   if (thinking) {

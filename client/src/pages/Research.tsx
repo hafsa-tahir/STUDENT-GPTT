@@ -30,19 +30,21 @@ type Quote = { text: string; author: string; context?: string };
 type Objective = { title: string; description?: string };
 
 type Board = {
+  topicType?: string;
   definition?: string;
   description?: string;
   howItWorks?: string;
   pastSummary?: string;
   presentAndContributors?: string;
   futureOutlook?: string;
-  quote?: Quote;
+  quote?: Quote | null;
   projectFocus?: string;
   objectives?: Array<string | Objective>;
   methodology?: string[];
   applications?: string[];
   misconceptions?: string[];
   verificationChecklist?: string[];
+  limitations?: string[];
 };
 
 function strings(value: unknown): string[] { 
@@ -59,11 +61,7 @@ function board(value: unknown): Board {
 
 function parseObjectives(raw: unknown): Array<{ title: string; description: string }> {
   if (!Array.isArray(raw) || !raw.length) {
-    return [
-      { title: "Foundational Comprehension", description: "Establish authoritative grasp of core principles, underlying mechanics, and key theoretical laws." },
-      { title: "Mechanistic & Applied Analysis", description: "Investigate operational dynamics, real-world case studies, and engineering implementations." },
-      { title: "Critical Synthesis & Evaluation", description: "Assess key architectural trade-offs, common misconceptions, and ongoing scientific frontiers." }
-    ];
+    return [];
   }
   return raw.map((item, index) => {
     if (typeof item === "string") {
@@ -84,47 +82,32 @@ function parseObjectives(raw: unknown): Array<{ title: string; description: stri
   });
 }
 
-function getResolvedPaperData(title: string, briefOverview?: string | null, boardData?: Board) {
-  const isQuantum = /quantum/i.test(title);
-  
-  const fallbackQuote = isQuantum ? {
-    text: "Nature isn't classical, dammit, and if you want to make a simulation of nature, you'd better make it quantum mechanical, and by golly it's a wonderful problem, because it doesn't look so easy.",
-    author: "Richard P. Feynman",
-    context: "Nobel Laureate in Theoretical Physics (1981 MIT Keynote)"
-  } : {
-    text: "Research is to see what everybody else has seen, and to think what nobody else has thought.",
-    author: "Albert Szent-Györgyi",
-    context: "Nobel Laureate in Physiology or Medicine"
+function formatTopicType(type: string): string {
+  if (!type) return "";
+  const map: Record<string, string> = {
+    physical_object_or_phenomenon: "Physical Object / Phenomenon",
+    natural_process: "Natural Process",
+    academic_field: "Academic Field",
+    technology_or_system: "Technology / System",
+    historical_event: "Historical Event",
+    person_or_group: "Person / Group",
+    concept_or_theory: "Concept / Theory",
+    other: "Academic Subject"
   };
+  return map[type] || type.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+}
 
-  const fallbackDefinition = isQuantum
-    ? "Quantum computing is a revolutionary computational paradigm that leverages the foundational principles of quantum mechanics—principally linear superposition, quantum entanglement, and interference—to process complex information exponentially faster than classical Turing architectures for targeted problem classes."
-    : `${title} is an academic and technical discipline that investigates core theoretical principles, operational mechanisms, and architectural frameworks to analyze and solve complex systems challenges.`;
-
-  const fallbackHowItWorks = isQuantum
-    ? "Unlike classical systems that store data in discrete binary bits (0 or 1), quantum computers process information using quantum bits (qubits). Qubits exist in continuous linear superpositions of orthogonal states (|0⟩ and |1⟩) governed by complex probability amplitudes. Through a sequence of unitary quantum logic gates (such as Hadamard, Pauli-X, CNOT, and Toffoli gates), a quantum circuit manipulates these wavefunctions, using constructive interference to amplify correct solution states and destructive interference to cancel erroneous paths. Multi-qubit entanglement links states instantaneously across an exponentially expanding Hilbert space (2ⁿ dimensions for n qubits), enabling algorithms like Shor's algorithm (prime factorization) and Grover's algorithm (database search) to achieve unprecedented computational speedups."
-    : `${title} operates through a structured sequence of interconnected subsystems and operational workflows. Data and state inputs are ingested, normalized, and transformed according to formal domain rules and mathematical formulations. Internal modules coordinate state changes, execute control flows, and apply deterministic or probabilistic algorithms, ensuring high fidelity, error mitigation, and verifiable outputs across real-world operational environments.`;
-
-  const fallbackPast = isQuantum
-    ? "The conceptual foundation of quantum computing was proposed in 1981 by Nobel laureate Richard Feynman and Paul Benioff, who realized that simulating quantum physical systems with classical computers required exponential resources. In 1985, David Deutsch formalized the universal quantum Turing machine. The discipline accelerated in 1994 when Peter Shor unveiled a polynomial-time algorithm for factoring large integers, proving that quantum hardware could theoretically break standard RSA cryptography. Lov Grover's 1996 quadratic search algorithm and subsequent discoveries in quantum error-correcting codes established the formal theoretical framework."
-    : `The historical foundation of ${title} traces back to seminal academic inquiries and early pioneering experiments. Early researchers established the foundational theorems, overcoming initial physical and mathematical constraints through iterative breakthroughs. Over successive decades, key academic milestones transformed theoretical hypotheses into a formal, autonomous discipline with standardized methodologies.`;
-
-  const fallbackPresent = isQuantum
-    ? "Presently, quantum computing is driven by global collaboration across hardware architectures including superconducting transmons, trapped ions, neutral atoms, and photonics. Leading pioneers include IBM Quantum (pioneering utility-scale 1,000+ qubit Condor and Heron processors), Google Quantum AI (advancing quantum supremacy and surface-code error mitigation), Microsoft Quantum (engineering topological Majorana qubits), IonQ, Rigetti, Quantinuum, and PsiQuantum. Leading research universities such as MIT, Oxford, Caltech, ETH Zurich, and Waterloo actively publish breakthroughs in quantum algorithms, error correction, and post-quantum cryptography."
-    : `Presently, ${title} is at the forefront of international academic research and industrial application. Leading institutions including premier research universities (such as MIT, Stanford, Oxford, and Cambridge), industrial labs (including Google Research, IBM, Microsoft, and specialized research institutes), and open-source academic consortia are actively pushing state-of-the-art benchmarks, developing modern standards, and deploying scalable implementations.`;
-
-  const fallbackFuture = isQuantum
-    ? "The forward trajectory focuses on transitioning from Noisy Intermediate-Scale Quantum (NISQ) systems to fully Fault-Tolerant Quantum Computation (FTQC). As physical error rates cross below fault-tolerant thresholds via surface codes and lattice surgery, multi-million physical qubit systems will unlock profound breakthroughs in molecular chemistry (fertilizer catalysts, ambient-temperature superconductors), structural biology (rapid targeted drug discovery), global logistical optimization, and financial modeling."
-    : `The future trajectory of ${title} points toward deep interdisciplinary integration, fault-tolerant reliability, and high-performance automation. Key upcoming milestones include overcoming existing scalability bottlenecks, developing adaptive algorithms, and enabling transformative breakthroughs across science, engineering, and society over the next decade.`;
-
+function getResolvedPaperData(title: string, briefOverview?: string | null, boardData?: Board) {
   return {
-    definition: boardData?.definition || fallbackDefinition,
+    topicType: boardData?.topicType || "",
+    definition: boardData?.definition || "",
     description: boardData?.description || briefOverview || "",
-    howItWorks: boardData?.howItWorks || fallbackHowItWorks,
-    pastSummary: boardData?.pastSummary || fallbackPast,
-    presentAndContributors: boardData?.presentAndContributors || fallbackPresent,
-    futureOutlook: boardData?.futureOutlook || fallbackFuture,
-    quote: (boardData?.quote && boardData.quote.text) ? boardData.quote : fallbackQuote,
+    howItWorks: boardData?.howItWorks || "",
+    pastSummary: boardData?.pastSummary || "",
+    presentAndContributors: boardData?.presentAndContributors || "",
+    futureOutlook: boardData?.futureOutlook || "",
+    quote: (boardData?.quote && boardData.quote.text) ? boardData.quote : null,
+    limitations: Array.isArray(boardData?.limitations) ? boardData.limitations.filter(Boolean) : []
   };
 }
 
@@ -592,8 +575,17 @@ export default function Research() {
                       {/* Paper Masthead */}
                       <header className="border-b-2 border-[#724060] pb-6">
                         <div className="flex flex-wrap items-center justify-between gap-3 text-[10px] font-extrabold uppercase tracking-[.22em] text-[#A070A1]">
-                          <span>StudentGPT Research Preprint · Peer-Indexed Canvas</span>
-                          <span className="rounded bg-[#F8E7E7] px-2.5 py-1 text-[#724060]">Verified Academic Synthesis</span>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span>StudentGPT Research Study Guide</span>
+                            {resolved.topicType && (
+                              <span className="rounded bg-[#724060] px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#FDF3F3]">
+                                {formatTopicType(resolved.topicType)}
+                              </span>
+                            )}
+                          </div>
+                          <span className="rounded bg-[#F8E7E7] px-2.5 py-1 text-[#724060]">
+                            AI-generated study guide · Check against sources
+                          </span>
                         </div>
                         <h2 className="mt-5 text-3xl font-extrabold tracking-[-.035em] text-[#724060] sm:text-4xl lg:text-5xl font-serif">
                           {brief.title}
@@ -620,14 +612,22 @@ export default function Research() {
                               <h4 className="text-[11px] font-bold uppercase tracking-[.14em] text-[#A070A1]">1.1 Formal Academic Definition</h4>
                             </div>
                             <div className="mt-2 text-[13px] font-medium leading-6 text-[#724060]">
-                              <MathRenderer content={resolved.definition} />
+                              {resolved.definition ? (
+                                <MathRenderer content={resolved.definition} />
+                              ) : (
+                                <p className="text-[12px] italic text-[#A070A1]">Couldn't generate this section. Please try synthesizing again.</p>
+                              )}
                             </div>
                           </div>
                           {/* 1.2 Description */}
                           <div>
                             <h4 className="text-[11px] font-bold uppercase tracking-[.14em] text-[#A070A1]">1.2 Comprehensive Description & Domain Context</h4>
                             <div className="mt-2 space-y-3 text-[13px] leading-6 text-[#724060]/90">
-                              <MathRenderer content={resolved.description} />
+                              {resolved.description ? (
+                                <MathRenderer content={resolved.description} />
+                              ) : (
+                                <p className="text-[12px] italic text-[#A070A1]">Couldn't generate this section. Please try synthesizing again.</p>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -645,7 +645,11 @@ export default function Research() {
                             <h4 className="text-[11px] font-bold uppercase tracking-[.14em] text-[#A070A1]">Core Mechanisms & Execution Flow</h4>
                           </div>
                           <div className="mt-2.5 text-[13px] leading-6 text-[#724060]">
-                            <MathRenderer content={resolved.howItWorks} />
+                            {resolved.howItWorks ? (
+                              <MathRenderer content={resolved.howItWorks} />
+                            ) : (
+                              <p className="text-[12px] italic text-[#A070A1]">Couldn't generate this section. Please try synthesizing again.</p>
+                            )}
                           </div>
                         </div>
                       </section>
@@ -665,7 +669,11 @@ export default function Research() {
                             </div>
                             <h5 className="mt-2 text-[13px] font-bold text-[#724060]">Origins & Discovery Timeline</h5>
                             <div className="mt-2 text-[12px] leading-5 text-[#724060]/90">
-                              <MathRenderer content={resolved.pastSummary} />
+                              {resolved.pastSummary ? (
+                                <MathRenderer content={resolved.pastSummary} />
+                              ) : (
+                                <p className="text-[12px] italic text-[#A070A1]">Couldn't generate this section. Please try synthesizing again.</p>
+                              )}
                             </div>
                           </div>
                           {/* 3.2 Present */}
@@ -676,7 +684,11 @@ export default function Research() {
                             </div>
                             <h5 className="mt-2 text-[13px] font-bold text-[#724060]">Active Pioneers & Institutions</h5>
                             <div className="mt-2 text-[12px] leading-5 text-[#724060]">
-                              <MathRenderer content={resolved.presentAndContributors} />
+                              {resolved.presentAndContributors ? (
+                                <MathRenderer content={resolved.presentAndContributors} />
+                              ) : (
+                                <p className="text-[12px] italic text-[#A070A1]">Couldn't generate this section. Please try synthesizing again.</p>
+                              )}
                             </div>
                           </div>
                           {/* 3.3 Future */}
@@ -687,71 +699,79 @@ export default function Research() {
                             </div>
                             <h5 className="mt-2 text-[13px] font-bold text-[#724060]">Breakthrough Trajectory</h5>
                             <div className="mt-2 text-[12px] leading-5 text-[#724060]/90">
-                              <MathRenderer content={resolved.futureOutlook} />
+                              {resolved.futureOutlook ? (
+                                <MathRenderer content={resolved.futureOutlook} />
+                              ) : (
+                                <p className="text-[12px] italic text-[#A070A1]">Couldn't generate this section. Please try synthesizing again.</p>
+                              )}
                             </div>
                           </div>
                         </div>
                       </section>
 
                       {/* Section 4.0 Research Objectives & Investigative Questions */}
-                      <section className="mt-8 border-b border-[#F8E7E7] pb-8">
-                        <div className="flex items-center gap-2">
-                          <span className="grid h-7 w-7 place-items-center rounded bg-[#724060] text-xs font-bold text-[#FDF3F3]">4</span>
-                          <h3 className="text-[16px] font-bold tracking-tight text-[#724060]">Research Objectives & Questions</h3>
-                        </div>
-                        <div className="mt-4 grid gap-6 lg:grid-cols-[1.3fr_1fr]">
-                          <div>
-                            <h4 className="text-[11px] font-bold uppercase tracking-[.14em] text-[#A070A1]">4.1 Core Research Objectives</h4>
-                            <div className="mt-3 space-y-3">
-                              {parsedObjectives.map((obj, idx) => (
-                                <div key={idx} className="rounded border-l-4 border-[#724060] bg-[#F8E7E7]/40 p-3.5 pl-4">
-                                  <h5 className="text-[13px] font-bold text-[#724060]">
-                                    <MathRenderer content={obj.title} inline={true} />
-                                  </h5>
-                                  {obj.description && (
-                                    <div className="mt-1 text-[12px] leading-5 text-[#724060]/90">
-                                      <MathRenderer content={obj.description} />
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
+                      {(parsedObjectives.length > 0 || studyQuestions.length > 0) && (
+                        <section className="mt-8 border-b border-[#F8E7E7] pb-8">
+                          <div className="flex items-center gap-2">
+                            <span className="grid h-7 w-7 place-items-center rounded bg-[#724060] text-xs font-bold text-[#FDF3F3]">4</span>
+                            <h3 className="text-[16px] font-bold tracking-tight text-[#724060]">Research Objectives & Questions</h3>
                           </div>
-                          <div>
-                            <h4 className="text-[11px] font-bold uppercase tracking-[.14em] text-[#A070A1]">4.2 Questions Under Investigation</h4>
-                            <ol className="mt-3 space-y-2.5">
-                              {studyQuestions.map((q, idx) => (
-                                <li key={idx} className="flex gap-2.5 rounded border border-[#F8E7E7] bg-[#FDF3F3] p-3 text-[12px] leading-5 text-[#724060]">
-                                  <span className="font-bold text-[#A070A1]">{idx + 1}.</span>
-                                  <div className="flex-1 min-w-0">
-                                    <MathRenderer content={q} />
+                          <div className="mt-4 grid gap-6 lg:grid-cols-[1.3fr_1fr]">
+                            <div>
+                              <h4 className="text-[11px] font-bold uppercase tracking-[.14em] text-[#A070A1]">4.1 Core Research Objectives</h4>
+                              <div className="mt-3 space-y-3">
+                                {parsedObjectives.map((obj, idx) => (
+                                  <div key={idx} className="rounded border-l-4 border-[#724060] bg-[#F8E7E7]/40 p-3.5 pl-4">
+                                    <h5 className="text-[13px] font-bold text-[#724060]">
+                                      <MathRenderer content={obj.title} inline={true} />
+                                    </h5>
+                                    {obj.description && (
+                                      <div className="mt-1 text-[12px] leading-5 text-[#724060]/90">
+                                        <MathRenderer content={obj.description} />
+                                      </div>
+                                    )}
                                   </div>
-                                </li>
-                              ))}
-                            </ol>
-                          </div>
-                        </div>
-                      </section>
-
-                      {/* Section 5.0 Key Conceptual Foundations */}
-                      <section className="mt-8 border-b border-[#F8E7E7] pb-8">
-                        <div className="flex items-center gap-2">
-                          <span className="grid h-7 w-7 place-items-center rounded bg-[#724060] text-xs font-bold text-[#FDF3F3]">5</span>
-                          <h3 className="text-[16px] font-bold tracking-tight text-[#724060]">Key Conceptual Foundations</h3>
-                        </div>
-                        <div className="mt-4 grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
-                          {keyConcepts.map((concept, index) => (
-                            <div key={index} className="rounded-lg border border-[#F8E7E7] bg-[#FDF3F3] p-4">
-                              <p className="text-[13px] font-bold text-[#724060]">
-                                <MathRenderer content={concept.name} inline={true} />
-                              </p>
-                              <div className="mt-1 text-[12px] leading-5 text-[#724060]/85">
-                                <MathRenderer content={concept.explanation} />
+                                ))}
                               </div>
                             </div>
-                          ))}
-                        </div>
-                      </section>
+                            <div>
+                              <h4 className="text-[11px] font-bold uppercase tracking-[.14em] text-[#A070A1]">4.2 Questions Under Investigation</h4>
+                              <ol className="mt-3 space-y-2.5">
+                                {studyQuestions.map((q, idx) => (
+                                  <li key={idx} className="flex gap-2.5 rounded border border-[#F8E7E7] bg-[#FDF3F3] p-3 text-[12px] leading-5 text-[#724060]">
+                                    <span className="font-bold text-[#A070A1]">{idx + 1}.</span>
+                                    <div className="flex-1 min-w-0">
+                                      <MathRenderer content={q} />
+                                    </div>
+                                  </li>
+                                ))}
+                              </ol>
+                            </div>
+                          </div>
+                        </section>
+                      )}
+
+                      {/* Section 5.0 Key Conceptual Foundations */}
+                      {keyConcepts.length > 0 && (
+                        <section className="mt-8 border-b border-[#F8E7E7] pb-8">
+                          <div className="flex items-center gap-2">
+                            <span className="grid h-7 w-7 place-items-center rounded bg-[#724060] text-xs font-bold text-[#FDF3F3]">5</span>
+                            <h3 className="text-[16px] font-bold tracking-tight text-[#724060]">Key Conceptual Foundations</h3>
+                          </div>
+                          <div className="mt-4 grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+                            {keyConcepts.map((concept, index) => (
+                              <div key={index} className="rounded-lg border border-[#F8E7E7] bg-[#FDF3F3] p-4">
+                                <p className="text-[13px] font-bold text-[#724060]">
+                                  <MathRenderer content={concept.name} inline={true} />
+                                </p>
+                                <div className="mt-1 text-[12px] leading-5 text-[#724060]/85">
+                                  <MathRenderer content={concept.explanation} />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </section>
+                      )}
 
                       {/* Section 6.0 Methodologies, Applications & Study Sequence */}
                       <section className="mt-8 border-b border-[#F8E7E7] pb-8">
@@ -785,25 +805,66 @@ export default function Research() {
                         </div>
                       </section>
 
-                      {/* Section 7.0 Authoritative Perspective & Statement (Quotation at bottom of paper!) */}
-                      <section className="mt-8 rounded-xl border-2 border-[#724060]/20 bg-[#F8E7E7]/50 p-6 sm:p-8 text-center shadow-sm">
-                        <QuoteIcon className="mx-auto h-8 w-8 text-[#A070A1]" />
-                        <div className="mx-auto mt-3 max-w-3xl font-serif text-[16px] italic leading-7 text-[#724060] sm:text-[18px]">
-                          "<MathRenderer content={resolved.quote.text} inline={true} />"
-                        </div>
-                        <div className="mt-4 flex flex-col items-center justify-center">
-                          <span className="text-[13px] font-bold tracking-wide text-[#724060]">— {resolved.quote.author}</span>
-                          {resolved.quote.context && (
-                            <span className="mt-0.5 text-[11px] text-[#A070A1]">{resolved.quote.context}</span>
-                          )}
-                        </div>
-                      </section>
+                      {/* Areas to Double-Check / Verification Advisory */}
+                      {resolved.limitations.length > 0 && (
+                        <section className="mt-8 rounded-lg border-2 border-[#A070A1]/30 bg-[#F8E7E7]/60 p-5">
+                          <div className="flex items-center gap-2">
+                            <AlertTriangle className="h-4 w-4 text-[#724060]" />
+                            <h4 className="text-[11px] font-bold uppercase tracking-[.14em] text-[#724060]">
+                              Areas to Double-Check (Verification Advisory)
+                            </h4>
+                          </div>
+                          <p className="mt-1 text-[11px] text-[#A070A1]">
+                            The following details were noted as requiring careful double-checking against authoritative primary sources:
+                          </p>
+                          <ul className="mt-2.5 space-y-1.5">
+                            {resolved.limitations.map((item, idx) => (
+                              <li key={idx} className="flex items-start gap-2 text-[12px] leading-5 text-[#724060]">
+                                <span className="font-bold text-[#A070A1]">•</span>
+                                <span>{item}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </section>
+                      )}
+
+                      {/* Section 7.0 Authoritative Perspective & Statement (Only shown if authentic quote is present) */}
+                      {resolved.quote && resolved.quote.text && (
+                        <section className="mt-8 rounded-xl border-2 border-[#724060]/20 bg-[#F8E7E7]/50 p-6 sm:p-8 text-center shadow-sm">
+                          <QuoteIcon className="mx-auto h-8 w-8 text-[#A070A1]" />
+                          <div className="mx-auto mt-3 max-w-3xl font-serif text-[16px] italic leading-7 text-[#724060] sm:text-[18px]">
+                            "<MathRenderer content={resolved.quote.text} inline={true} />"
+                          </div>
+                          <div className="mt-4 flex flex-col items-center justify-center">
+                            <span className="text-[13px] font-bold tracking-wide text-[#724060]">— {resolved.quote.author || "Authority"}</span>
+                            {resolved.quote.context && (
+                              <span className="mt-0.5 text-[11px] text-[#A070A1]">{resolved.quote.context}</span>
+                            )}
+                          </div>
+                        </section>
+                      )}
 
                       {/* Paper Footer */}
                       <footer className="mt-8 border-t border-[#F8E7E7] pt-4 flex flex-wrap items-center justify-between text-[11px] text-[#A070A1]">
-                        <span>StudentGPT Academic Research Canvas · Continuous Learning Synthesis</span>
-                        <span>Downloadable as High-Resolution Preprint Image or Markdown Document</span>
+                        <span>StudentGPT Academic Research Study Guide · Continuous Learning Synthesis</span>
+                        <span>Downloadable as High-Resolution Image or Markdown Document</span>
                       </footer>
+                    </div>
+                  ) : brief.status === "failed" ? (
+                    <div className="mt-6 rounded-xl border-2 border-[#724060]/30 bg-[#F8E7E7] p-8 text-center shadow-sm">
+                      <AlertTriangle className="mx-auto h-8 w-8 text-[#724060]" />
+                      <h3 className="mt-3 text-[16px] font-bold text-[#724060]">Couldn't generate research synthesis</h3>
+                      <p className="mx-auto mt-2 max-w-lg text-[13px] leading-6 text-[#724060]/90">
+                        {brief.failureReason || "The model output could not be validated against academic standards. Please retry."}
+                      </p>
+                      <button
+                        onClick={runSynthesis}
+                        disabled={synthesize.isPending}
+                        className="mt-5 inline-flex items-center gap-2 bg-[#724060] px-5 py-2.5 text-[12px] font-bold text-[#FDF3F3] shadow-md transition hover:bg-[#5e344e] disabled:opacity-60"
+                      >
+                        <Wand2 className="h-4 w-4" />
+                        {synthesize.isPending ? "Retrying Synthesis…" : "Retry Synthesis"}
+                      </button>
                     </div>
                   ) : (
                     <div className="mt-6 border border-dashed border-[#F8E7E7] bg-[#FDF3F3] p-10 text-center text-sm text-[#A070A1]">

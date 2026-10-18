@@ -16,9 +16,9 @@ interface ResearchPaperResolved {
   futureOutlook: string;
   quote?: {
     text: string;
-    author: string;
+    author?: string;
     context?: string;
-  };
+  } | null;
 }
 
 interface ResearchBriefInput {
