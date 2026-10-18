@@ -3,7 +3,7 @@ import { PracticeHistory } from "@/components/PracticeHistory";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { trpc } from "@/lib/trpc";
 import { BrainCircuit, ChevronLeft, ChevronRight, Eye, Layers3 } from "lucide-react";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import { MathRenderer } from "@/components/MathRenderer";
 
@@ -31,6 +31,12 @@ export default function Practice() {
   const cards = trpc.flashcards.list.useQuery(undefined, { enabled: Boolean(user) });
   const subjects = trpc.academic.listSubjects.useQuery(undefined, { enabled: Boolean(user) });
   const documents = trpc.documents.list.useQuery(undefined, { enabled: Boolean(user) });
+
+  const subjectMap = useMemo(() => {
+    const map = new Map<number, { name: string; color: string }>();
+    subjects.data?.forEach(s => map.set(s.id, { name: s.name, color: s.color }));
+    return map;
+  }, [subjects.data]);
 
   const generateQuiz = trpc.quizzes.generate.useMutation({
     onError: (caught) => setError(caught.message)
@@ -174,12 +180,22 @@ export default function Practice() {
               </select>
               <select
                 value={documentId}
-                onChange={(event) => setDocumentId(event.target.value)}
+                onChange={(event) => {
+                  const docId = event.target.value;
+                  setDocumentId(docId);
+                  const found = documents.data?.find(d => String(d.id) === docId);
+                  if (found?.subjectId) {
+                    setSubjectId(String(found.subjectId));
+                  }
+                }}
                 className="h-11 rounded-xl border border-black/[.11] bg-white px-3 text-[12px] text-[#724060]"
               >
                 <option value="">Topic only</option>
                 {documents.data?.map((document) => (
                   <option key={document.id} value={document.id}>
+                    {document.subjectId && subjectMap.get(document.subjectId)
+                      ? `[${subjectMap.get(document.subjectId)!.name}] `
+                      : ""}
                     {document.originalName}
                   </option>
                 ))}

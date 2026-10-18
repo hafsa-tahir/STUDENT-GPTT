@@ -59,9 +59,29 @@ export async function uploadPrivatePdf(userId: number, file: { buffer: Buffer; n
   return created[0]!;
 }
 
-export async function listPrivateDocuments(userId: number) {
+export async function listPrivateDocuments(userId: number, subjectId?: number | null) {
   const db = databaseOrThrow(await getDb());
-  return db.select().from(documents).where(and(eq(documents.userId, userId), eq(documents.status, "ready"))).orderBy(desc(documents.createdAt));
+  const conditions = [eq(documents.userId, userId), eq(documents.status, "ready")];
+  if (typeof subjectId === "number" && subjectId > 0) {
+    conditions.push(eq(documents.subjectId, subjectId));
+  }
+  return db.select().from(documents).where(and(...conditions)).orderBy(desc(documents.createdAt));
+}
+
+export async function updateDocumentSubject(userId: number, documentId: number, subjectId: number | null) {
+  const db = databaseOrThrow(await getDb());
+  await db.update(documents).set({ subjectId: subjectId && subjectId > 0 ? subjectId : null }).where(and(eq(documents.id, documentId), eq(documents.userId, userId)));
+  const updated = await db.select().from(documents).where(and(eq(documents.id, documentId), eq(documents.userId, userId))).limit(1);
+  if (!updated[0]) throw new Error("Document not found.");
+  return updated[0];
+}
+
+export async function deletePrivateDocument(userId: number, documentId: number) {
+  const db = databaseOrThrow(await getDb());
+  const owned = await db.select({ id: documents.id }).from(documents).where(and(eq(documents.id, documentId), eq(documents.userId, userId))).limit(1);
+  if (!owned[0]) throw new Error("Document not found.");
+  await db.delete(documents).where(and(eq(documents.id, documentId), eq(documents.userId, userId)));
+  return { success: true };
 }
 
 export async function getPrivateDocumentDownload(userId: number, documentId: number) {
@@ -70,3 +90,4 @@ export async function getPrivateDocumentDownload(userId: number, documentId: num
   if (!record[0]) throw new Error("Document not found.");
   return storageGetSignedUrl(record[0].storageKey);
 }
+

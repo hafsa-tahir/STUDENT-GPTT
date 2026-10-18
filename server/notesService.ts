@@ -169,9 +169,13 @@ ${contentText.slice(0, 18000)}`;
   };
 }
 
-export async function listStudyNotes(userId: number) {
+export async function listStudyNotes(userId: number, subjectId?: number | null) {
   const db = database(await getDb());
-  return db.select().from(studyNotes).where(eq(studyNotes.userId, userId)).orderBy(desc(studyNotes.updatedAt));
+  const conditions = [eq(studyNotes.userId, userId)];
+  if (typeof subjectId === "number" && subjectId > 0) {
+    conditions.push(eq(studyNotes.subjectId, subjectId));
+  }
+  return db.select().from(studyNotes).where(and(...conditions)).orderBy(desc(studyNotes.updatedAt));
 }
 
 export async function getStudyNote(userId: number, noteId: number) {
@@ -487,10 +491,18 @@ ${source.promptContext}`;
   }
 
   const db = database(await getDb());
+  let targetSubjectId = input.subjectId ?? null;
+  const docId = source.docId ?? input.documentId ?? null;
+  if (!targetSubjectId && docId) {
+    try {
+      const docRow = await db.select({ subjectId: documents.subjectId }).from(documents).where(eq(documents.id, docId)).limit(1);
+      if (docRow[0]?.subjectId) targetSubjectId = docRow[0].subjectId;
+    } catch {}
+  }
   const inserted = await db.insert(studyNotes).values({
     userId,
-    subjectId: input.subjectId ?? null,
-    documentId: source.docId ?? input.documentId ?? null,
+    subjectId: targetSubjectId,
+    documentId: docId,
     title: cleanTitle,
     scopeType: source.scopeType,
     scopeLabel: source.scopeLabel,
@@ -754,10 +766,18 @@ Provide:
 
   const content = { oneLineSummary, overview, keyDefinitions, formulaBank, blocks, selfCheck };
   const db = database(await getDb());
+  let targetSubjectId = input.subjectId ?? null;
+  const docId = source.docId ?? input.documentId ?? null;
+  if (!targetSubjectId && docId) {
+    try {
+      const docRow = await db.select({ subjectId: documents.subjectId }).from(documents).where(eq(documents.id, docId)).limit(1);
+      if (docRow[0]?.subjectId) targetSubjectId = docRow[0].subjectId;
+    } catch {}
+  }
   const inserted = await db.insert(revisionGuides).values({
     userId,
-    subjectId: input.subjectId ?? null,
-    documentId: source.docId ?? input.documentId ?? null,
+    subjectId: targetSubjectId,
+    documentId: docId,
     title: cleanTitle,
     scopeLabel: source.scopeLabel,
     content,
@@ -772,12 +792,16 @@ Provide:
   return stored[0]!;
 }
 
-export async function listRevisionGuides(userId: number) {
+export async function listRevisionGuides(userId: number, subjectId?: number | null) {
   const db = database(await getDb());
+  const conditions = [eq(revisionGuides.userId, userId)];
+  if (typeof subjectId === "number" && subjectId > 0) {
+    conditions.push(eq(revisionGuides.subjectId, subjectId));
+  }
   return db
     .select()
     .from(revisionGuides)
-    .where(eq(revisionGuides.userId, userId))
+    .where(and(...conditions))
     .orderBy(desc(revisionGuides.createdAt));
 }
 

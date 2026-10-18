@@ -105,7 +105,15 @@ function normalizeFlashcards(raw: unknown) {
 }
 
 export async function generateQuiz(userId: number, input: { title: string; topic: string; subjectId?: number | null; documentId?: number | null; scopeType?: "topic" | "chapter" | "section" | "range" | "document"; scopeLabel?: string; questionCount?: number; difficulty: "easy" | "medium" | "hard" }) {
-  if (input.subjectId) await assertOwnedSubject(userId, input.subjectId);
+  let effectiveSubjectId = input.subjectId ?? null;
+  if (!effectiveSubjectId && input.documentId) {
+    const db = dbOrThrow(await getDb());
+    const doc = await db.select({ subjectId: documents.subjectId }).from(documents).where(and(eq(documents.id, input.documentId), eq(documents.userId, userId))).limit(1);
+    if (doc[0]?.subjectId) {
+      effectiveSubjectId = doc[0].subjectId;
+    }
+  }
+  if (effectiveSubjectId) await assertOwnedSubject(userId, effectiveSubjectId);
   const count = input.questionCount ?? 5; const scope = input.scopeLabel || input.topic; const source = await studySource(userId, input.topic, input.documentId ?? undefined, scope);
   const response = await invokeLLM({
     messages: [{ role: "system", content: "Create academically accurate quiz questions from the supplied study source. Return JSON with a 'questions' array. Each question must have 'prompt', 'options' (array of 4 strings), 'correctAnswer', and 'explanation'." }, { role: "user", content: `Difficulty: ${input.difficulty}\nRequested ${input.scopeType ?? "topic"}: ${scope}\nCreate up to ${count} multiple-choice questions, each with four options, one exact correctAnswer, and a concise explanation.\n\n${source}` }],
@@ -158,14 +166,22 @@ export async function submitQuiz(userId: number, quizId: number, answers: Array<
 }
 
 export async function generateFlashcards(userId: number, input: { topic: string; subjectId?: number | null; documentId?: number | null; scopeType?: "topic" | "chapter" | "section" | "range" | "document"; scopeLabel?: string }) {
-  if (input.subjectId) await assertOwnedSubject(userId, input.subjectId);
+  let effectiveSubjectId = input.subjectId ?? null;
+  if (!effectiveSubjectId && input.documentId) {
+    const db = dbOrThrow(await getDb());
+    const doc = await db.select({ subjectId: documents.subjectId }).from(documents).where(and(eq(documents.id, input.documentId), eq(documents.userId, userId))).limit(1);
+    if (doc[0]?.subjectId) {
+      effectiveSubjectId = doc[0].subjectId;
+    }
+  }
+  if (effectiveSubjectId) await assertOwnedSubject(userId, effectiveSubjectId);
   const source = await studySource(userId, input.topic, input.documentId ?? undefined, input.scopeLabel || input.topic);
   const response = await invokeLLM({ messages: [{ role: "system", content: "Create concise, high-value academic flashcards from the supplied source. Return JSON with a 'cards' array." }, { role: "user", content: `Create 8 flashcards with a direct question on the front and a concise correct answer on the back.\n\n${source}` }], response_format: { type: "json_schema", json_schema: { name: "flashcards", strict: true, schema: { type: "object", properties: { cards: { type: "array", minItems: 4, maxItems: 8, items: { type: "object", properties: { front: { type: "string" }, back: { type: "string" } }, required: ["front", "back"], additionalProperties: false } } }, required: ["cards"], additionalProperties: false } } }, maxTokens: 2500 });
   const raw = text(response.choices[0]?.message.content); const parsedRaw = safeParseJSON<unknown>(raw, { cards: [] });
   const cards = normalizeFlashcards(parsedRaw);
   if (cards.length === 0) throw new Error("Could not generate flashcards from this topic. Please try again.");
   const db = dbOrThrow(await getDb()); const created = [];
-  for (const card of cards) { const result = await db.insert(flashcards).values({ userId, subjectId: input.subjectId ?? null, documentId: input.documentId ?? null, front: card.front, back: card.back, sourceType: input.documentId ? "document" : "topic" }); const id = Number(result[0].insertId); const stored = await db.select().from(flashcards).where(and(eq(flashcards.id, id), eq(flashcards.userId, userId))).limit(1); if (stored[0]) created.push(stored[0]); }
+  for (const card of cards) { const result = await db.insert(flashcards).values({ userId, subjectId: effectiveSubjectId ?? null, documentId: input.documentId ?? null, front: card.front, back: card.back, sourceType: input.documentId ? "document" : "topic" }); const id = Number(result[0].insertId); const stored = await db.select().from(flashcards).where(and(eq(flashcards.id, id), eq(flashcards.userId, userId))).limit(1); if (stored[0]) created.push(stored[0]); }
   return created;
 }
 

@@ -1,4 +1,5 @@
 import { trpc } from "@/lib/trpc";
+import { getSupabaseAccessToken } from "@/lib/supabase";
 import {
   BookMarked,
   BookOpen,
@@ -6,6 +7,7 @@ import {
   CheckCircle2,
   Clock,
   Compass,
+  ExternalLink,
   FileText,
   Layers3,
   MessageCircle,
@@ -14,10 +16,11 @@ import {
   RefreshCw,
   Search,
   Sparkles,
+  UploadCloud,
   X,
   Zap
 } from "lucide-react";
-import { useState } from "react";
+import { ChangeEvent, useState } from "react";
 import { useLocation } from "wouter";
 
 type SubjectItem = {
@@ -39,12 +42,67 @@ export function SubjectActivityModal({
   onOpenOrganizer,
 }: SubjectActivityModalProps) {
   const [, setLocation] = useLocation();
+  const utils = trpc.useUtils();
   const [activeTab, setActiveTab] = useState<"all" | "notes" | "quizzes" | "research" | "documents" | "curriculum">("all");
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [docUploadNotice, setDocUploadNotice] = useState<string | null>(null);
+  const [docUploadError, setDocUploadError] = useState<string | null>(null);
 
   const activitiesQuery = trpc.academic.getSubjectActivities.useQuery(
     { subjectId: subject.id },
     { refetchOnWindowFocus: false }
   );
+
+  async function handleDirectUpload(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    setDocUploadError(null);
+    setDocUploadNotice(null);
+
+    if (file.type !== "application/pdf") {
+      setDocUploadError("Please upload a PDF file.");
+      return;
+    }
+
+    if (file.size > 12 * 1024 * 1024) {
+      setDocUploadError("PDF files must be 12 MB or smaller.");
+      return;
+    }
+
+    const token = getSupabaseAccessToken();
+    if (!token) {
+      setDocUploadError("Session expired. Please sign in again.");
+      return;
+    }
+
+    setUploadingDoc(true);
+
+    try {
+      const response = await fetch("/api/documents/upload", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/pdf",
+          "X-File-Name": encodeURIComponent(file.name),
+          "X-Subject-Id": String(subject.id)
+        },
+        body: file
+      });
+
+      const body = (await response.json()) as { error?: string; document?: { originalName: string } };
+      if (!response.ok) throw new Error(body.error || "Upload failed.");
+
+      setDocUploadNotice(`"${body.document?.originalName || file.name}" added to ${subject.name}!`);
+      await activitiesQuery.refetch();
+      await utils.documents.list.invalidate();
+    } catch (caught) {
+      setDocUploadError(caught instanceof Error ? caught.message : "Failed to upload document.");
+    } finally {
+      setUploadingDoc(false);
+    }
+  }
 
   const data = activitiesQuery.data;
   const isLoading = activitiesQuery.isLoading;
@@ -192,7 +250,22 @@ export function SubjectActivityModal({
               <Layers3 className="h-3.5 w-3.5" />
               Manage Curriculum
             </button>
+            <label className={`inline-flex items-center gap-1.5 rounded-xl border border-[#724060]/30 bg-white px-3.5 py-2 text-[12px] font-bold text-[#724060] shadow-xs hover:bg-[#F8E7E7] transition ${uploadingDoc ? "cursor-wait opacity-60" : "cursor-pointer"}`}>
+              <UploadCloud className="h-3.5 w-3.5 text-[#A070A1]" />
+              {uploadingDoc ? "Uploading PDF…" : "Upload PDF to Subject"}
+              <input type="file" accept="application/pdf" onChange={handleDirectUpload} disabled={uploadingDoc} className="sr-only" />
+            </label>
           </div>
+          {docUploadNotice && (
+            <p className="mt-2 text-[12px] font-semibold text-[#724060] bg-white px-3 py-1.5 rounded-lg border border-[#F8E7E7]">
+              {docUploadNotice}
+            </p>
+          )}
+          {docUploadError && (
+            <p className="mt-2 text-[12px] font-semibold text-[#A070A1] bg-white px-3 py-1.5 rounded-lg border border-[#F8E7E7]">
+              {docUploadError}
+            </p>
+          )}
         </div>
 
         {/* Tab Navigation */}
@@ -464,52 +537,77 @@ export function SubjectActivityModal({
               {/* Tab: ALL or documents */}
               {(activeTab === "all" || activeTab === "documents") && (
                 <div className="mt-4">
-                  <h3 className="mb-2 text-[12px] font-bold uppercase tracking-wider text-[#A070A1]">
-                    Uploaded Documents
-                  </h3>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-[12px] font-bold uppercase tracking-wider text-[#A070A1]">
+                      {subject.name} Documents ({data?.documents.length ?? 0})
+                    </h3>
+                    <label className={`inline-flex items-center gap-1.5 rounded-xl bg-[#724060] px-3 py-1.5 text-[12px] font-bold text-white shadow-xs transition hover:bg-[#5a334c] ${uploadingDoc ? "cursor-wait opacity-60" : "cursor-pointer"}`}>
+                      <UploadCloud className="h-3.5 w-3.5" />
+                      {uploadingDoc ? "Uploading…" : "Upload PDF"}
+                      <input type="file" accept="application/pdf" onChange={handleDirectUpload} disabled={uploadingDoc} className="sr-only" />
+                    </label>
+                  </div>
+
                   {data?.documents.length ? (
-                    <div className="space-y-2">
+                    <div className="space-y-2.5">
                       {data.documents.map(doc => (
                         <div
                           key={`doc-${doc.id}`}
-                          onClick={() => {
-                            onClose();
-                            setLocation(`/documents`);
-                          }}
-                          className="flex cursor-pointer items-center justify-between rounded-2xl border border-[#F8E7E7] bg-[#FDF3F3] p-3.5 hover:bg-[#F8E7E7] transition group"
+                          className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 rounded-2xl border border-[#F8E7E7] bg-[#FDF3F3] p-4 transition hover:bg-[#F8E7E7]/80"
                         >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-[#724060] shadow-xs">
-                              <FileText className="h-4 w-4" />
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-[#724060] shadow-xs">
+                              <FileText className="h-5 w-5" />
                             </span>
                             <div className="min-w-0">
-                              <p className="truncate text-[13px] font-bold text-[#724060]">
+                              <p className="truncate text-[13.5px] font-bold text-[#724060]" title={doc.originalName}>
                                 {doc.originalName}
                               </p>
-                              <p className="text-[11px] text-[#A070A1]">
-                                {doc.pageCount || 1} pages · {new Date(doc.createdAt).toLocaleDateString()}
+                              <p className="text-[11.5px] text-[#A070A1]">
+                                {doc.pageCount ? `${doc.pageCount} pages` : "Indexed"} · {Math.ceil(doc.byteSize / 1024)} KB · {new Date(doc.createdAt).toLocaleDateString()}
                               </p>
                             </div>
                           </div>
-                          <span className="rounded-lg bg-white px-2.5 py-1 text-[11px] font-semibold text-[#724060] shadow-xs">
-                            View in Docs
-                          </span>
+
+                          <div className="flex items-center gap-1.5 text-[11px] font-bold">
+                            <button
+                              onClick={() => {
+                                onClose();
+                                setLocation(`/notes?documentId=${doc.id}&subjectId=${subject.id}&mode=notes`);
+                              }}
+                              className="inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-1.5 text-[#724060] hover:bg-[#F8E7E7] transition shadow-xs"
+                            >
+                              <NotebookPen className="h-3 w-3 text-[#A070A1]" /> Notes
+                            </button>
+                            <button
+                              onClick={() => {
+                                onClose();
+                                setLocation(`/practice?documentId=${doc.id}&subjectId=${subject.id}`);
+                              }}
+                              className="inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-1.5 text-[#724060] hover:bg-[#F8E7E7] transition shadow-xs"
+                            >
+                              <Zap className="h-3 w-3 text-[#A070A1]" /> Quiz
+                            </button>
+                            <a
+                              href={`/api/documents/${doc.id}/download`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-1.5 text-[#724060] hover:bg-[#F8E7E7] transition shadow-xs"
+                            >
+                              <ExternalLink className="h-3 w-3 text-[#A070A1]" /> View
+                            </a>
+                          </div>
                         </div>
                       ))}
                     </div>
                   ) : activeTab === "documents" ? (
                     <div className="rounded-2xl border border-dashed border-[#F8E7E7] bg-[#FDF3F3] p-8 text-center">
                       <FileText className="mx-auto h-8 w-8 text-[#A070A1]" />
-                      <p className="mt-2 text-[13px] font-semibold text-[#724060]">No documents uploaded for {subject.name}</p>
-                      <button
-                        onClick={() => {
-                          onClose();
-                          setLocation(`/documents`);
-                        }}
-                        className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-[#724060] px-3.5 py-1.5 text-[12px] font-semibold text-white"
-                      >
-                        <Plus className="h-3.5 w-3.5" /> Upload document
-                      </button>
+                      <p className="mt-2 text-[13px] font-semibold text-[#724060]">No documents uploaded for {subject.name} yet</p>
+                      <label className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-[#724060] px-4 py-2 text-[12px] font-bold text-white cursor-pointer hover:bg-[#5a334c] transition shadow-xs">
+                        <UploadCloud className="h-3.5 w-3.5" /> Upload PDF for {subject.name}
+                        <input type="file" accept="application/pdf" onChange={handleDirectUpload} disabled={uploadingDoc} className="sr-only" />
+                      </label>
                     </div>
                   ) : null}
                 </div>

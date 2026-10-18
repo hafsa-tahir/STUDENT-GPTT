@@ -106,6 +106,7 @@ export default function Notes() {
   const [mode, setMode] = useState<"notes" | "revision">("notes");
   const [documentId, setDocumentId] = useState("");
   const [subjectId, setSubjectId] = useState("");
+  const [filterSubjectId, setFilterSubjectId] = useState<number | "all">("all");
   const [scopeType, setScopeType] = useState<(typeof scopeOptions)[number]>("document");
   const [scopeLabel, setScopeLabel] = useState("");
   const [sticky, setSticky] = useState("");
@@ -116,6 +117,24 @@ export default function Notes() {
   const [qaInput, setQaInput] = useState("");
   const [qaHistory, setQaHistory] = useState<QAItem[]>([]);
   const askDocMutation = trpc.notes.askDocument.useMutation();
+
+  const subjectMap = useMemo(() => {
+    const map = new Map<number, { name: string; color: string }>();
+    subjects.data?.forEach(s => map.set(s.id, { name: s.name, color: s.color }));
+    return map;
+  }, [subjects.data]);
+
+  const filteredNotes = useMemo(() => {
+    if (!notes.data) return [];
+    if (filterSubjectId === "all") return notes.data;
+    return notes.data.filter(n => n.subjectId === filterSubjectId);
+  }, [notes.data, filterSubjectId]);
+
+  const filteredRevisions = useMemo(() => {
+    if (!revisions.data) return [];
+    if (filterSubjectId === "all") return revisions.data;
+    return revisions.data.filter(r => r.subjectId === filterSubjectId);
+  }, [revisions.data, filterSubjectId]);
 
   const generateNotes = trpc.notes.generate.useMutation({
     onSuccess: data => {
@@ -148,23 +167,32 @@ export default function Notes() {
   useEffect(() => {
     if (!documentId && documents.data?.length) {
       const readyDoc = documents.data.find(doc => doc.status === "ready") || documents.data[0];
-      if (readyDoc) setDocumentId(String(readyDoc.id));
+      if (readyDoc) {
+        setDocumentId(String(readyDoc.id));
+        if (readyDoc.subjectId) {
+          setSubjectId(String(readyDoc.subjectId));
+        }
+      }
     }
   }, [documents.data, documentId]);
 
-  // Sync selected note to the latest one when notes list loads
+  // Sync selected note to the latest one when filtered notes list loads
   useEffect(() => {
-    if (notes.data?.length && selectedNote === null) {
-      setSelectedNote(notes.data[0].id);
+    if (filteredNotes.length) {
+      if (!selectedNote || !filteredNotes.some(n => n.id === selectedNote)) {
+        setSelectedNote(filteredNotes[0].id);
+      }
     }
-  }, [notes.data, selectedNote]);
+  }, [filteredNotes, selectedNote]);
 
-  // Sync selected revision to the latest one when revisions list loads
+  // Sync selected revision to the latest one when filtered revisions list loads
   useEffect(() => {
-    if (revisions.data?.length && selectedRevisionId === null) {
-      setSelectedRevisionId(revisions.data[0].id);
+    if (filteredRevisions.length) {
+      if (!selectedRevisionId || !filteredRevisions.some(r => r.id === selectedRevisionId)) {
+        setSelectedRevisionId(filteredRevisions[0].id);
+      }
     }
-  }, [revisions.data, selectedRevisionId]);
+  }, [filteredRevisions, selectedRevisionId]);
 
   // Read URL query parameters for subjectId and mode
   useEffect(() => {
@@ -172,6 +200,7 @@ export default function Notes() {
     const sub = params.get("subjectId");
     if (sub) {
       setSubjectId(sub);
+      setFilterSubjectId(Number(sub));
     }
     const m = params.get("mode");
     if (m === "notes" || m === "revision") {
@@ -486,50 +515,178 @@ export default function Notes() {
             {/* Left Sidebar: Saved Notes Library */}
             <aside className="rounded-[24px] border border-[#F8E7E7] bg-white p-4 shadow-sm">
               <div className="border-b border-[#F8E7E7] pb-3 pt-1">
-                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#A070A1]">
-                  Saved Notes Library
-                </p>
-                <p className="mt-0.5 text-[12px] text-[#724060]/70">
-                  {notes.data?.length || 0} notes created
-                </p>
-              </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#A070A1]">
+                    Study Library
+                  </p>
+                  <span className="rounded-full bg-[#F8E7E7] px-2 py-0.5 text-[10.5px] font-bold text-[#724060]">
+                    {mode === "notes" ? filteredNotes.length : filteredRevisions.length} saved
+                  </span>
+                </div>
 
-              <div className="mt-3 max-h-[700px] space-y-2 overflow-y-auto pr-1">
-                {notes.data?.length ? (
-                  notes.data.map(item => {
-                    const isSelected = item.id === selectedNote;
-                    return (
+                {/* Sub-library switcher */}
+                <div className="mt-2.5 flex rounded-xl bg-[#FDF3F3] p-1 text-[11.5px] font-semibold">
+                  <button
+                    type="button"
+                    onClick={() => setMode("notes")}
+                    className={`flex-1 rounded-lg py-1 text-center transition ${
+                      mode === "notes" ? "bg-white text-[#724060] shadow-xs font-bold" : "text-[#724060]/70 hover:text-[#724060]"
+                    }`}
+                  >
+                    Notes ({notes.data?.length || 0})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMode("revision")}
+                    className={`flex-1 rounded-lg py-1 text-center transition ${
+                      mode === "revision" ? "bg-white text-[#724060] shadow-xs font-bold" : "text-[#724060]/70 hover:text-[#724060]"
+                    }`}
+                  >
+                    Guides ({revisions.data?.length || 0})
+                  </button>
+                </div>
+
+                {/* Subject Filter Pills */}
+                {subjects.data && subjects.data.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#A070A1]/80 mb-1.5">
+                      Filter by Subject
+                    </p>
+                    <div className="flex flex-wrap gap-1">
                       <button
-                        key={item.id}
                         type="button"
-                        onClick={() => {
-                          setSelectedNote(item.id);
-                          setMode("notes");
-                        }}
-                        className={`w-full rounded-2xl p-3 text-left transition ${
-                          isSelected
-                            ? "border border-[#A070A1] bg-[#F8E7E7] shadow-sm"
-                            : "border border-transparent bg-[#FDF3F3]/60 hover:bg-[#FDF3F3]"
+                        onClick={() => setFilterSubjectId("all")}
+                        className={`rounded-lg px-2 py-1 text-[11px] font-medium transition ${
+                          filterSubjectId === "all"
+                            ? "bg-[#724060] text-white shadow-xs"
+                            : "bg-[#FDF3F3] text-[#724060]/80 hover:bg-[#F8E7E7]"
                         }`}
                       >
-                        <p className="line-clamp-2 text-[13px] font-semibold text-[#724060]">
-                          {item.title}
-                        </p>
-                        <div className="mt-1.5 flex items-center justify-between text-[11px] text-[#A070A1]">
-                          <span className="capitalize">{item.scopeType}</span>
-                          <span className="truncate max-w-[140px]">{item.scopeLabel}</span>
-                        </div>
+                        All ({mode === "notes" ? notes.data?.length || 0 : revisions.data?.length || 0})
                       </button>
-                    );
-                  })
-                ) : (
-                  <div className="px-4 py-12 text-center">
-                    <NotebookPen className="mx-auto h-8 w-8 text-[#A070A1]/60" />
-                    <p className="mt-3 text-[13px] font-semibold text-[#724060]">No saved notes yet</p>
-                    <p className="mt-1 text-[11.5px] text-[#A070A1]">
-                      Select a document below to generate comprehensive notes.
-                    </p>
+                      {subjects.data.map(sub => {
+                        const count = mode === "notes"
+                          ? notes.data?.filter(n => n.subjectId === sub.id).length || 0
+                          : revisions.data?.filter(r => r.subjectId === sub.id).length || 0;
+                        const isSelected = filterSubjectId === sub.id;
+                        return (
+                          <button
+                            key={sub.id}
+                            type="button"
+                            onClick={() => setFilterSubjectId(sub.id)}
+                            className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium transition ${
+                              isSelected
+                                ? "bg-[#724060] text-white shadow-xs"
+                                : "bg-[#FDF3F3] text-[#724060]/80 hover:bg-[#F8E7E7]"
+                            }`}
+                          >
+                            <span
+                              className="h-1.5 w-1.5 rounded-full"
+                              style={{ backgroundColor: sub.color }}
+                            />
+                            <span>{sub.name}</span>
+                            <span className="text-[10px] opacity-75">({count})</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
+                )}
+              </div>
+
+              <div className="mt-3 max-h-[620px] space-y-2 overflow-y-auto pr-1">
+                {mode === "notes" ? (
+                  filteredNotes.length ? (
+                    filteredNotes.map(item => {
+                      const isSelected = item.id === selectedNote;
+                      const sub = item.subjectId ? subjectMap.get(item.subjectId) : null;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setSelectedNote(item.id)}
+                          className={`w-full rounded-2xl p-3 text-left transition ${
+                            isSelected
+                              ? "border border-[#A070A1] bg-[#F8E7E7] shadow-sm"
+                              : "border border-transparent bg-[#FDF3F3]/60 hover:bg-[#FDF3F3]"
+                          }`}
+                        >
+                          {sub && (
+                            <span
+                              className="mb-1.5 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9.5px] font-bold text-white shadow-2xs"
+                              style={{ backgroundColor: sub.color }}
+                            >
+                              <span className="h-1.5 w-1.5 rounded-full bg-white/70" />
+                              {sub.name}
+                            </span>
+                          )}
+                          <p className="line-clamp-2 text-[13px] font-semibold text-[#724060]">
+                            {item.title}
+                          </p>
+                          <div className="mt-1.5 flex items-center justify-between text-[11px] text-[#A070A1]">
+                            <span className="capitalize">{item.scopeType}</span>
+                            <span className="truncate max-w-[140px]">{item.scopeLabel}</span>
+                          </div>
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <div className="px-4 py-12 text-center">
+                      <NotebookPen className="mx-auto h-8 w-8 text-[#A070A1]/60" />
+                      <p className="mt-3 text-[13px] font-semibold text-[#724060]">No notes found</p>
+                      <p className="mt-1 text-[11.5px] text-[#A070A1]">
+                        {filterSubjectId !== "all"
+                          ? "No notes saved for this subject yet. Select a document below to generate notes."
+                          : "Select a document below to generate comprehensive notes."}
+                      </p>
+                    </div>
+                  )
+                ) : (
+                  filteredRevisions.length ? (
+                    filteredRevisions.map(item => {
+                      const isSelected = item.id === selectedRevisionId;
+                      const sub = item.subjectId ? subjectMap.get(item.subjectId) : null;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setSelectedRevisionId(item.id)}
+                          className={`w-full rounded-2xl p-3 text-left transition ${
+                            isSelected
+                              ? "border border-[#A070A1] bg-[#F8E7E7] shadow-sm"
+                              : "border border-transparent bg-[#FDF3F3]/60 hover:bg-[#FDF3F3]"
+                          }`}
+                        >
+                          {sub && (
+                            <span
+                              className="mb-1.5 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9.5px] font-bold text-white shadow-2xs"
+                              style={{ backgroundColor: sub.color }}
+                            >
+                              <span className="h-1.5 w-1.5 rounded-full bg-white/70" />
+                              {sub.name}
+                            </span>
+                          )}
+                          <p className="line-clamp-2 text-[13px] font-semibold text-[#724060]">
+                            {item.title}
+                          </p>
+                          <div className="mt-1.5 flex items-center justify-between text-[11px] text-[#A070A1]">
+                            <span className="capitalize">Revision Guide</span>
+                            <span className="truncate max-w-[140px]">{item.scopeLabel}</span>
+                          </div>
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <div className="px-4 py-12 text-center">
+                      <RefreshCw className="mx-auto h-8 w-8 text-[#A070A1]/60" />
+                      <p className="mt-3 text-[13px] font-semibold text-[#724060]">No revision guides found</p>
+                      <p className="mt-1 text-[11.5px] text-[#A070A1]">
+                        {filterSubjectId !== "all"
+                          ? "No revision guides saved for this subject yet."
+                          : "Build an active-recall revision guide from a document below."}
+                      </p>
+                    </div>
+                  )
                 )}
               </div>
             </aside>
@@ -557,7 +714,14 @@ export default function Notes() {
                     Uploaded Document
                     <select
                       value={documentId}
-                      onChange={e => setDocumentId(e.target.value)}
+                      onChange={e => {
+                        const newDocId = e.target.value;
+                        setDocumentId(newDocId);
+                        const matchedDoc = documents.data?.find(d => String(d.id) === newDocId);
+                        if (matchedDoc?.subjectId) {
+                          setSubjectId(String(matchedDoc.subjectId));
+                        }
+                      }}
                       className="mt-1.5 h-11 w-full rounded-xl border border-[#F8E7E7] bg-[#FDF3F3] px-3 text-[13px] text-[#724060] outline-none transition focus:border-[#A070A1]"
                     >
                       <option value="">No document selected — use general topic</option>
@@ -565,6 +729,9 @@ export default function Notes() {
                         ?.filter(doc => doc.status === "ready")
                         .map(doc => (
                           <option key={doc.id} value={doc.id}>
+                            {doc.subjectId && subjectMap.get(doc.subjectId)
+                              ? `[${subjectMap.get(doc.subjectId)!.name}] `
+                              : ""}
                             {doc.originalName} ({doc.pageCount || 1} pages)
                           </option>
                         ))}

@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { availableChatModels, createChatConversation, getChatConversation, listChatConversations, regenerateChatMessage, sendChatMessage } from "./chatService";
-import { listPrivateDocuments } from "./documentService";
+import { deletePrivateDocument, listPrivateDocuments, updateDocumentSubject } from "./documentService";
 import { generateFlashcards, generateQuiz, getQuiz, listFlashcardReviewHistory, listFlashcards, listQuizAttemptHistory, reviewFlashcard, submitQuiz } from "./learningArtifactsService";
 import { addResearchSource, createResearchBrief, createResearchBriefFromTopic, exportResearchBrief, getResearchBrief, getResearchExportDownload, listResearchBriefs, listResearchExports, summarizeSourceUrl, synthesizeResearchBrief } from "./researchService";
 import { searchResearchVideos } from "./youtubeService";
@@ -72,7 +72,36 @@ export const appRouter = router({
     regenerate: protectedProcedure.input(z.object({ conversationId: z.number().int().positive() })).mutation(async ({ ctx, input }) => { try { return await regenerateChatMessage(ctx.user.id, input.conversationId); } catch (error) { return toApiError(error); } }),
   }),
   documents: router({
-    list: protectedProcedure.query(async ({ ctx }) => { try { return await listPrivateDocuments(ctx.user.id); } catch (error) { return toApiError(error); } }),
+    list: protectedProcedure
+      .input(z.object({ subjectId: z.number().int().positive().nullable().optional() }).optional())
+      .query(async ({ ctx, input }) => {
+        try {
+          return await listPrivateDocuments(ctx.user.id, input?.subjectId);
+        } catch (error) {
+          return toApiError(error);
+        }
+      }),
+    updateSubject: protectedProcedure
+      .input(z.object({
+        documentId: z.number().int().positive(),
+        subjectId: z.number().int().positive().nullable()
+      }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          return await updateDocumentSubject(ctx.user.id, input.documentId, input.subjectId);
+        } catch (error) {
+          return toApiError(error);
+        }
+      }),
+    delete: protectedProcedure
+      .input(z.object({ documentId: z.number().int().positive() }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          return await deletePrivateDocument(ctx.user.id, input.documentId);
+        } catch (error) {
+          return toApiError(error);
+        }
+      }),
   }),
   research: router({
     list: protectedProcedure.query(async ({ ctx }) => { try { return await listResearchBriefs(ctx.user.id); } catch (error) { return toApiError(error); } }),
@@ -89,14 +118,30 @@ export const appRouter = router({
     summarizeSourceUrl: protectedProcedure.input(z.object({ url: z.string().url() })).mutation(async ({ input }) => { try { return await summarizeSourceUrl(input.url); } catch (error) { return toApiError(error); } }),
   }),
   notes: router({
-    list: protectedProcedure.query(async ({ ctx }) => { try { return await listStudyNotes(ctx.user.id); } catch (error) { return toApiError(error); } }),
+    list: protectedProcedure
+      .input(z.object({ subjectId: z.number().int().positive().nullable().optional() }).optional())
+      .query(async ({ ctx, input }) => {
+        try {
+          return await listStudyNotes(ctx.user.id, input?.subjectId);
+        } catch (error) {
+          return toApiError(error);
+        }
+      }),
     get: protectedProcedure.input(z.object({ noteId: z.number().int().positive() })).query(async ({ ctx, input }) => { try { return await getStudyNote(ctx.user.id, input.noteId); } catch (error) { return toApiError(error); } }),
     generate: protectedProcedure.input(z.object({ title: z.string().trim().min(3).max(260), topic: z.string().trim().max(6000).nullable().optional(), subjectId: z.number().int().positive().nullable().optional(), documentId: z.number().int().positive().nullable().optional(), scopeType: z.enum(["topic", "chapter", "section", "range", "document"]), scopeLabel: z.string().trim().min(2).max(300) })).mutation(async ({ ctx, input }) => { try { return await generateStudyNotes(ctx.user.id, input); } catch (error) { return toApiError(error); } }),
     addSticky: protectedProcedure.input(z.object({ studyNoteId: z.number().int().positive(), content: z.string().trim().min(1).max(3000), color: z.enum(["yellow", "mint", "lavender", "peach"]) })).mutation(async ({ ctx, input }) => { try { return await addStickyNote(ctx.user.id, input.studyNoteId, input); } catch (error) { return toApiError(error); } }),
     askDocument: protectedProcedure.input(z.object({ documentId: z.number().int().positive(), question: z.string().trim().min(2).max(2000), studyNoteId: z.number().int().positive().optional() })).mutation(async ({ ctx, input }) => { try { return await askDocumentGrounded(ctx.user.id, input); } catch (error) { return toApiError(error); } }),
   }),
   revision: router({
-    list: protectedProcedure.query(async ({ ctx }) => { try { return await listRevisionGuides(ctx.user.id); } catch (error) { return toApiError(error); } }),
+    list: protectedProcedure
+      .input(z.object({ subjectId: z.number().int().positive().nullable().optional() }).optional())
+      .query(async ({ ctx, input }) => {
+        try {
+          return await listRevisionGuides(ctx.user.id, input?.subjectId);
+        } catch (error) {
+          return toApiError(error);
+        }
+      }),
     generate: protectedProcedure.input(z.object({ title: z.string().trim().min(3).max(260), topic: z.string().trim().max(6000).nullable().optional(), subjectId: z.number().int().positive().nullable().optional(), documentId: z.number().int().positive().nullable().optional(), scopeType: z.enum(["topic", "chapter", "section", "range", "document"]), scopeLabel: z.string().trim().min(2).max(300) })).mutation(async ({ ctx, input }) => { try { return await generateRevisionGuide(ctx.user.id, input); } catch (error) { return toApiError(error); } }),
   }),
   quizzes: router({
