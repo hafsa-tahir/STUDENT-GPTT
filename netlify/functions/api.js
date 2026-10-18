@@ -130808,6 +130808,29 @@ function shouldShowDeprecationWarning() {
 if (shouldShowDeprecationWarning()) console.warn("\u26A0\uFE0F  Node.js 20 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 22 or later. For more information, visit: https://github.com/orgs/supabase/discussions/45715");
 
 // server/_core/context.ts
+if (typeof globalThis.WebSocket === "undefined") {
+  class NodeWebSocketStub {
+    static CONNECTING = 0;
+    static OPEN = 1;
+    static CLOSING = 2;
+    static CLOSED = 3;
+    readyState = 3;
+    constructor() {
+    }
+    close() {
+    }
+    send() {
+    }
+    addEventListener() {
+    }
+    removeEventListener() {
+    }
+    dispatchEvent() {
+      return true;
+    }
+  }
+  globalThis.WebSocket = NodeWebSocketStub;
+}
 var supabaseAdmin = null;
 var DEFAULT_SUPABASE_URL = "REDACTED";
 var DEFAULT_SUPABASE_SERVICE_ROLE_KEY = "REDACTED";
@@ -130816,7 +130839,10 @@ function getSupabaseAdmin() {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || DEFAULT_SUPABASE_SERVICE_ROLE_KEY;
   if (!supabaseAdmin) {
     supabaseAdmin = createClient(url3, serviceRoleKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
+      auth: { autoRefreshToken: false, persistSession: false },
+      realtime: {
+        transport: globalThis.WebSocket
+      }
     });
   }
   return supabaseAdmin;
@@ -131087,6 +131113,29 @@ if (typeof globalThis.DOMPoint === "undefined") {
     }
   }
   globalThis.DOMPoint = DOMPointPolyfill;
+}
+if (typeof globalThis.WebSocket === "undefined") {
+  class NodeWebSocketStub {
+    static CONNECTING = 0;
+    static OPEN = 1;
+    static CLOSING = 2;
+    static CLOSED = 3;
+    readyState = 3;
+    constructor() {
+    }
+    close() {
+    }
+    send() {
+    }
+    addEventListener() {
+    }
+    removeEventListener() {
+    }
+    dispatchEvent() {
+      return true;
+    }
+  }
+  globalThis.WebSocket = NodeWebSocketStub;
 }
 var app = createExpressApp();
 var handler = (0, import_serverless_http.default)(app);

@@ -4212,6 +4212,29 @@ var appRouter = router({
 
 // server/_core/context.ts
 import { createClient } from "@supabase/supabase-js";
+if (typeof globalThis.WebSocket === "undefined") {
+  class NodeWebSocketStub {
+    static CONNECTING = 0;
+    static OPEN = 1;
+    static CLOSING = 2;
+    static CLOSED = 3;
+    readyState = 3;
+    constructor() {
+    }
+    close() {
+    }
+    send() {
+    }
+    addEventListener() {
+    }
+    removeEventListener() {
+    }
+    dispatchEvent() {
+      return true;
+    }
+  }
+  globalThis.WebSocket = NodeWebSocketStub;
+}
 var supabaseAdmin = null;
 var DEFAULT_SUPABASE_URL = "REDACTED";
 var DEFAULT_SUPABASE_SERVICE_ROLE_KEY = "REDACTED";
@@ -4220,7 +4243,10 @@ function getSupabaseAdmin() {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || DEFAULT_SUPABASE_SERVICE_ROLE_KEY;
   if (!supabaseAdmin) {
     supabaseAdmin = createClient(url, serviceRoleKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
+      auth: { autoRefreshToken: false, persistSession: false },
+      realtime: {
+        transport: globalThis.WebSocket
+      }
     });
   }
   return supabaseAdmin;
@@ -4398,6 +4424,29 @@ function createExpressApp() {
 }
 
 // server/_core/index.ts
+if (typeof globalThis.WebSocket === "undefined") {
+  class NodeWebSocketStub {
+    static CONNECTING = 0;
+    static OPEN = 1;
+    static CLOSING = 2;
+    static CLOSED = 3;
+    readyState = 3;
+    constructor() {
+    }
+    close() {
+    }
+    send() {
+    }
+    addEventListener() {
+    }
+    removeEventListener() {
+    }
+    dispatchEvent() {
+      return true;
+    }
+  }
+  globalThis.WebSocket = NodeWebSocketStub;
+}
 var app = createExpressApp();
 function isPortAvailable(port) {
   return new Promise((resolve) => {

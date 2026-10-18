@@ -1,3 +1,21 @@
+// Polyfill WebSocket in Node environments (Node < 22 or serverless) so @supabase/realtime-js never throws
+if (typeof globalThis.WebSocket === "undefined") {
+  class NodeWebSocketStub {
+    static readonly CONNECTING = 0;
+    static readonly OPEN = 1;
+    static readonly CLOSING = 2;
+    static readonly CLOSED = 3;
+    readonly readyState = 3;
+    constructor() {}
+    close() {}
+    send() {}
+    addEventListener() {}
+    removeEventListener() {}
+    dispatchEvent() { return true; }
+  }
+  (globalThis as any).WebSocket = NodeWebSocketStub;
+}
+
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import { createClient } from "@supabase/supabase-js";
 import type { User } from "../../drizzle/schema";
@@ -22,6 +40,9 @@ function getSupabaseAdmin() {
   if (!supabaseAdmin) {
     supabaseAdmin = createClient(url, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
+      realtime: {
+        transport: (globalThis as any).WebSocket,
+      },
     });
   }
   return supabaseAdmin;
