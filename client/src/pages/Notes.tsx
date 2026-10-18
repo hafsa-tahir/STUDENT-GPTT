@@ -19,8 +19,8 @@ import {
   Sparkles,
   StickyNote,
   AlertTriangle,
-  Eye,
-  EyeOff
+  Zap,
+  Binary
 } from "lucide-react";
 import { FormEvent, useEffect, useState, useMemo } from "react";
 import { useLocation } from "wouter";
@@ -34,10 +34,17 @@ type NoteContent = {
   revisionReminders?: string[];
 };
 
-type RevisionQuestion = {
-  question: string;
-  answer?: string;
-  examTrap?: string;
+type KeyDefinition = {
+  term: string;
+  definition: string;
+  memoryTip?: string;
+};
+
+type FormulaItem = {
+  name: string;
+  formula: string;
+  variables?: string;
+  whenToUse?: string;
 };
 
 type RevisionBlock = {
@@ -46,12 +53,16 @@ type RevisionBlock = {
   coreSummary?: string;
   keyFormula?: string;
   keyTakeaways?: string[];
-  questions?: Array<string | RevisionQuestion>;
   commonMistakes?: string[];
+  mnemonic?: string;
+  questions?: Array<string | { question: string; answer?: string; examTrap?: string }>;
 };
 
 type RevisionContent = {
+  oneLineSummary?: string;
   overview?: string;
+  keyDefinitions?: KeyDefinition[];
+  formulaBank?: FormulaItem[];
   blocks?: RevisionBlock[];
   selfCheck?: string[];
 };
@@ -99,11 +110,6 @@ export default function Notes() {
   const [sticky, setSticky] = useState("");
   const [stickyColor, setStickyColor] = useState("yellow");
   const [error, setError] = useState<string | null>(null);
-  const [revealedQuestions, setRevealedQuestions] = useState<Record<string, boolean>>({});
-
-  const toggleQuestionReveal = (questionKey: string) => {
-    setRevealedQuestions(prev => ({ ...prev, [questionKey]: !prev[questionKey] }));
-  };
 
   // Grounded Document Q&A State
   const [qaInput, setQaInput] = useState("");
@@ -211,8 +217,26 @@ export default function Notes() {
       parts.push(`Scope: ${latestRevision.scopeLabel}.`);
     }
 
+    if (revision.oneLineSummary) {
+      parts.push(`In One Line: ${revision.oneLineSummary}.`);
+    }
+
     if (revision.overview) {
       parts.push(`Overview: ${revision.overview}.`);
+    }
+
+    if (revision.keyDefinitions?.length) {
+      parts.push(`Key Definitions.`);
+      revision.keyDefinitions.forEach((d) => {
+        parts.push(`${d.term}: ${d.definition}.${d.memoryTip ? ` Tip: ${d.memoryTip}.` : ""}`);
+      });
+    }
+
+    if (revision.formulaBank?.length) {
+      parts.push(`Master Formulas.`);
+      revision.formulaBank.forEach((f) => {
+        parts.push(`${f.name}: ${f.formula}.${f.variables ? ` Variables: ${f.variables}.` : ""}`);
+      });
     }
 
     if (revision.blocks?.length) {
@@ -230,20 +254,11 @@ export default function Notes() {
         if (b.keyTakeaways?.length) {
           parts.push(`Key takeaways: ${b.keyTakeaways.join(". ")}.`);
         }
-        if (b.questions?.length) {
-          b.questions.forEach((rawQ, qIdx) => {
-            const qObj = typeof rawQ === "string" ? { question: rawQ, answer: "", examTrap: "" } : rawQ;
-            parts.push(`Practice Question ${qIdx + 1}: ${qObj.question}.`);
-            if (qObj.answer) {
-              parts.push(`Model Answer: ${qObj.answer}.`);
-            }
-            if (qObj.examTrap) {
-              parts.push(`Exam trap: ${qObj.examTrap}.`);
-            }
-          });
-        }
         if (b.commonMistakes?.length) {
           parts.push(`Common pitfalls to avoid: ${b.commonMistakes.join(". ")}.`);
+        }
+        if (b.mnemonic) {
+          parts.push(`Memory cue: ${b.mnemonic}.`);
         }
       });
     }
@@ -257,7 +272,10 @@ export default function Notes() {
     latestRevision?.id,
     latestRevision?.title,
     latestRevision?.scopeLabel,
+    revision.oneLineSummary,
     revision.overview,
+    revision.keyDefinitions,
+    revision.formulaBank,
     revision.blocks,
     revision.selfCheck
   ]);
@@ -760,6 +778,19 @@ export default function Notes() {
                   <h2 className="mt-3 text-[28px] font-bold tracking-tight text-[#724060]">
                     {latestRevision.title}
                   </h2>
+                  {/* In One Line Summary Banner */}
+                  {revision.oneLineSummary && (
+                    <div className="mt-5 rounded-2xl border border-[#724060]/20 bg-gradient-to-r from-[#724060] via-[#854570] to-[#5e3250] p-5 text-[#FDF3F3] shadow-md">
+                      <div className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-widest text-amber-300">
+                        <Zap className="h-4 w-4 fill-amber-300" />
+                        <span>In One Line · The Core Takeaway</span>
+                      </div>
+                      <p className="mt-2 text-[15.5px] font-medium leading-relaxed text-[#FDF3F3]">
+                        <MathRenderer content={revision.oneLineSummary} />
+                      </p>
+                    </div>
+                  )}
+
                   <MathRenderer
                     content={revision.overview || ""}
                     className="mt-5 rounded-2xl bg-[#FDF3F3] p-5 text-[14px] leading-7 text-[#724060]"
@@ -774,164 +805,172 @@ export default function Notes() {
                     />
                   </div>
 
-                  <div className="mt-7 space-y-6">
-                    {revision.blocks?.map((block, index) => {
-                      const blockId = `block-${index}`;
-                      return (
-                        <section
-                          key={`${block.title}-${index}`}
-                          className="rounded-2xl border border-[#F8E7E7] bg-white p-6 shadow-sm transition hover:border-[#A070A1]/30 sm:p-7"
-                        >
-                          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#F8E7E7] pb-3">
-                            <span className="rounded-full bg-[#F8E7E7] px-3 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-[#724060]">
-                              Revision Block {index + 1}
-                            </span>
-                            <span className="text-[12px] font-semibold text-[#A070A1]">
-                              <MathRenderer content={block.focus || ""} inline={true} />
-                            </span>
+                  {/* Master Formula & Equation Cheatsheet */}
+                  {revision.formulaBank && revision.formulaBank.length > 0 && (
+                    <div className="mt-7 rounded-2xl border-2 border-[#A070A1]/20 bg-gradient-to-b from-[#FDF3F3] to-white p-6 shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-[#724060]">
+                          <Binary className="h-5 w-5 text-[#A070A1]" />
+                          <h3 className="text-[16px] font-bold">Master Formula & Equation Cheatsheet</h3>
+                        </div>
+                        <span className="rounded-full bg-[#F8E7E7] px-2.5 py-0.5 text-[10.5px] font-extrabold uppercase tracking-wider text-[#724060]">
+                          {revision.formulaBank.length} Laws
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[12px] text-[#A070A1]">
+                        Governing mathematical formulations, equations, and variable units to memorize.
+                      </p>
+                      <div className="mt-4 grid gap-3.5 sm:grid-cols-2">
+                        {revision.formulaBank.map((item, fIdx) => (
+                          <div key={fIdx} className="rounded-xl border border-[#F8E7E7] bg-white p-4 shadow-2xs">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[13px] font-bold text-[#724060]">{item.name}</span>
+                              {item.whenToUse && (
+                                <span className="rounded bg-[#F8E7E7] px-2 py-0.5 text-[10px] font-semibold text-[#A070A1]">
+                                  {item.whenToUse}
+                                </span>
+                              )}
+                            </div>
+                            <div className="my-2.5 rounded-lg bg-[#FDF3F3] py-2 text-center text-[#724060]">
+                              <MathRenderer content={item.formula} />
+                            </div>
+                            {item.variables && (
+                              <p className="text-[11.5px] leading-5 text-[#724060]/85">
+                                <span className="font-bold text-[#A070A1]">Variables: </span>
+                                <MathRenderer content={item.variables} inline={true} />
+                              </p>
+                            )}
                           </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-                          <h3 className="mt-4 text-[20px] font-bold text-[#724060]">
-                            <MathRenderer content={block.title || ""} inline />
-                          </h3>
-
-                          {/* 1. High-Yield Concept Summary */}
-                          {block.coreSummary && (
-                            <div className="mt-3 rounded-xl border-l-4 border-[#724060] bg-[#FDF3F3] p-4">
-                              <p className="text-[10.5px] font-bold uppercase tracking-wider text-[#A070A1]">
-                                High-Yield Conceptual Breakdown & Mechanics
+                  {/* Key Definitions & Terminology Bank */}
+                  {revision.keyDefinitions && revision.keyDefinitions.length > 0 && (
+                    <div className="mt-7 rounded-2xl border border-[#F8E7E7] bg-white p-6 shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-[#724060]">
+                          <BookMarked className="h-5 w-5 text-[#A070A1]" />
+                          <h3 className="text-[16px] font-bold">Key Definitions & Terminology Bank</h3>
+                        </div>
+                        <span className="rounded-full bg-[#F8E7E7] px-2.5 py-0.5 text-[10.5px] font-extrabold uppercase tracking-wider text-[#724060]">
+                          {revision.keyDefinitions.length} Terms
+                        </span>
+                      </div>
+                      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                        {revision.keyDefinitions.map((def, dIdx) => (
+                          <div key={dIdx} className="rounded-xl border border-[#F8E7E7] bg-[#FDF3F3]/50 p-4">
+                            <span className="text-[13px] font-bold text-[#724060]">{def.term}</span>
+                            <p className="mt-1 text-[12.5px] leading-5 text-[#724060]/90">
+                              <MathRenderer content={def.definition} />
+                            </p>
+                            {def.memoryTip && (
+                              <p className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-[#A070A1]">
+                                <Sparkles className="h-3 w-3 shrink-0" />
+                                <span>Memory cue: {def.memoryTip}</span>
                               </p>
-                              <div className="mt-1.5 text-[13.5px] leading-6 text-[#724060]">
-                                <MathRenderer content={block.coreSummary} />
-                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="mt-7 space-y-6">
+                    {revision.blocks?.map((block, index) => (
+                      <section
+                        key={`${block.title}-${index}`}
+                        className="rounded-2xl border border-[#F8E7E7] bg-white p-6 shadow-sm transition hover:border-[#A070A1]/30 sm:p-7"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#F8E7E7] pb-3">
+                          <span className="rounded-full bg-[#F8E7E7] px-3 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-[#724060]">
+                            Revision Block {index + 1}
+                          </span>
+                          <span className="text-[12px] font-semibold text-[#A070A1]">
+                            <MathRenderer content={block.focus || ""} inline={true} />
+                          </span>
+                        </div>
+
+                        <h3 className="mt-4 text-[20px] font-bold text-[#724060]">
+                          <MathRenderer content={block.title || ""} inline />
+                        </h3>
+
+                        {/* 1. High-Yield Concept Summary */}
+                        {block.coreSummary && (
+                          <div className="mt-3 rounded-xl border-l-4 border-[#724060] bg-[#FDF3F3] p-4">
+                            <p className="text-[10.5px] font-bold uppercase tracking-wider text-[#A070A1]">
+                              High-Yield Conceptual Breakdown & Mechanics
+                            </p>
+                            <div className="mt-1.5 text-[13.5px] leading-6 text-[#724060]">
+                              <MathRenderer content={block.coreSummary} />
                             </div>
-                          )}
+                          </div>
+                        )}
 
-                          {/* 2. Key Governing Formula / Law */}
-                          {block.keyFormula && (
-                            <div className="mt-3 rounded-xl border border-[#A070A1]/20 bg-gradient-to-r from-[#FDF3F3] via-white to-[#F8E7E7] p-3 text-center">
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-[#A070A1]">
-                                Governing Formula / Primary Law
-                              </span>
-                              <div className="mt-1">
-                                <MathRenderer content={block.keyFormula} />
-                              </div>
+                        {/* 2. Key Governing Formula / Law */}
+                        {block.keyFormula && (
+                          <div className="mt-3 rounded-xl border border-[#A070A1]/20 bg-gradient-to-r from-[#FDF3F3] via-white to-[#F8E7E7] p-3 text-center">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#A070A1]">
+                              Governing Formula / Primary Law
+                            </span>
+                            <div className="mt-1">
+                              <MathRenderer content={block.keyFormula} />
                             </div>
-                          )}
+                          </div>
+                        )}
 
-                          {/* 3. Key Takeaways */}
-                          {block.keyTakeaways && block.keyTakeaways.length > 0 && (
-                            <div className="mt-4">
-                              <p className="text-[11px] font-bold uppercase tracking-wider text-[#724060]">
-                                Key Takeaways & Core Insights
-                              </p>
-                              <ul className="mt-2 space-y-1.5">
-                                {block.keyTakeaways.map((takeaway, tIdx) => (
-                                  <li key={tIdx} className="flex items-start gap-2 text-[12.5px] leading-5 text-[#724060]">
-                                    <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#A070A1]" />
-                                    <div className="flex-1 min-w-0">
-                                      <MathRenderer content={takeaway} />
-                                    </div>
-                                  </li>
-                                ))}
-                              </ul>
+                        {/* 3. Key Takeaways */}
+                        {block.keyTakeaways && block.keyTakeaways.length > 0 && (
+                          <div className="mt-4">
+                            <p className="text-[11px] font-bold uppercase tracking-wider text-[#724060]">
+                              Key Takeaways & Core Insights
+                            </p>
+                            <ul className="mt-2 space-y-1.5">
+                              {block.keyTakeaways.map((takeaway, tIdx) => (
+                                <li key={tIdx} className="flex items-start gap-2 text-[12.5px] leading-5 text-[#724060]">
+                                  <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#A070A1]" />
+                                  <div className="flex-1 min-w-0">
+                                    <MathRenderer content={takeaway} />
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {/* 4. Common Pitfalls & Traps to Avoid */}
+                        {block.commonMistakes && block.commonMistakes.length > 0 && (
+                          <div className="mt-4 rounded-xl border border-red-100 bg-red-50/40 p-3">
+                            <p className="flex items-center gap-1.5 text-[11px] font-bold text-red-800">
+                              <AlertTriangle className="h-3.5 w-3.5 text-red-600" />
+                              Common Pitfalls to Avoid on Exams
+                            </p>
+                            <ul className="mt-1.5 space-y-1">
+                              {block.commonMistakes.map((mistake, mIdx) => (
+                                <li key={mIdx} className="text-[12px] text-red-950 flex items-start gap-1.5">
+                                  <span className="text-red-500 font-bold">•</span>
+                                  <div className="flex-1 min-w-0">
+                                    <MathRenderer content={mistake} />
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {/* 5. Memory Cue / Mnemonic */}
+                        {block.mnemonic && (
+                          <div className="mt-3.5 flex items-start gap-2 rounded-xl bg-purple-50/70 border border-purple-200 p-3 text-purple-950 text-[12.5px]">
+                            <Sparkles className="h-4 w-4 shrink-0 text-[#A070A1] mt-0.5" />
+                            <div className="flex-1 min-w-0">
+                              <span className="font-bold text-[#724060]">Memory Cue: </span>
+                              <MathRenderer content={block.mnemonic} inline={true} />
                             </div>
-                          )}
-
-                          {/* 4. Active-Recall Questions with Reveal Answer Toggle */}
-                          {block.questions && block.questions.length > 0 && (
-                            <div className="mt-5 border-t border-[#F8E7E7] pt-4">
-                              <p className="text-[11px] font-bold uppercase tracking-wider text-[#A070A1]">
-                                Active-Recall Flash Questions & Model Answers
-                              </p>
-                              <div className="mt-3 space-y-3">
-                                {block.questions.map((rawQ, qIndex) => {
-                                  const qKey = `${blockId}-q-${qIndex}`;
-                                  const isRevealed = Boolean(revealedQuestions[qKey]);
-                                  const qObj =
-                                    typeof rawQ === "string"
-                                      ? { question: rawQ, answer: "Review the section summary above for full derivation.", examTrap: "" }
-                                      : rawQ;
-
-                                  return (
-                                    <div
-                                      key={qIndex}
-                                      className="rounded-xl border border-[#F8E7E7] bg-[#FDF3F3]/50 p-4 transition"
-                                    >
-                                      <div className="flex items-start justify-between gap-3">
-                                        <div className="flex items-start gap-2 text-[13.5px] font-medium text-[#724060]">
-                                          <span className="font-bold text-[#A070A1]">{qIndex + 1}.</span>
-                                          <div className="flex-1 min-w-0">
-                                            <MathRenderer content={qObj.question} />
-                                          </div>
-                                        </div>
-                                        <button
-                                          type="button"
-                                          onClick={() => toggleQuestionReveal(qKey)}
-                                          className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-[#A070A1]/30 bg-white px-2.5 py-1 text-[11.5px] font-bold text-[#724060] shadow-2xs hover:bg-[#F8E7E7] transition"
-                                        >
-                                          {isRevealed ? (
-                                            <>
-                                              <EyeOff className="h-3 w-3 text-[#A070A1]" /> Hide Answer
-                                            </>
-                                          ) : (
-                                            <>
-                                              <Eye className="h-3 w-3 text-[#A070A1]" /> Reveal Model Answer
-                                            </>
-                                          )}
-                                        </button>
-                                      </div>
-
-                                      {isRevealed && (
-                                        <div className="mt-3 border-t border-[#F8E7E7] pt-3 text-[12.5px] leading-6 text-[#724060] space-y-2">
-                                          <div className="rounded-lg bg-white p-3 border border-[#F8E7E7]">
-                                            <p className="text-[10.5px] font-bold uppercase tracking-wider text-[#A070A1]">
-                                              Model Answer & Derivation
-                                            </p>
-                                            <div className="mt-1">
-                                              <MathRenderer content={qObj.answer || "See summary above for explanation."} />
-                                            </div>
-                                          </div>
-                                          {qObj.examTrap && (
-                                            <div className="flex items-start gap-2 rounded-lg bg-amber-50/70 border border-amber-200 p-2.5 text-amber-900 text-[12px]">
-                                              <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
-                                              <div className="flex-1 min-w-0">
-                                                <span className="font-bold">Exam Trap: </span>
-                                                <MathRenderer content={qObj.examTrap} inline={true} />
-                                              </div>
-                                            </div>
-                                          )}
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* 5. Common Pitfalls & Mistakes */}
-                          {block.commonMistakes && block.commonMistakes.length > 0 && (
-                            <div className="mt-4 rounded-xl border border-red-100 bg-red-50/40 p-3">
-                              <p className="flex items-center gap-1.5 text-[11px] font-bold text-red-800">
-                                <AlertTriangle className="h-3.5 w-3.5 text-red-600" />
-                                Common Pitfalls to Avoid
-                              </p>
-                              <ul className="mt-1.5 space-y-1">
-                                {block.commonMistakes.map((mistake, mIdx) => (
-                                  <li key={mIdx} className="text-[12px] text-red-950 flex items-start gap-1.5">
-                                    <span className="text-red-500 font-bold">•</span>
-                                    <div className="flex-1 min-w-0">
-                                      <MathRenderer content={mistake} />
-                                    </div>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                        </section>
-                      );
-                    })}
+                          </div>
+                        )}
+                      </section>
+                    ))}
                   </div>
 
                   <div className="mt-6 rounded-2xl bg-[#FDF3F3] p-5">

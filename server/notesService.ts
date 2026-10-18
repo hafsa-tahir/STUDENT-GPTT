@@ -534,20 +534,27 @@ export async function generateRevisionGuide(userId: number, input: SourceInput &
     messages: [
       {
         role: "system",
-        content: `Create an authoritative, high-yield academic revision guide strictly from the supplied study source text.
-CRITICAL INSTRUCTION: Do NOT provide bare questions. Students need comprehensive revision:
-- "coreSummary": A detailed 2 to 4 sentence conceptual synthesis explaining the physical/theoretical principles, relationships, and mechanisms. Use clean LaTeX ($inline$ and $$block$$) for any equations.
-- "keyFormula": The primary governing mathematical formula or rule in clean LaTeX (e.g. "$$\\vec{E} = \\frac{1}{4\\pi\\varepsilon_0}\\frac{2p}{z^3}$$").
-- "keyTakeaways": 2 to 3 concise, high-yield bullet takeaways to memorize.
-- "questions": 2 to 3 active-recall review questions. Each question MUST be an object with:
-  * "question": The targeted question testing understanding
-  * "answer": The complete, rigorous model answer explaining the exact reasoning, derivation, or proof.
-  * "examTrap": A common exam mistake or tricky pitfall students make.
-- "commonMistakes": 1 to 2 common misconceptions or pitfalls to avoid.`
+        content: `You are an elite academic revision specialist. Your job is to transform the document into an unforgettable, high-yield revision sheet.
+CRITICAL INSTRUCTION: Revision is NOT a quiz (questions belong on the Quiz page). Revision means summarizing the document with crystal clarity, extracting the governing definitions and master formulas, and creating high-impact mental models to help the student memorize and master the subject in minutes.
+
+Provide:
+1. "oneLineSummary": A single, powerful, crystal-clear 1-sentence synthesis that captures the entire document in plain English (e.g. "Coulomb's Law quantifies the inverse-square electrostatic force between static point charges, governed by permittivity and charge polarity.").
+2. "overview": A concise 2 to 3 paragraph executive summary of the entire document.
+3. "keyDefinitions": 4 to 8 essential terms with exact, concise definitions and a short memory clue/cue.
+4. "formulaBank": All governing mathematical laws, equations, and rules in clean LaTeX ($inline$ and $$block$$), specifying every variable's meaning and units.
+5. "blocks": 3 to 6 high-yield revision blocks covering each topic/concept:
+   - "title": Clean descriptive title
+   - "focus": What to master in this block
+   - "coreSummary": A crystal-clear conceptual synthesis (2-4 sentences) explaining the mechanism
+   - "keyFormula": Governing equation or primary rule in LaTeX
+   - "keyTakeaways": 2 to 4 must-memorize high-yield bullet takeaways
+   - "commonMistakes": 1 to 2 tricky exam pitfalls or traps students often fall into
+   - "mnemonic": A memory trick, rule of thumb, or mnemonic aid
+6. "selfCheck": 3 to 5 rapid self-verification prompts.`
       },
       {
         role: "user",
-        content: `Create a comprehensive revision guide titled '${cleanTitle}' for '${source.scopeLabel}'. Return an overview, 3 to 5 rich revision blocks (each with title, focus, coreSummary, keyFormula, keyTakeaways, questions with model answers & exam traps, commonMistakes), and an end-of-session self-check checklist.\n\n${source.promptContext}`
+        content: `Create an authoritative revision guide titled '${cleanTitle}' for '${source.scopeLabel}'. Return a oneLineSummary, overview, keyDefinitions bank, formulaBank, 3 to 5 high-yield revision blocks (with title, focus, coreSummary, keyFormula, keyTakeaways, commonMistakes, mnemonic), and an end-of-session self-check checklist.\n\n${source.promptContext}`
       }
     ],
     response_format: {
@@ -558,10 +565,42 @@ CRITICAL INSTRUCTION: Do NOT provide bare questions. Students need comprehensive
         schema: {
           type: "object",
           properties: {
+            oneLineSummary: { type: "string" },
             overview: { type: "string" },
-            blocks: {
+            keyDefinitions: {
               type: "array",
               minItems: 3,
+              maxItems: 8,
+              items: {
+                type: "object",
+                properties: {
+                  term: { type: "string" },
+                  definition: { type: "string" },
+                  memoryTip: { type: "string" }
+                },
+                required: ["term", "definition", "memoryTip"],
+                additionalProperties: false
+              }
+            },
+            formulaBank: {
+              type: "array",
+              minItems: 2,
+              maxItems: 8,
+              items: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                  formula: { type: "string" },
+                  variables: { type: "string" },
+                  whenToUse: { type: "string" }
+                },
+                required: ["name", "formula", "variables", "whenToUse"],
+                additionalProperties: false
+              }
+            },
+            blocks: {
+              type: "array",
+              minItems: 2,
               maxItems: 6,
               items: {
                 type: "object",
@@ -574,27 +613,13 @@ CRITICAL INSTRUCTION: Do NOT provide bare questions. Students need comprehensive
                     type: "array",
                     items: { type: "string" }
                   },
-                  questions: {
-                    type: "array",
-                    minItems: 2,
-                    maxItems: 4,
-                    items: {
-                      type: "object",
-                      properties: {
-                        question: { type: "string" },
-                        answer: { type: "string" },
-                        examTrap: { type: "string" }
-                      },
-                      required: ["question", "answer", "examTrap"],
-                      additionalProperties: false
-                    }
-                  },
                   commonMistakes: {
                     type: "array",
                     items: { type: "string" }
-                  }
+                  },
+                  mnemonic: { type: "string" }
                 },
-                required: ["title", "focus", "coreSummary", "keyFormula", "keyTakeaways", "questions", "commonMistakes"],
+                required: ["title", "focus", "coreSummary", "keyFormula", "keyTakeaways", "commonMistakes", "mnemonic"],
                 additionalProperties: false
               }
             },
@@ -605,7 +630,7 @@ CRITICAL INSTRUCTION: Do NOT provide bare questions. Students need comprehensive
               items: { type: "string" }
             }
           },
-          required: ["overview", "blocks", "selfCheck"],
+          required: ["oneLineSummary", "overview", "keyDefinitions", "formulaBank", "blocks", "selfCheck"],
           additionalProperties: false
         }
       }
@@ -616,10 +641,32 @@ CRITICAL INSTRUCTION: Do NOT provide bare questions. Students need comprehensive
   const rawParsed = safeParseJSON<Record<string, any>>(text(response?.choices?.[0]?.message?.content), {});
   const topicName = source.docName || cleanTitle;
 
+  let oneLineSummary =
+    typeof rawParsed.oneLineSummary === "string" && rawParsed.oneLineSummary.length > 10
+      ? rawParsed.oneLineSummary
+      : `High-yield synthesis of ${topicName}: core principles, governing equations, and essential definitions for rapid mastery.`;
+
   let overview =
     typeof rawParsed.overview === "string" && rawParsed.overview.length > 25
       ? rawParsed.overview
-      : `High-yield comprehensive revision guide for ${topicName}. Structured for active recall, mathematical derivations, and concept mastery.`;
+      : `High-yield comprehensive revision guide for ${topicName}. Structured for rapid recall, mathematical derivations, and concept mastery.`;
+
+  let keyDefinitions = Array.isArray(rawParsed.keyDefinitions)
+    ? rawParsed.keyDefinitions.map((d: any) => ({
+        term: typeof d.term === "string" ? d.term : "Key Term",
+        definition: typeof d.definition === "string" ? d.definition : "",
+        memoryTip: typeof d.memoryTip === "string" ? d.memoryTip : ""
+      }))
+    : [];
+
+  let formulaBank = Array.isArray(rawParsed.formulaBank)
+    ? rawParsed.formulaBank.map((f: any) => ({
+        name: typeof f.name === "string" ? f.name : "Governing Equation",
+        formula: typeof f.formula === "string" ? f.formula : "",
+        variables: typeof f.variables === "string" ? f.variables : "",
+        whenToUse: typeof f.whenToUse === "string" ? f.whenToUse : ""
+      }))
+    : [];
 
   let rawBlocks = Array.isArray(rawParsed.blocks) ? rawParsed.blocks : [];
   let blocks = rawBlocks.map((b: any, index: number) => {
@@ -631,23 +678,7 @@ CRITICAL INSTRUCTION: Do NOT provide bare questions. Students need comprehensive
     const keyFormula = typeof b.keyFormula === "string" ? b.keyFormula : "";
     const keyTakeaways = Array.isArray(b.keyTakeaways) ? b.keyTakeaways.filter(Boolean) : [];
     const commonMistakes = Array.isArray(b.commonMistakes) ? b.commonMistakes.filter(Boolean) : [];
-
-    // Normalize questions to object format
-    let rawQ = Array.isArray(b.questions) ? b.questions : [];
-    let questions = rawQ.map((q: any) => {
-      if (typeof q === "string") {
-        return {
-          question: q,
-          answer: `Review the core summary and derivations above to verify this concept step-by-step.`,
-          examTrap: `Always double-check units, vector directions, and sign conventions.`
-        };
-      }
-      return {
-        question: typeof q.question === "string" ? q.question : String(q),
-        answer: typeof q.answer === "string" ? q.answer : "Refer to core concept summary for full derivation.",
-        examTrap: typeof q.examTrap === "string" ? q.examTrap : ""
-      };
-    });
+    const mnemonic = typeof b.mnemonic === "string" ? b.mnemonic : "";
 
     return {
       title,
@@ -655,8 +686,8 @@ CRITICAL INSTRUCTION: Do NOT provide bare questions. Students need comprehensive
       coreSummary,
       keyFormula,
       keyTakeaways,
-      questions,
-      commonMistakes
+      commonMistakes,
+      mnemonic
     };
   });
 
@@ -672,14 +703,8 @@ CRITICAL INSTRUCTION: Do NOT provide bare questions. Students need comprehensive
           `Density of field lines is proportional to field strength.`,
           `Field lines can never cross at any point.`
         ],
-        questions: [
-          {
-            question: `Why can electric field lines never cross?`,
-            answer: `If field lines intersected, the electric field vector at that point would have two distinct directions simultaneously, which violates the uniqueness of the electric field at any point in space.`,
-            examTrap: `Confusing field line density with the number of charges.`
-          }
-        ],
-        commonMistakes: [`Forgetting that field lines always meet a conductor perpendicular (90 degrees) to its surface.`]
+        commonMistakes: [`Forgetting that field lines always meet a conductor perpendicular (90 degrees) to its surface.`],
+        mnemonic: `Lines originate on positive (+q) and terminate on negative (-q). Like charges repel, opposites attract.`
       },
       {
         title: `Block 2: Governing Equations & Derivations`,
@@ -691,14 +716,8 @@ CRITICAL INSTRUCTION: Do NOT provide bare questions. Students need comprehensive
           `External torque rotates dipole to align with E field.`,
           `Potential energy is minimum U = -pE when aligned with field.`
         ],
-        questions: [
-          {
-            question: `What is the net force and net torque on an electric dipole in a uniform electric field?`,
-            answer: `Net force is zero because equal and opposite charges experience equal and opposite forces (+qE and -qE). Net torque is tau = p x E = pE sin(theta), which tends to rotate the dipole into alignment.`,
-            examTrap: `Assuming net torque is zero because net force is zero.`
-          }
-        ],
-        commonMistakes: [`Neglecting the negative sign in potential energy U = -p . E.`]
+        commonMistakes: [`Neglecting the negative sign in potential energy U = -p . E.`],
+        mnemonic: `Dipole torque aligns with field; potential energy is lowest (most stable) when perfectly aligned.`
       }
     ];
   }
@@ -706,14 +725,14 @@ CRITICAL INSTRUCTION: Do NOT provide bare questions. Students need comprehensive
   let selfCheck = Array.isArray(rawParsed.selfCheck) ? rawParsed.selfCheck : [];
   if (selfCheck.length === 0) {
     selfCheck = [
-      `Can I define the central concepts of ${topicName} without assistance?`,
+      `Can I define the central concepts of ${topicName} without looking?`,
       `Can I state and derive the governing equations and on-axis approximations?`,
-      `Can I solve the key example problems and avoid the common exam traps?`,
-      `Can I complete a 3-minute active recall summary in my own words?`
+      `Can I state the key memory mnemonics and avoid common exam pitfalls?`,
+      `Can I summarize the entire topic in one clear sentence from memory?`
     ];
   }
 
-  const content = { overview, blocks, selfCheck };
+  const content = { oneLineSummary, overview, keyDefinitions, formulaBank, blocks, selfCheck };
   const db = database(await getDb());
   const inserted = await db.insert(revisionGuides).values({
     userId,

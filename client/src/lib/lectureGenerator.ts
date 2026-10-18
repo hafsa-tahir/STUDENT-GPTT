@@ -234,15 +234,18 @@ export function generateNotesLecture(
 export function generateRevisionLecture(
   revisionDoc: { title: string; scopeLabel?: string },
   revision: {
+    oneLineSummary?: string;
     overview?: string;
+    keyDefinitions?: Array<{ term: string; definition: string; memoryTip?: string }>;
+    formulaBank?: Array<{ name: string; formula: string; variables?: string; whenToUse?: string }>;
     blocks?: Array<{
       title?: string;
       focus?: string;
       coreSummary?: string;
       keyFormula?: string;
       keyTakeaways?: string[];
-      questions?: Array<string | { question: string; answer?: string; examTrap?: string }>;
       commonMistakes?: string[];
+      mnemonic?: string;
     }>;
     selfCheck?: string[];
   }
@@ -252,52 +255,62 @@ export function generateRevisionLecture(
   const parts: string[] = [];
 
   parts.push(
-    `Welcome to your high-yield revision session for ${revisionDoc.title}! Let's review the highest-yield concepts, governing laws, and sneaky exam traps so you can score top marks.`
+    `Welcome to your high-yield revision session for ${revisionDoc.title}! Let's review the governing definitions, master formulas, and key memory aids so you can master this subject in minutes.`
   );
 
+  if (revision.oneLineSummary) {
+    parts.push(`In one line, here is the core takeaway: ${revision.oneLineSummary}.`);
+  }
+
   if (revision.overview) {
-    parts.push(`Our revision foundation: ${revision.overview}.`);
+    parts.push(`Academic overview: ${revision.overview}.`);
+  }
+
+  if (revision.keyDefinitions && revision.keyDefinitions.length > 0) {
+    parts.push(`Let's lock in the essential definitions.`);
+    revision.keyDefinitions.slice(0, 5).forEach((d) => {
+      parts.push(`${d.term}: ${d.definition}.${d.memoryTip ? ` Memory tip: ${d.memoryTip}.` : ""}`);
+    });
+  }
+
+  if (revision.formulaBank && revision.formulaBank.length > 0) {
+    parts.push(`Now, for our master formula and equation bank.`);
+    revision.formulaBank.slice(0, 4).forEach((f) => {
+      parts.push(`${f.name}: ${f.formula}.${f.variables ? ` Variables: ${f.variables}.` : ""}${f.whenToUse ? ` Use when: ${f.whenToUse}.` : ""}`);
+    });
   }
 
   if (revision.blocks && revision.blocks.length > 0) {
     revision.blocks.forEach((block, idx) => {
-      parts.push(`Let's focus on Revision Block ${idx + 1}: ${block.title || "Core Law"}.`);
+      parts.push(`Revision Block ${idx + 1}: ${block.title || "Core Law"}.`);
       if (block.focus) {
-        parts.push(`Key focus area: ${block.focus}.`);
+        parts.push(`Focus: ${block.focus}.`);
       }
       if (block.coreSummary) {
-        parts.push(`Here is the high-yield breakdown: ${block.coreSummary}.`);
+        parts.push(`High-yield mechanism: ${block.coreSummary}.`);
       }
       if (block.keyFormula) {
-        parts.push(`Remember the governing formula: ${block.keyFormula}. Make sure you know every variable and its units.`);
+        parts.push(`Governing formula: ${block.keyFormula}.`);
       }
       if (block.keyTakeaways && block.keyTakeaways.length > 0) {
-        parts.push(`Core takeaways to memorize: ${block.keyTakeaways.join(". ")}.`);
-      }
-      if (block.questions && block.questions.length > 0) {
-        const firstQ = block.questions[0];
-        const qObj = typeof firstQ === "string" ? { question: firstQ, answer: "", examTrap: "" } : firstQ;
-        parts.push(`Now test your active recall! Question: ${qObj.question}?`);
-        if (qObj.answer) {
-          parts.push(`The model derivation is: ${qObj.answer}.`);
-        }
-        if (qObj.examTrap) {
-          parts.push(`Watch out for this exam trap: ${qObj.examTrap}!`);
-        }
+        parts.push(`Takeaways to memorize: ${block.keyTakeaways.join(". ")}.`);
       }
       if (block.commonMistakes && block.commonMistakes.length > 0) {
-        parts.push(`Avoid this common pitfall: ${block.commonMistakes.join(". ")}.`);
+        parts.push(`Exam pitfalls to avoid: ${block.commonMistakes.join(". ")}.`);
+      }
+      if (block.mnemonic) {
+        parts.push(`Memory trick: ${block.mnemonic}.`);
       }
     });
   }
 
   if (revision.selfCheck && revision.selfCheck.length > 0) {
     parts.push(
-      `Before we wrap up, check off your self-assessment: ${revision.selfCheck.join(". ")}.`
+      `Before we conclude, test your recall: ${revision.selfCheck.join(". ")}.`
     );
   }
 
-  parts.push(`You are thoroughly prepared. Trust your preparation, and good luck on your exams!`);
+  parts.push(`You are thoroughly prepared. Trust your preparation, and good luck!`);
 
   return parts.filter(Boolean).join(" ");
 }
