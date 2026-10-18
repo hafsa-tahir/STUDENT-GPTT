@@ -1,113 +1,5 @@
-// server/_core/index.ts
-import "dotenv/config";
-import { createServer } from "http";
-import net from "net";
-
-// server/_core/vite.ts
-import express from "express";
-import fs from "fs";
-import { nanoid } from "nanoid";
-import path2 from "path";
-import { createServer as createViteServer } from "vite";
-
-// vite.config.ts
-import { jsxLocPlugin } from "@builder.io/vite-plugin-jsx-loc";
-import tailwindcss from "@tailwindcss/vite";
-import react from "@vitejs/plugin-react";
-import path from "node:path";
-import { defineConfig } from "vite";
-var PROJECT_ROOT = import.meta.dirname;
-var LOG_DIR = path.join(PROJECT_ROOT, ".manus-logs");
-var MAX_LOG_SIZE_BYTES = 1 * 1024 * 1024;
-var TRIM_TARGET_BYTES = Math.floor(MAX_LOG_SIZE_BYTES * 0.6);
-var plugins = [react(), tailwindcss(), jsxLocPlugin()];
-var vite_config_default = defineConfig({
-  plugins,
-  resolve: {
-    alias: {
-      "@": path.resolve(import.meta.dirname, "client", "src"),
-      "@shared": path.resolve(import.meta.dirname, "shared"),
-      "@assets": path.resolve(import.meta.dirname, "attached_assets")
-    }
-  },
-  envDir: path.resolve(import.meta.dirname),
-  envPrefix: ["VITE_", "SUPABASE_"],
-  root: path.resolve(import.meta.dirname, "client"),
-  publicDir: path.resolve(import.meta.dirname, "client", "public"),
-  build: {
-    outDir: path.resolve(import.meta.dirname, "dist/public"),
-    emptyOutDir: true
-  },
-  server: {
-    host: true,
-    allowedHosts: [
-      ".trycloudflare.com",
-      ".manuspre.computer",
-      ".manus.computer",
-      ".manus-asia.computer",
-      ".manuscomputer.ai",
-      ".manusvm.computer",
-      "localhost",
-      "127.0.0.1"
-    ],
-    fs: {
-      strict: true,
-      deny: ["**/.*"]
-    }
-  }
-});
-
-// server/_core/vite.ts
-async function setupVite(app2, server) {
-  const serverOptions = {
-    middlewareMode: true,
-    hmr: { server },
-    allowedHosts: true
-  };
-  const vite = await createViteServer({
-    ...vite_config_default,
-    configFile: false,
-    server: serverOptions,
-    appType: "custom"
-  });
-  app2.use(vite.middlewares);
-  app2.use("*", async (req, res, next) => {
-    const url = req.originalUrl;
-    try {
-      const clientTemplate = path2.resolve(
-        import.meta.dirname,
-        "../..",
-        "client",
-        "index.html"
-      );
-      let template = await fs.promises.readFile(clientTemplate, "utf-8");
-      template = template.replace(
-        `src="/src/main.tsx"`,
-        `src="/src/main.tsx?v=${nanoid()}"`
-      );
-      const page = await vite.transformIndexHtml(url, template);
-      res.status(200).set({ "Content-Type": "text/html" }).end(page);
-    } catch (e) {
-      vite.ssrFixStacktrace(e);
-      next(e);
-    }
-  });
-}
-function serveStatic(app2) {
-  const distPath = process.env.NODE_ENV === "development" ? path2.resolve(import.meta.dirname, "../..", "dist", "public") : path2.resolve(import.meta.dirname, "public");
-  if (!fs.existsSync(distPath)) {
-    console.error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`
-    );
-  }
-  app2.use(express.static(distPath));
-  app2.use("*", (_req, res) => {
-    res.sendFile(path2.resolve(distPath, "index.html"));
-  });
-}
-
 // server/app.ts
-import express2 from "express";
+import express from "express";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 
 // shared/const.ts
@@ -1157,13 +1049,13 @@ function registerOAuthRoutes(app2) {
 }
 
 // server/_core/storageProxy.ts
-import fs3 from "node:fs";
-import path4 from "node:path";
+import fs2 from "node:fs";
+import path2 from "node:path";
 import os2 from "node:os";
 
 // server/storage.ts
-import fs2 from "node:fs";
-import path3 from "node:path";
+import fs from "node:fs";
+import path from "node:path";
 import os from "node:os";
 import { createClient } from "@supabase/supabase-js";
 var SUPABASE_STORAGE_BUCKET = "studentgpt-storage";
@@ -1187,22 +1079,22 @@ function getLocalUploadsDir() {
     process.env.LAMBDA_TASK_ROOT || process.env.NETLIFY || typeof process.cwd === "function" && process.cwd().startsWith("/var/task")
   );
   if (isServerless) {
-    return path3.join(os.tmpdir(), "studentgpt-uploads");
+    return path.join(os.tmpdir(), "studentgpt-uploads");
   }
-  return path3.resolve(process.cwd(), "uploads");
+  return path.resolve(process.cwd(), "uploads");
 }
 function ensureUploadsDir() {
   const dir = getLocalUploadsDir();
   try {
-    if (!fs2.existsSync(dir)) {
-      fs2.mkdirSync(dir, { recursive: true });
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
     }
     return dir;
   } catch {
-    const tmpDir = path3.join(os.tmpdir(), "studentgpt-uploads");
+    const tmpDir = path.join(os.tmpdir(), "studentgpt-uploads");
     try {
-      if (!fs2.existsSync(tmpDir)) {
-        fs2.mkdirSync(tmpDir, { recursive: true });
+      if (!fs.existsSync(tmpDir)) {
+        fs.mkdirSync(tmpDir, { recursive: true });
       }
     } catch {
     }
@@ -1264,10 +1156,10 @@ async function storagePut(relKey, data, contentType = "application/octet-stream"
     }
   }
   const baseDir = ensureUploadsDir();
-  const filePath = path3.join(baseDir, key);
+  const filePath = path.join(baseDir, key);
   try {
-    fs2.mkdirSync(path3.dirname(filePath), { recursive: true });
-    fs2.writeFileSync(filePath, buffer);
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    fs.writeFileSync(filePath, buffer);
   } catch (fsErr) {
     console.warn("[Local Storage Write Error]:", fsErr);
   }
@@ -1325,12 +1217,12 @@ function registerStorageProxy(app2) {
       }
     }
     const candidates = [
-      path4.join(getLocalUploadsDir(), key),
-      path4.resolve(process.cwd(), "uploads", key),
-      path4.join(os2.tmpdir(), "studentgpt-uploads", key)
+      path2.join(getLocalUploadsDir(), key),
+      path2.resolve(process.cwd(), "uploads", key),
+      path2.join(os2.tmpdir(), "studentgpt-uploads", key)
     ];
     for (const filePath of candidates) {
-      if (fs3.existsSync(filePath)) {
+      if (fs2.existsSync(filePath)) {
         res.sendFile(filePath);
         return;
       }
@@ -2712,6 +2604,7 @@ var RESEARCH_SYSTEM_PROMPT = `You are an academic research assistant helping stu
 ACCURACY RULES (these override everything else):
 - Never invent facts, dates, names, numbers, institutions, or quotations. If you are not confident about a detail, leave it out or say it is uncertain.
 - Only name people and organizations that are genuinely associated with this specific topic. Do not name technology companies, universities, or labs unless they actually work on it.
+- NEVER fabricate a generic boilerplate list of premier universities (such as MIT, Stanford, Oxford, Cambridge) or tech giants (Google, IBM, Microsoft) unless this exact topic is fundamentally and provably researched by them. If the topic is unverified, ambiguous, or not found in major academic indexes, state that explicitly and do not invent affiliations.
 - No generic filler. Every sentence must say something specific to the topic.
 - If source notes are provided, prefer them over your own memory and stay within what they support. Never claim a source says something it does not.
 - Write for a motivated student: precise, clear, no hype.
@@ -2743,7 +2636,7 @@ Write an accurate, student-ready research synthesis for "${title}". Return ONLY 
   "overview": "<3-4 short paragraphs: background, key principles, real-world context, and why it matters>",
   "howItWorks": "<the actual mechanism, structure, or process, appropriate to the topic type>",
   "pastSummary": "<real history: named people, years, and milestones you are confident about. If unsure of a date, write 'around' or leave it out>",
-  "presentAndContributors": "<current understanding and who is genuinely involved today: specific real institutions, collaborations, or researchers that actually work on this topic. If you are not sure of names, describe the kinds of groups instead>",
+  "presentAndContributors": "<current understanding and who is genuinely involved today: specific real institutions, collaborations, or researchers that actually work on this topic. If you are not sure of names, describe the kinds of groups instead. If the topic is unverified, ambiguous, or has no active institutional literature, explicitly state that no verified institutional research programs exist instead of naming generic universities>",
   "futureOutlook": "<realistic open questions and expected developments, framed as open questions, not certain predictions>",
   "quote": {
     "text": "<a real quote, correctly attributed, relevant to ${title}>",
@@ -2866,7 +2759,15 @@ ${source.note ?? ""}`).join("\n\n") : "";
       description: parsed.overview.trim(),
       howItWorks: parsed.howItWorks.trim(),
       pastSummary: parsed.pastSummary.trim(),
-      presentAndContributors: parsed.presentAndContributors.trim(),
+      presentAndContributors: (() => {
+        const raw = parsed.presentAndContributors.trim();
+        const isUnverified = (parsed.overview || "").toLowerCase().includes("absence from peer-reviewed") || (parsed.overview || "").toLowerCase().includes("not recognized") || (parsed.overview || "").toLowerCase().includes("speculative linguistic");
+        const hasGenericDump = /(MIT|Stanford|Oxford|Cambridge).*?(Google|IBM|Microsoft)/i.test(raw);
+        if (isUnverified && hasGenericDump) {
+          return `Because "${title}" does not appear in standard academic literature or peer-reviewed databases, there are no verified research groups, academic departments, or industrial laboratories dedicated to this subject. Any claims of formal institutional programs are unverified.`;
+        }
+        return raw;
+      })(),
       futureOutlook: parsed.futureOutlook.trim(),
       quote: cleanQuote,
       limitations: cleanLimitations,
@@ -4422,16 +4323,16 @@ async function createContext(opts) {
 
 // server/app.ts
 function createExpressApp() {
-  const app2 = express2();
+  const app2 = express();
   app2.use((req, _res, next) => {
     if (req.url.startsWith("/.netlify/functions/api")) {
       req.url = req.url.replace("/.netlify/functions/api", "/api");
     }
     next();
   });
-  app2.use(express2.json({ limit: "50mb" }));
-  app2.use(express2.urlencoded({ limit: "50mb", extended: true }));
-  app2.post(["/api/documents/upload", "/documents/upload"], express2.raw({ type: "*/*", limit: "12mb" }), async (req, res) => {
+  app2.use(express.json({ limit: "50mb" }));
+  app2.use(express.urlencoded({ limit: "50mb", extended: true }));
+  app2.post(["/api/documents/upload", "/documents/upload"], express.raw({ type: "*/*", limit: "12mb" }), async (req, res) => {
     try {
       const user = await authenticateSupabaseRequest(req);
       if (!user) return res.status(401).json({ error: "Authentication is required." });
@@ -4532,7 +4433,101 @@ function createExpressApp() {
   return app2;
 }
 
-// server/_core/index.ts
+// api/index.ts
+if (typeof globalThis.DOMMatrix === "undefined") {
+  class DOMMatrixPolyfill {
+    a = 1;
+    b = 0;
+    c = 0;
+    d = 1;
+    e = 0;
+    f = 0;
+    m11 = 1;
+    m12 = 0;
+    m13 = 0;
+    m14 = 0;
+    m21 = 0;
+    m22 = 1;
+    m23 = 0;
+    m24 = 0;
+    m31 = 0;
+    m32 = 0;
+    m33 = 1;
+    m34 = 0;
+    m41 = 0;
+    m42 = 0;
+    m43 = 0;
+    m44 = 1;
+    is2D = true;
+    isIdentity = true;
+    constructor(init) {
+      if (Array.isArray(init)) {
+        if (init.length === 6) {
+          [this.a, this.b, this.c, this.d, this.e, this.f] = init;
+        } else if (init.length === 16) {
+          [
+            this.m11,
+            this.m12,
+            this.m13,
+            this.m14,
+            this.m21,
+            this.m22,
+            this.m23,
+            this.m24,
+            this.m31,
+            this.m32,
+            this.m33,
+            this.m34,
+            this.m41,
+            this.m42,
+            this.m43,
+            this.m44
+          ] = init;
+        }
+      }
+    }
+    multiplySelf() {
+      return this;
+    }
+    preMultiplySelf() {
+      return this;
+    }
+    translate() {
+      return this;
+    }
+    scale() {
+      return this;
+    }
+    invertSelf() {
+      return this;
+    }
+    rotateSelf() {
+      return this;
+    }
+    transformPoint(p) {
+      return p || { x: 0, y: 0, z: 0, w: 1 };
+    }
+  }
+  globalThis.DOMMatrix = DOMMatrixPolyfill;
+}
+if (typeof globalThis.DOMPoint === "undefined") {
+  class DOMPointPolyfill {
+    x = 0;
+    y = 0;
+    z = 0;
+    w = 1;
+    constructor(x = 0, y = 0, z4 = 0, w = 1) {
+      this.x = x;
+      this.y = y;
+      this.z = z4;
+      this.w = w;
+    }
+    static fromPoint(other) {
+      return new DOMPointPolyfill(other?.x ?? 0, other?.y ?? 0, other?.z ?? 0, other?.w ?? 1);
+    }
+  }
+  globalThis.DOMPoint = DOMPointPolyfill;
+}
 if (typeof globalThis.WebSocket === "undefined") {
   class NodeWebSocketStub {
     static CONNECTING = 0;
@@ -4557,44 +4552,7 @@ if (typeof globalThis.WebSocket === "undefined") {
   globalThis.WebSocket = NodeWebSocketStub;
 }
 var app = createExpressApp();
-function isPortAvailable(port) {
-  return new Promise((resolve) => {
-    const server = net.createServer();
-    server.listen(port, () => {
-      server.close(() => resolve(true));
-    });
-    server.on("error", () => resolve(false));
-  });
-}
-async function findAvailablePort(startPort = 3e3) {
-  for (let port = startPort; port < startPort + 20; port++) {
-    if (await isPortAvailable(port)) {
-      return port;
-    }
-  }
-  throw new Error(`No available port found starting from ${startPort}`);
-}
-async function startServer() {
-  const server = createServer(app);
-  if (process.env.NODE_ENV === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-  }
-  const preferredPort = parseInt(process.env.PORT || "3000");
-  const port = await findAvailablePort(preferredPort);
-  if (port !== preferredPort) {
-    console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
-  }
-  server.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}/`);
-  });
-}
-if (process.env.VERCEL !== "1") {
-  startServer().catch(console.error);
-}
 var index_default = app;
 export {
-  app,
   index_default as default
 };

@@ -129317,6 +129317,7 @@ var RESEARCH_SYSTEM_PROMPT = `You are an academic research assistant helping stu
 ACCURACY RULES (these override everything else):
 - Never invent facts, dates, names, numbers, institutions, or quotations. If you are not confident about a detail, leave it out or say it is uncertain.
 - Only name people and organizations that are genuinely associated with this specific topic. Do not name technology companies, universities, or labs unless they actually work on it.
+- NEVER fabricate a generic boilerplate list of premier universities (such as MIT, Stanford, Oxford, Cambridge) or tech giants (Google, IBM, Microsoft) unless this exact topic is fundamentally and provably researched by them. If the topic is unverified, ambiguous, or not found in major academic indexes, state that explicitly and do not invent affiliations.
 - No generic filler. Every sentence must say something specific to the topic.
 - If source notes are provided, prefer them over your own memory and stay within what they support. Never claim a source says something it does not.
 - Write for a motivated student: precise, clear, no hype.
@@ -129348,7 +129349,7 @@ Write an accurate, student-ready research synthesis for "${title}". Return ONLY 
   "overview": "<3-4 short paragraphs: background, key principles, real-world context, and why it matters>",
   "howItWorks": "<the actual mechanism, structure, or process, appropriate to the topic type>",
   "pastSummary": "<real history: named people, years, and milestones you are confident about. If unsure of a date, write 'around' or leave it out>",
-  "presentAndContributors": "<current understanding and who is genuinely involved today: specific real institutions, collaborations, or researchers that actually work on this topic. If you are not sure of names, describe the kinds of groups instead>",
+  "presentAndContributors": "<current understanding and who is genuinely involved today: specific real institutions, collaborations, or researchers that actually work on this topic. If you are not sure of names, describe the kinds of groups instead. If the topic is unverified, ambiguous, or has no active institutional literature, explicitly state that no verified institutional research programs exist instead of naming generic universities>",
   "futureOutlook": "<realistic open questions and expected developments, framed as open questions, not certain predictions>",
   "quote": {
     "text": "<a real quote, correctly attributed, relevant to ${title}>",
@@ -129471,7 +129472,15 @@ ${source.note ?? ""}`).join("\n\n") : "";
       description: parsed.overview.trim(),
       howItWorks: parsed.howItWorks.trim(),
       pastSummary: parsed.pastSummary.trim(),
-      presentAndContributors: parsed.presentAndContributors.trim(),
+      presentAndContributors: (() => {
+        const raw = parsed.presentAndContributors.trim();
+        const isUnverified = (parsed.overview || "").toLowerCase().includes("absence from peer-reviewed") || (parsed.overview || "").toLowerCase().includes("not recognized") || (parsed.overview || "").toLowerCase().includes("speculative linguistic");
+        const hasGenericDump = /(MIT|Stanford|Oxford|Cambridge).*?(Google|IBM|Microsoft)/i.test(raw);
+        if (isUnverified && hasGenericDump) {
+          return `Because "${title}" does not appear in standard academic literature or peer-reviewed databases, there are no verified research groups, academic departments, or industrial laboratories dedicated to this subject. Any claims of formal institutional programs are unverified.`;
+        }
+        return raw;
+      })(),
       futureOutlook: parsed.futureOutlook.trim(),
       quote: cleanQuote,
       limitations: cleanLimitations,
