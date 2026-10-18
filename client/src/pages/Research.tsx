@@ -7,7 +7,7 @@ import {
   BookOpenCheck, Compass, Download, FileText, Lightbulb, 
   ListChecks, MessageCircleMore, Network, PlayCircle, Plus, 
   SearchCheck, Sparkles, Target, Wand2, Quote as QuoteIcon, 
-  Clock, Users, Rocket, Cpu, CheckCircle2, AlertTriangle 
+  Clock, Users, Rocket, Cpu, CheckCircle2, AlertTriangle, X 
 } from "lucide-react";
 import { FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useSearch } from "wouter";
@@ -475,7 +475,9 @@ export default function Research() {
                 >
                   Retry
                 </button>
-                <button onClick={() => setError(null)} className="text-sm font-bold text-[#A070A1] hover:text-[#724060]">✕</button>
+                <button onClick={() => setError(null)} className="rounded p-1 text-[#A070A1] hover:bg-[#FDF3F3] hover:text-[#724060] transition" aria-label="Dismiss error">
+                  <X className="h-4 w-4" />
+                </button>
               </div>
             </div>
           )}
@@ -694,7 +696,7 @@ export default function Research() {
                           {/* 3.3 Future */}
                           <div className="rounded-lg border border-[#F8E7E7] bg-[#FDF3F3] p-5">
                             <div className="flex items-center gap-1.5 text-[#A070A1]">
-                              <Rocket className="h-4 w-4" />
+                              <Compass className="h-4 w-4" />
                               <span className="text-[10px] font-bold uppercase tracking-[.14em]">3.3 Future Horizon (Future)</span>
                             </div>
                             <h5 className="mt-2 text-[13px] font-bold text-[#724060]">Breakthrough Trajectory</h5>

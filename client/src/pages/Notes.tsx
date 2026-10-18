@@ -999,7 +999,7 @@ export default function Notes() {
                       className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#724060] to-[#8d4774] px-4 text-[12px] font-bold text-white shadow-sm transition hover:opacity-95 disabled:opacity-50"
                     >
                       <Zap className="h-3.5 w-3.5 fill-amber-300 text-amber-300" />
-                      {generateRevision.isPending ? "Synthesizing Full Solutions & Formulas…" : "⚡ Re-Generate High-Yield Revision Guide"}
+                      {generateRevision.isPending ? "Synthesizing Full Solutions & Formulas…" : "Re-Generate High-Yield Revision Guide"}
                     </button>
                   </div>
 
@@ -1267,7 +1267,7 @@ export default function Notes() {
 
                                   <div className="mt-3 rounded-lg border-l-4 border-emerald-600 bg-emerald-50/70 p-3 text-[13px] leading-6 text-emerald-950">
                                     <span className="text-[10.5px] font-extrabold uppercase tracking-widest text-emerald-700 block mb-1">
-                                      ✓ Complete Solution & Derivation:
+                                      Complete Solution & Derivation:
                                     </span>
                                     <MathRenderer content={solution} />
                                   </div>

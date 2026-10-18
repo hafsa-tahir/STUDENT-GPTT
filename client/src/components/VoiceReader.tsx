@@ -702,7 +702,7 @@ export const VoiceReader: React.FC<VoiceReaderProps> = ({
               }`}
             >
               <GraduationCap className="h-3.5 w-3.5" />
-              <span>🎓 Professor Lecture</span>
+              <span>Professor Lecture</span>
             </button>
             <button
               type="button"
@@ -714,13 +714,13 @@ export const VoiceReader: React.FC<VoiceReaderProps> = ({
               }`}
             >
               <BookOpen className="h-3.5 w-3.5" />
-              <span>📖 Read Verbatim</span>
+              <span>Read Verbatim</span>
             </button>
           </div>
           <span className="text-[11.5px] font-medium text-[#724060]/80 italic">
             {mode === "lecture"
-              ? "✨ Teaches concepts with enthusiasm, intuitive analogies & exam tips"
-              : "📖 Reads the exact paper sections word-for-word"}
+              ? "Teaches concepts with structured explanations, intuitive analogies and exam preparation"
+              : "Reads the exact paper sections word-for-word"}
           </span>
         </div>
       )}
