@@ -61,8 +61,37 @@ if (typeof globalThis.WebSocket === "undefined") {
   (globalThis as any).WebSocket = NodeWebSocketStub;
 }
 
-import { createExpressApp } from "../server/app";
+let appInstance: any = null;
+let initError: any = null;
 
-const app = createExpressApp();
+async function getApp() {
+  if (appInstance) return appInstance;
+  if (initError) throw initError;
+  try {
+    const { createExpressApp } = await import("../server/app");
+    appInstance = createExpressApp();
+    return appInstance;
+  } catch (err: any) {
+    initError = err?.stack || err?.message || String(err);
+    console.error("[Vercel App Init Error]:", initError);
+    throw err;
+  }
+}
 
-export default app;
+export default async function handler(req: any, res: any) {
+  try {
+    const app = await getApp();
+    return app(req, res);
+  } catch (err: any) {
+    console.error("[Vercel Handler Error]:", err);
+    res.statusCode = 500;
+    res.setHeader("Content-Type", "application/json");
+    res.end(
+      JSON.stringify({
+        error: "Server initialization failed",
+        message: err?.message || String(err),
+        stack: err?.stack || null,
+      })
+    );
+  }
+}
