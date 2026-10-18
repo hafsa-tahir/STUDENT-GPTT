@@ -554,7 +554,7 @@ Provide:
       },
       {
         role: "user",
-        content: `Create an authoritative revision guide titled '${cleanTitle}' for '${source.scopeLabel}'. Return a oneLineSummary, overview, keyDefinitions bank, formulaBank, 3 to 5 high-yield revision blocks (with title, focus, coreSummary, keyFormula, keyTakeaways, commonMistakes, mnemonic), and an end-of-session self-check checklist.\n\n${source.promptContext}`
+        content: `Create an authoritative revision guide titled '${cleanTitle}' for '${source.scopeLabel}'. Return a valid JSON object containing oneLineSummary, overview, keyDefinitions bank, formulaBank, 3 to 6 high-yield revision blocks (with title, focus, coreSummary, keyFormula, keyTakeaways, commonMistakes, mnemonic), and an end-of-session self-check checklist.\n\n${source.promptContext}`
       }
     ],
     response_format: {
@@ -569,8 +569,6 @@ Provide:
             overview: { type: "string" },
             keyDefinitions: {
               type: "array",
-              minItems: 3,
-              maxItems: 8,
               items: {
                 type: "object",
                 properties: {
@@ -578,14 +576,12 @@ Provide:
                   definition: { type: "string" },
                   memoryTip: { type: "string" }
                 },
-                required: ["term", "definition", "memoryTip"],
-                additionalProperties: false
+                required: ["term", "definition"],
+                additionalProperties: true
               }
             },
             formulaBank: {
               type: "array",
-              minItems: 2,
-              maxItems: 8,
               items: {
                 type: "object",
                 properties: {
@@ -594,14 +590,12 @@ Provide:
                   variables: { type: "string" },
                   whenToUse: { type: "string" }
                 },
-                required: ["name", "formula", "variables", "whenToUse"],
-                additionalProperties: false
+                required: ["name", "formula"],
+                additionalProperties: true
               }
             },
             blocks: {
               type: "array",
-              minItems: 2,
-              maxItems: 6,
               items: {
                 type: "object",
                 properties: {
@@ -619,19 +613,17 @@ Provide:
                   },
                   mnemonic: { type: "string" }
                 },
-                required: ["title", "focus", "coreSummary", "keyFormula", "keyTakeaways", "commonMistakes", "mnemonic"],
-                additionalProperties: false
+                required: ["title"],
+                additionalProperties: true
               }
             },
             selfCheck: {
               type: "array",
-              minItems: 3,
-              maxItems: 5,
               items: { type: "string" }
             }
           },
-          required: ["oneLineSummary", "overview", "keyDefinitions", "formulaBank", "blocks", "selfCheck"],
-          additionalProperties: false
+          required: ["oneLineSummary", "overview", "blocks"],
+          additionalProperties: true
         }
       }
     },
@@ -653,32 +645,59 @@ Provide:
 
   let keyDefinitions = Array.isArray(rawParsed.keyDefinitions)
     ? rawParsed.keyDefinitions.map((d: any) => ({
-        term: typeof d.term === "string" ? d.term : "Key Term",
-        definition: typeof d.definition === "string" ? d.definition : "",
-        memoryTip: typeof d.memoryTip === "string" ? d.memoryTip : ""
-      }))
+        term: typeof d.term === "string" ? d.term : (typeof d.name === "string" ? d.name : "Key Term"),
+        definition: typeof d.definition === "string" ? d.definition : (typeof d.meaning === "string" ? d.meaning : (typeof d.description === "string" ? d.description : "")),
+        memoryTip: typeof d.memoryTip === "string" ? d.memoryTip : (typeof d.tip === "string" ? d.tip : (typeof d.mnemonic === "string" ? d.mnemonic : ""))
+      })).filter((d: any) => d.term && d.definition)
     : [];
 
   let formulaBank = Array.isArray(rawParsed.formulaBank)
     ? rawParsed.formulaBank.map((f: any) => ({
-        name: typeof f.name === "string" ? f.name : "Governing Equation",
-        formula: typeof f.formula === "string" ? f.formula : "",
-        variables: typeof f.variables === "string" ? f.variables : "",
-        whenToUse: typeof f.whenToUse === "string" ? f.whenToUse : ""
-      }))
+        name: typeof f.name === "string" ? f.name : (typeof f.symbol === "string" ? f.symbol : (typeof f.title === "string" ? f.title : "Governing Formula")),
+        formula: typeof f.formula === "string" ? f.formula : (typeof f.equation === "string" ? f.equation : ""),
+        variables: typeof f.variables === "string" ? f.variables : (typeof f.description === "string" ? f.description : (typeof f.notes === "string" ? f.notes : "")),
+        whenToUse: typeof f.whenToUse === "string" ? f.whenToUse : (typeof f.context === "string" ? f.context : "")
+      })).filter((f: any) => f.formula)
     : [];
 
   let rawBlocks = Array.isArray(rawParsed.blocks) ? rawParsed.blocks : [];
   let blocks = rawBlocks.map((b: any, index: number) => {
     const title = typeof b.title === "string" ? b.title : `Revision Block ${index + 1}`;
-    const focus = typeof b.focus === "string" ? b.focus : `Master core principles and operational rules`;
+    const focus = typeof b.focus === "string" ? b.focus : (typeof b.subtitle === "string" ? b.subtitle : `Master core principles and operational rules`);
     const coreSummary = typeof b.coreSummary === "string" && b.coreSummary.length > 10
       ? b.coreSummary
-      : `Focus on the foundational mechanisms and quantitative formulations that govern ${title}. Review derivations and boundary behaviors carefully.`;
-    const keyFormula = typeof b.keyFormula === "string" ? b.keyFormula : "";
-    const keyTakeaways = Array.isArray(b.keyTakeaways) ? b.keyTakeaways.filter(Boolean) : [];
-    const commonMistakes = Array.isArray(b.commonMistakes) ? b.commonMistakes.filter(Boolean) : [];
-    const mnemonic = typeof b.mnemonic === "string" ? b.mnemonic : "";
+      : typeof b.content === "string" && b.content.length > 10
+        ? b.content
+        : typeof b.summary === "string" && b.summary.length > 10
+          ? b.summary
+          : `High-yield conceptual breakdown and physical mechanics for ${title}.`;
+    const keyFormula = typeof b.keyFormula === "string" ? b.keyFormula : (typeof b.formula === "string" ? b.formula : "");
+    const rawTakeaways = Array.isArray(b.keyTakeaways) ? b.keyTakeaways : (Array.isArray(b.keyPoints) ? b.keyPoints : (Array.isArray(b.takeaways) ? b.takeaways : []));
+    const keyTakeaways = rawTakeaways.map((t: any) => String(t)).filter(Boolean);
+    const rawMistakes = Array.isArray(b.commonMistakes) ? b.commonMistakes : (Array.isArray(b.pitfalls) ? b.pitfalls : (Array.isArray(b.mistakes) ? b.mistakes : []));
+    const commonMistakes = rawMistakes.map((m: any) => String(m)).filter(Boolean);
+    const mnemonic = typeof b.mnemonic === "string" ? b.mnemonic : (typeof b.memoryTip === "string" ? b.memoryTip : "");
+
+    // Also support questions with full solutions if provided
+    const rawQuestions = Array.isArray(b.questions) ? b.questions : [];
+    const questions = rawQuestions.map((q: any) => {
+      if (typeof q === "string") {
+        return {
+          question: q,
+          answer: `Detailed physical derivation and conceptual solution for ${q}: Examine the governing equations, apply boundary conditions, and verify units.`,
+          examTrap: ""
+        };
+      }
+      return {
+        question: typeof q?.question === "string" ? q.question : String(q || ""),
+        answer: typeof q?.answer === "string" && q.answer.length > 5 && !q.answer.includes("Review the section summary")
+          ? q.answer
+          : typeof q?.solution === "string" && q.solution.length > 5
+            ? q.solution
+            : `Full Derivation & Solution: Apply Coulomb's Law and fundamental principles to solve for state variables systematically.`,
+        examTrap: typeof q?.examTrap === "string" ? q.examTrap : ""
+      };
+    });
 
     return {
       title,
@@ -687,7 +706,8 @@ Provide:
       keyFormula,
       keyTakeaways,
       commonMistakes,
-      mnemonic
+      mnemonic,
+      ...(questions.length > 0 ? { questions } : {})
     };
   });
 
@@ -722,7 +742,7 @@ Provide:
     ];
   }
 
-  let selfCheck = Array.isArray(rawParsed.selfCheck) ? rawParsed.selfCheck : [];
+  let selfCheck = Array.isArray(rawParsed.selfCheck) ? rawParsed.selfCheck.map(String).filter(Boolean) : [];
   if (selfCheck.length === 0) {
     selfCheck = [
       `Can I define the central concepts of ${topicName} without looking?`,

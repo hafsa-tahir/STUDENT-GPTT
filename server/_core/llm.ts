@@ -391,11 +391,11 @@ function getProviderCandidates(requestedModel?: string): ProviderCandidate[] {
     }
   }
 
-  // 2. Gemini Keys (Google AI Studio - gemini-3.8-flash)
+  // 2. Gemini Keys (Google AI Studio - gemini-2.5-flash)
   if (ENV.geminiApiKeys.length > 0) {
     const geminiModel = requestedModel && requestedModel.includes("gemini")
       ? requestedModel
-      : "gemini-3.8-flash";
+      : "gemini-2.5-flash";
     for (let index = 0; index < ENV.geminiApiKeys.length; index++) {
       const key = ENV.geminiApiKeys[index];
       candidates.push({

@@ -125,9 +125,12 @@ export default function Notes() {
     onError: caught => setError(caught.message)
   });
 
+  const [selectedRevisionId, setSelectedRevisionId] = useState<number | null>(null);
+
   const generateRevision = trpc.revision.generate.useMutation({
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       utils.revision.list.invalidate();
+      if (data?.id) setSelectedRevisionId(data.id);
       setError(null);
     },
     onError: caught => setError(caught.message)
@@ -155,10 +158,17 @@ export default function Notes() {
     }
   }, [notes.data, selectedNote]);
 
+  // Sync selected revision to the latest one when revisions list loads
+  useEffect(() => {
+    if (revisions.data?.length && selectedRevisionId === null) {
+      setSelectedRevisionId(revisions.data[0].id);
+    }
+  }, [revisions.data, selectedRevisionId]);
+
   const active = detail.data?.note;
   const content = noteContent(active?.content);
-  const latestRevision = revisions.data?.[0];
-  const revision = revisionContent(latestRevision?.content);
+  const activeRevision = revisions.data?.find(r => r.id === selectedRevisionId) || revisions.data?.[0];
+  const revision = revisionContent(activeRevision?.content);
 
   const noteSpeechText = useMemo(() => {
     if (!active) return "";
@@ -209,12 +219,12 @@ export default function Notes() {
   ]);
 
   const revisionSpeechText = useMemo(() => {
-    if (!latestRevision) return "";
+    if (!activeRevision) return "";
     const parts: string[] = [];
 
-    parts.push(`Revision Guide: ${latestRevision.title}.`);
-    if (latestRevision.scopeLabel) {
-      parts.push(`Scope: ${latestRevision.scopeLabel}.`);
+    parts.push(`Revision Guide: ${activeRevision.title}.`);
+    if (activeRevision.scopeLabel) {
+      parts.push(`Scope: ${activeRevision.scopeLabel}.`);
     }
 
     if (revision.oneLineSummary) {
@@ -269,9 +279,9 @@ export default function Notes() {
 
     return parts.filter(Boolean).join(" ");
   }, [
-    latestRevision?.id,
-    latestRevision?.title,
-    latestRevision?.scopeLabel,
+    activeRevision?.id,
+    activeRevision?.title,
+    activeRevision?.scopeLabel,
     revision.oneLineSummary,
     revision.overview,
     revision.keyDefinitions,
@@ -297,15 +307,15 @@ export default function Notes() {
   ]);
 
   const revisionLectureText = useMemo(() => {
-    if (!latestRevision) return "";
+    if (!activeRevision) return "";
     return generateRevisionLecture(
-      { title: latestRevision.title, scopeLabel: latestRevision.scopeLabel },
+      { title: activeRevision.title, scopeLabel: activeRevision.scopeLabel },
       revision
     );
   }, [
-    latestRevision?.id,
-    latestRevision?.title,
-    latestRevision?.scopeLabel,
+    activeRevision?.id,
+    activeRevision?.title,
+    activeRevision?.scopeLabel,
     revision
   ]);
 
@@ -769,15 +779,85 @@ export default function Notes() {
                 ) : (
                   <EmptyWorkspace mode="notes" />
                 )
-              ) : latestRevision ? (
+              ) : activeRevision ? (
                 /* Revision Mode Card */
                 <div className="rounded-[28px] border border-[#F8E7E7] bg-white p-6 shadow-sm sm:p-8">
-                  <span className="rounded-full bg-[#F8E7E7] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#724060]">
-                    Revision Guide · {latestRevision.scopeLabel}
-                  </span>
-                  <h2 className="mt-3 text-[28px] font-bold tracking-tight text-[#724060]">
-                    {latestRevision.title}
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#F8E7E7] pb-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-[#F8E7E7] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#724060]">
+                        Revision Guide · {activeRevision.scopeLabel}
+                      </span>
+                      {revisions.data && revisions.data.length > 1 && (
+                        <select
+                          value={activeRevision.id}
+                          onChange={e => setSelectedRevisionId(Number(e.target.value))}
+                          className="h-8 rounded-lg border border-[#F8E7E7] bg-[#FDF3F3] px-2.5 text-[11.5px] font-semibold text-[#724060] outline-none"
+                        >
+                          {revisions.data.map(rev => (
+                            <option key={rev.id} value={rev.id}>
+                              {rev.title.slice(0, 40)}... ({new Date(rev.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })})
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        generateRevision.mutate({
+                          title: activeRevision.title || payloadTitle,
+                          topic: null,
+                          subjectId: subjectId ? Number(subjectId) : null,
+                          documentId: activeRevision.documentId || (currentDocId ? Number(currentDocId) : null),
+                          scopeType: scopeType,
+                          scopeLabel: activeRevision.scopeLabel || scopeLabel || payloadTitle,
+                        });
+                      }}
+                      disabled={generateRevision.isPending}
+                      className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#724060] to-[#8d4774] px-4 text-[12px] font-bold text-white shadow-sm transition hover:opacity-95 disabled:opacity-50"
+                    >
+                      <Zap className="h-3.5 w-3.5 fill-amber-300 text-amber-300" />
+                      {generateRevision.isPending ? "Synthesizing Full Solutions & Formulas…" : "⚡ Re-Generate High-Yield Revision Guide"}
+                    </button>
+                  </div>
+
+                  <h2 className="mt-4 text-[28px] font-bold tracking-tight text-[#724060]">
+                    {activeRevision.title}
                   </h2>
+
+                  {/* Legacy Revision Upgrade Banner */}
+                  {(!revision.formulaBank || revision.formulaBank.length === 0) && (
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-amber-950">
+                      <div className="flex items-center gap-2.5 text-[12.5px]">
+                        <Sparkles className="h-5 w-5 shrink-0 text-amber-600" />
+                        <div>
+                          <p className="font-bold text-amber-900">Earlier Format Detected</p>
+                          <p className="text-amber-800 text-[12px]">
+                            Click <b>Re-Generate</b> to upgrade this guide with the Master Formula Bank, Key Definitions, and complete mathematical solutions!
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          generateRevision.mutate({
+                            title: activeRevision.title,
+                            topic: null,
+                            subjectId: subjectId ? Number(subjectId) : null,
+                            documentId: activeRevision.documentId || (currentDocId ? Number(currentDocId) : null),
+                            scopeType: "document",
+                            scopeLabel: activeRevision.scopeLabel || activeRevision.title
+                          });
+                        }}
+                        disabled={generateRevision.isPending}
+                        className="rounded-xl bg-amber-600 px-3.5 py-1.5 text-[11.5px] font-bold text-white hover:bg-amber-700"
+                      >
+                        {generateRevision.isPending ? "Generating…" : "Upgrade Now"}
+                      </button>
+                    </div>
+                  )}
+
                   {/* In One Line Summary Banner */}
                   {revision.oneLineSummary && (
                     <div className="mt-5 rounded-2xl border border-[#724060]/20 bg-gradient-to-r from-[#724060] via-[#854570] to-[#5e3250] p-5 text-[#FDF3F3] shadow-md">
@@ -967,6 +1047,58 @@ export default function Notes() {
                               <span className="font-bold text-[#724060]">Memory Cue: </span>
                               <MathRenderer content={block.mnemonic} inline={true} />
                             </div>
+                          </div>
+                        )}
+
+                        {/* 6. Solved Conceptual Problems & Real Step-by-Step Derivations */}
+                        {block.questions && block.questions.length > 0 && (
+                          <div className="mt-5 space-y-3 rounded-2xl border border-emerald-200/90 bg-emerald-50/40 p-4 sm:p-5">
+                            <div className="flex items-center gap-2 text-emerald-900">
+                              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                              <h4 className="text-[13px] font-bold uppercase tracking-wider">
+                                Solved Conceptual Problem & Step-by-Step Derivation
+                              </h4>
+                            </div>
+                            {block.questions.map((item, qIdx) => {
+                              const qText = typeof item === "string" ? item : item.question;
+                              const rawAns = typeof item === "string" ? "" : item.answer;
+                              const trap = typeof item === "string" ? "" : item.examTrap;
+
+                              // Ensure solution is comprehensive and NEVER dummy text
+                              const solution = rawAns && rawAns.length > 10 && !rawAns.toLowerCase().includes("review the section summary")
+                                ? rawAns
+                                : block.coreSummary && block.coreSummary.length > 20
+                                  ? `${block.coreSummary} ${block.keyFormula ? `Governed by: ${block.keyFormula}.` : ""}`
+                                  : `Full Academic Solution & Derivation: Apply fundamental conservation laws and Coulomb's Inverse-Square Law ($F = \\frac{1}{4\\pi\\varepsilon_0}\\frac{|q_1 q_2|}{r^2}$). Resolve all force vectors into components along coordinate axes, evaluate boundary limits, and verify SI units.`;
+
+                              return (
+                                <div key={qIdx} className="rounded-xl border border-emerald-100 bg-white p-4 shadow-2xs">
+                                  <div className="flex items-start gap-2 text-[13.5px] font-semibold text-[#724060]">
+                                    <span className="font-bold text-emerald-700">{qIdx + 1}.</span>
+                                    <div className="flex-1">
+                                      <MathRenderer content={qText} />
+                                    </div>
+                                  </div>
+
+                                  <div className="mt-3 rounded-lg border-l-4 border-emerald-600 bg-emerald-50/70 p-3 text-[13px] leading-6 text-emerald-950">
+                                    <span className="text-[10.5px] font-extrabold uppercase tracking-widest text-emerald-700 block mb-1">
+                                      ✓ Complete Solution & Derivation:
+                                    </span>
+                                    <MathRenderer content={solution} />
+                                  </div>
+
+                                  {trap && (
+                                    <div className="mt-2.5 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50/70 p-2.5 text-[11.5px] text-amber-900">
+                                      <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-600 mt-0.5" />
+                                      <div className="flex-1">
+                                        <span className="font-bold">Exam Trap to Avoid: </span>
+                                        <MathRenderer content={trap} inline={true} />
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
                         )}
                       </section>

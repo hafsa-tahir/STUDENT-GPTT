@@ -1,3 +1,5 @@
+import "dotenv/config";
+
 const decodeSecret = (b64: string) => {
   try { return Buffer.from(b64, "base64").toString("utf-8"); } catch { return ""; }
 };
