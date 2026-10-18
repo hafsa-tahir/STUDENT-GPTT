@@ -10,9 +10,13 @@ import { streamLLM } from "./_core/llm";
 
 export function createExpressApp() {
   const app = express();
+  app.set("trust proxy", true);
   
   // Normalize Netlify / Vercel serverless function path prefixes
   app.use((req, _res, next) => {
+    if (req.originalUrl && (req.url === "/api" || req.url === "/") && req.originalUrl.startsWith("/api/")) {
+      req.url = req.originalUrl;
+    }
     if (req.url.startsWith("/.netlify/functions/api")) {
       req.url = req.url.replace("/.netlify/functions/api", "/api");
     }
@@ -108,8 +112,8 @@ export function createExpressApp() {
   app.use("/trpc", trpcHandler);
 
   // Catch-all JSON fallback for any unhandled API requests
-  app.use(["/api/*", "/trpc/*", "/.netlify/*"], (_req, res) => {
-    res.status(404).json({ error: { message: "API endpoint not found." } });
+  app.use((req, res) => {
+    res.status(404).json({ error: { message: `Route not found: ${req.method} ${req.originalUrl || req.url}` } });
   });
 
   // Global Express error handler returning JSON instead of HTML
