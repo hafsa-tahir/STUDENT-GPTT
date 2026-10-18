@@ -1157,8 +1157,154 @@ function registerOAuthRoutes(app2) {
 }
 
 // server/_core/storageProxy.ts
+import fs3 from "node:fs";
+import path4 from "node:path";
+import os2 from "node:os";
+
+// server/storage.ts
 import fs2 from "node:fs";
 import path3 from "node:path";
+import os from "node:os";
+import { createClient } from "@supabase/supabase-js";
+var SUPABASE_STORAGE_BUCKET = "studentgpt-storage";
+var DEFAULT_SUPABASE_URL = "REDACTED";
+var DEFAULT_SUPABASE_SERVICE_ROLE_KEY = "REDACTED";
+var supabaseStorageClient = null;
+function getStorageSupabase() {
+  if (!supabaseStorageClient) {
+    const url = process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || DEFAULT_SUPABASE_SERVICE_ROLE_KEY;
+    if (url && serviceRoleKey) {
+      supabaseStorageClient = createClient(url, serviceRoleKey, {
+        auth: { persistSession: false, autoRefreshToken: false }
+      });
+    }
+  }
+  return supabaseStorageClient;
+}
+function getLocalUploadsDir() {
+  const isServerless = Boolean(
+    process.env.LAMBDA_TASK_ROOT || process.env.NETLIFY || typeof process.cwd === "function" && process.cwd().startsWith("/var/task")
+  );
+  if (isServerless) {
+    return path3.join(os.tmpdir(), "studentgpt-uploads");
+  }
+  return path3.resolve(process.cwd(), "uploads");
+}
+function ensureUploadsDir() {
+  const dir = getLocalUploadsDir();
+  try {
+    if (!fs2.existsSync(dir)) {
+      fs2.mkdirSync(dir, { recursive: true });
+    }
+    return dir;
+  } catch {
+    const tmpDir = path3.join(os.tmpdir(), "studentgpt-uploads");
+    try {
+      if (!fs2.existsSync(tmpDir)) {
+        fs2.mkdirSync(tmpDir, { recursive: true });
+      }
+    } catch {
+    }
+    return tmpDir;
+  }
+}
+function normalizeKey(relKey) {
+  return relKey.replace(/^\/+/, "");
+}
+function appendHashSuffix(relKey) {
+  const hash = crypto.randomUUID().replace(/-/g, "").slice(0, 8);
+  const lastDot = relKey.lastIndexOf(".");
+  if (lastDot === -1) return `${relKey}_${hash}`;
+  return `${relKey.slice(0, lastDot)}_${hash}${relKey.slice(lastDot)}`;
+}
+async function storagePut(relKey, data, contentType = "application/octet-stream") {
+  const key = appendHashSuffix(normalizeKey(relKey));
+  const buffer = typeof data === "string" ? Buffer.from(data, "utf8") : Buffer.from(data);
+  const supabase = getStorageSupabase();
+  if (supabase) {
+    try {
+      const { data: uploadData, error: uploadErr } = await supabase.storage.from(SUPABASE_STORAGE_BUCKET).upload(key, buffer, {
+        contentType,
+        upsert: true
+      });
+      if (!uploadErr && uploadData) {
+        const { data: urlData } = supabase.storage.from(SUPABASE_STORAGE_BUCKET).getPublicUrl(key);
+        return { key, url: urlData?.publicUrl || `/manus-storage/${key}` };
+      }
+      console.warn("[Supabase Storage Upload Warning]:", uploadErr?.message);
+    } catch (err) {
+      console.warn("[Supabase Storage Upload Error]:", err);
+    }
+  }
+  const forgeUrl = ENV.forgeApiUrl;
+  const forgeKey = ENV.forgeApiKey;
+  if (forgeUrl && forgeKey) {
+    try {
+      const presignUrl = new URL("v1/storage/presign/put", forgeUrl.replace(/\/+$/, "") + "/");
+      presignUrl.searchParams.set("path", key);
+      const presignResp = await fetch(presignUrl, {
+        headers: { Authorization: `Bearer ${forgeKey}` }
+      });
+      if (presignResp.ok) {
+        const { url: s3Url } = await presignResp.json();
+        if (s3Url) {
+          const uploadResp = await fetch(s3Url, {
+            method: "PUT",
+            headers: { "Content-Type": contentType },
+            body: buffer
+          });
+          if (uploadResp.ok) {
+            return { key, url: `/manus-storage/${key}` };
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("[Forge Storage Upload Error]:", err);
+    }
+  }
+  const baseDir = ensureUploadsDir();
+  const filePath = path3.join(baseDir, key);
+  try {
+    fs2.mkdirSync(path3.dirname(filePath), { recursive: true });
+    fs2.writeFileSync(filePath, buffer);
+  } catch (fsErr) {
+    console.warn("[Local Storage Write Error]:", fsErr);
+  }
+  return { key, url: `/manus-storage/${key}` };
+}
+async function storageGetSignedUrl(relKey) {
+  const key = normalizeKey(relKey);
+  const supabase = getStorageSupabase();
+  if (supabase) {
+    try {
+      const { data } = supabase.storage.from(SUPABASE_STORAGE_BUCKET).getPublicUrl(key);
+      if (data?.publicUrl) {
+        return data.publicUrl;
+      }
+    } catch {
+    }
+  }
+  const forgeUrl = ENV.forgeApiUrl;
+  const forgeKey = ENV.forgeApiKey;
+  if (forgeUrl && forgeKey) {
+    try {
+      const getUrl = new URL("v1/storage/presign/get", forgeUrl.replace(/\/+$/, "") + "/");
+      getUrl.searchParams.set("path", key);
+      const resp = await fetch(getUrl, {
+        headers: { Authorization: `Bearer ${forgeKey}` }
+      });
+      if (resp.ok) {
+        const { url } = await resp.json();
+        if (url) return url;
+      }
+    } catch {
+    }
+  }
+  return `/manus-storage/${key}`;
+}
+
+// server/_core/storageProxy.ts
 function registerStorageProxy(app2) {
   app2.get("/manus-storage/*", async (req, res) => {
     const key = req.params[0];
@@ -1166,48 +1312,51 @@ function registerStorageProxy(app2) {
       res.status(400).send("Missing storage key");
       return;
     }
-    if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
-      const filePath = path3.resolve(process.cwd(), "uploads", key);
-      if (fs2.existsSync(filePath)) {
-        res.sendFile(filePath);
-        return;
-      }
-      res.status(404).send("File not found");
-      return;
-    }
-    try {
-      const forgeUrl = new URL(
-        "v1/storage/presign/get",
-        ENV.forgeApiUrl.replace(/\/+$/, "") + "/"
-      );
-      forgeUrl.searchParams.set("path", key);
-      const forgeResp = await fetch(forgeUrl, {
-        headers: { Authorization: `Bearer ${ENV.forgeApiKey}` }
-      });
-      if (!forgeResp.ok) {
-        const filePath = path3.resolve(process.cwd(), "uploads", key);
-        if (fs2.existsSync(filePath)) {
-          res.sendFile(filePath);
+    const supabase = getStorageSupabase();
+    if (supabase) {
+      try {
+        const { data } = supabase.storage.from(SUPABASE_STORAGE_BUCKET).getPublicUrl(key);
+        if (data?.publicUrl) {
+          res.set("Cache-Control", "public, max-age=86400");
+          res.redirect(302, data.publicUrl);
           return;
         }
-        res.status(502).send("Storage backend error");
-        return;
+      } catch {
       }
-      const { url } = await forgeResp.json();
-      if (!url) {
-        res.status(502).send("Empty signed URL from backend");
-        return;
-      }
-      res.set("Cache-Control", "no-store");
-      res.redirect(307, url);
-    } catch (err) {
-      const filePath = path3.resolve(process.cwd(), "uploads", key);
-      if (fs2.existsSync(filePath)) {
+    }
+    const candidates = [
+      path4.join(getLocalUploadsDir(), key),
+      path4.resolve(process.cwd(), "uploads", key),
+      path4.join(os2.tmpdir(), "studentgpt-uploads", key)
+    ];
+    for (const filePath of candidates) {
+      if (fs3.existsSync(filePath)) {
         res.sendFile(filePath);
         return;
       }
-      res.status(502).send("Storage proxy error");
     }
+    if (ENV.forgeApiUrl && ENV.forgeApiKey) {
+      try {
+        const forgeUrl = new URL(
+          "v1/storage/presign/get",
+          ENV.forgeApiUrl.replace(/\/+$/, "") + "/"
+        );
+        forgeUrl.searchParams.set("path", key);
+        const forgeResp = await fetch(forgeUrl, {
+          headers: { Authorization: `Bearer ${ENV.forgeApiKey}` }
+        });
+        if (forgeResp.ok) {
+          const { url } = await forgeResp.json();
+          if (url) {
+            res.set("Cache-Control", "no-store");
+            res.redirect(307, url);
+            return;
+          }
+        }
+      } catch {
+      }
+    }
+    res.status(404).send("File not found");
   });
 }
 
@@ -2036,79 +2185,6 @@ async function availableChatModels() {
 // server/documentService.ts
 import crypto2 from "node:crypto";
 import { and as and3, desc as desc3, eq as eq3 } from "drizzle-orm";
-
-// server/storage.ts
-import fs3 from "node:fs";
-import path4 from "node:path";
-var UPLOADS_DIR = path4.resolve(process.cwd(), "uploads");
-function ensureUploadsDir() {
-  if (!fs3.existsSync(UPLOADS_DIR)) {
-    fs3.mkdirSync(UPLOADS_DIR, { recursive: true });
-  }
-}
-function normalizeKey(relKey) {
-  return relKey.replace(/^\/+/, "");
-}
-function appendHashSuffix(relKey) {
-  const hash = crypto.randomUUID().replace(/-/g, "").slice(0, 8);
-  const lastDot = relKey.lastIndexOf(".");
-  if (lastDot === -1) return `${relKey}_${hash}`;
-  return `${relKey.slice(0, lastDot)}_${hash}${relKey.slice(lastDot)}`;
-}
-async function storagePut(relKey, data, contentType = "application/octet-stream") {
-  const forgeUrl = ENV.forgeApiUrl;
-  const forgeKey = ENV.forgeApiKey;
-  const key = appendHashSuffix(normalizeKey(relKey));
-  if (forgeUrl && forgeKey) {
-    const presignUrl = new URL("v1/storage/presign/put", forgeUrl.replace(/\/+$/, "") + "/");
-    presignUrl.searchParams.set("path", key);
-    const presignResp = await fetch(presignUrl, {
-      headers: { Authorization: `Bearer ${forgeKey}` }
-    });
-    if (presignResp.ok) {
-      const { url: s3Url } = await presignResp.json();
-      if (s3Url) {
-        const blob = typeof data === "string" ? new Blob([data], { type: contentType }) : new Blob([data], { type: contentType });
-        const uploadResp = await fetch(s3Url, {
-          method: "PUT",
-          headers: { "Content-Type": contentType },
-          body: blob
-        });
-        if (uploadResp.ok) {
-          return { key, url: `/manus-storage/${key}` };
-        }
-      }
-    }
-  }
-  ensureUploadsDir();
-  const filePath = path4.join(UPLOADS_DIR, key);
-  fs3.mkdirSync(path4.dirname(filePath), { recursive: true });
-  const buffer = typeof data === "string" ? Buffer.from(data, "utf8") : Buffer.from(data);
-  fs3.writeFileSync(filePath, buffer);
-  return { key, url: `/manus-storage/${key}` };
-}
-async function storageGetSignedUrl(relKey) {
-  const forgeUrl = ENV.forgeApiUrl;
-  const forgeKey = ENV.forgeApiKey;
-  const key = normalizeKey(relKey);
-  if (forgeUrl && forgeKey) {
-    try {
-      const getUrl = new URL("v1/storage/presign/get", forgeUrl.replace(/\/+$/, "") + "/");
-      getUrl.searchParams.set("path", key);
-      const resp = await fetch(getUrl, {
-        headers: { Authorization: `Bearer ${forgeKey}` }
-      });
-      if (resp.ok) {
-        const { url } = await resp.json();
-        if (url) return url;
-      }
-    } catch {
-    }
-  }
-  return `/manus-storage/${key}`;
-}
-
-// server/documentService.ts
 var MAX_PDF_BYTES = 12 * 1024 * 1024;
 function databaseOrThrow(value) {
   if (!value) throw new Error("The database connection is not available.");
@@ -4244,7 +4320,7 @@ var appRouter = router({
 });
 
 // server/_core/context.ts
-import { createClient } from "@supabase/supabase-js";
+import { createClient as createClient2 } from "@supabase/supabase-js";
 if (typeof globalThis.WebSocket === "undefined") {
   class NodeWebSocketStub {
     static CONNECTING = 0;
@@ -4269,13 +4345,13 @@ if (typeof globalThis.WebSocket === "undefined") {
   globalThis.WebSocket = NodeWebSocketStub;
 }
 var supabaseAdmin = null;
-var DEFAULT_SUPABASE_URL = "REDACTED";
-var DEFAULT_SUPABASE_SERVICE_ROLE_KEY = "REDACTED";
+var DEFAULT_SUPABASE_URL2 = "REDACTED";
+var DEFAULT_SUPABASE_SERVICE_ROLE_KEY2 = "REDACTED";
 function getSupabaseAdmin() {
-  const url = process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || DEFAULT_SUPABASE_SERVICE_ROLE_KEY;
+  const url = process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL2;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || DEFAULT_SUPABASE_SERVICE_ROLE_KEY2;
   if (!supabaseAdmin) {
-    supabaseAdmin = createClient(url, serviceRoleKey, {
+    supabaseAdmin = createClient2(url, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
       realtime: {
         transport: globalThis.WebSocket
