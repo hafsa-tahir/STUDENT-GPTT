@@ -18,7 +18,10 @@ import {
   Sparkles,
   UploadCloud,
   X,
-  Zap
+  Zap,
+  FolderInput,
+  Check,
+  Loader2
 } from "lucide-react";
 import { ChangeEvent, useState } from "react";
 import { useLocation } from "wouter";
@@ -52,6 +55,24 @@ export function SubjectActivityModal({
     { subjectId: subject.id },
     { refetchOnWindowFocus: false }
   );
+
+  const subjectsQuery = trpc.academic.listSubjects.useQuery(undefined, { refetchOnWindowFocus: false });
+  const allSubjects = subjectsQuery.data || [];
+
+  const [movingDoc, setMovingDoc] = useState<{ id: number; originalName: string } | null>(null);
+  const [targetMoveSubId, setTargetMoveSubId] = useState<number | null>(null);
+
+  const updateSubjectMutation = trpc.documents.updateSubject.useMutation({
+    onSuccess: async () => {
+      setDocUploadNotice("Document moved to new subject.");
+      setMovingDoc(null);
+      await activitiesQuery.refetch();
+      await utils.documents.list.invalidate();
+    },
+    onError: (err) => {
+      setDocUploadError(`Failed to move document: ${err.message}`);
+    }
+  });
 
   async function handleDirectUpload(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -596,6 +617,17 @@ export function SubjectActivityModal({
                             >
                               <ExternalLink className="h-3 w-3 text-[#A070A1]" /> View
                             </a>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMovingDoc(doc);
+                                setTargetMoveSubId(null);
+                              }}
+                              className="inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-1.5 text-[#724060] hover:bg-[#F8E7E7] transition shadow-xs cursor-pointer"
+                              title="Move to another subject"
+                            >
+                              <FolderInput className="h-3 w-3 text-[#A070A1]" /> Move
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -692,6 +724,112 @@ export function SubjectActivityModal({
           )}
         </div>
       </div>
+
+      {/* Move Document Modal */}
+      {movingDoc && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-60 flex items-center justify-center bg-[#724060]/40 p-4 backdrop-blur-xs animate-in fade-in duration-200"
+        >
+          <div className="w-full max-w-[460px] overflow-hidden rounded-[24px] border border-[#F8E7E7] bg-white p-6 shadow-[0_24px_70px_rgba(114,64,96,0.3)]">
+            <div className="flex items-start justify-between gap-4 border-b border-[#F8E7E7] pb-3">
+              <div>
+                <h3 className="text-[17px] font-bold text-[#724060]">Move Document</h3>
+                <p className="text-[12px] text-[#A070A1]">Move from "{subject.name}" to another subject</p>
+              </div>
+              <button
+                disabled={updateSubjectMutation.isPending}
+                onClick={() => setMovingDoc(null)}
+                className="grid h-7 w-7 place-items-center rounded-lg text-[#A070A1] hover:bg-[#FDF3F3] hover:text-[#724060] transition cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mt-3 rounded-xl border border-[#F8E7E7] bg-[#FDF3F3] p-3 text-[12.5px] font-bold text-[#724060] truncate">
+              {movingDoc.originalName}
+            </div>
+
+            <div className="mt-4 max-h-[220px] space-y-2 overflow-y-auto pr-1">
+              <label
+                onClick={() => setTargetMoveSubId(null)}
+                className={`flex items-center justify-between rounded-xl border p-2.5 cursor-pointer transition ${
+                  targetMoveSubId === null
+                    ? "border-[#724060] bg-[#FDF3F3]"
+                    : "border-[#F8E7E7] bg-white hover:bg-[#FDF3F3]/50"
+                }`}
+              >
+                <span className="text-[12.5px] font-bold text-[#724060]">No Subject (General Library)</span>
+                {targetMoveSubId === null && <Check className="h-4 w-4 text-[#724060]" />}
+              </label>
+
+              {allSubjects.map((sub) => {
+                const isSelected = targetMoveSubId === sub.id;
+                const isCurrent = sub.id === subject.id;
+                return (
+                  <label
+                    key={sub.id}
+                    onClick={() => setTargetMoveSubId(sub.id)}
+                    className={`flex items-center justify-between rounded-xl border p-2.5 cursor-pointer transition ${
+                      isSelected
+                        ? "border-[#724060] bg-[#FDF3F3]"
+                        : "border-[#F8E7E7] bg-white hover:bg-[#FDF3F3]/50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: sub.color || "#724060" }}
+                      />
+                      <span className="text-[12.5px] font-bold text-[#724060]">{sub.name}</span>
+                      {isCurrent && (
+                        <span className="rounded bg-[#724060]/10 px-1.5 py-0.2 text-[10px] font-bold text-[#724060]">
+                          Current
+                        </span>
+                      )}
+                    </div>
+                    {isSelected && <Check className="h-4 w-4 text-[#724060]" />}
+                  </label>
+                );
+              })}
+            </div>
+
+            <div className="mt-5 flex items-center justify-end gap-2 border-t border-[#F8E7E7] pt-3">
+              <button
+                type="button"
+                disabled={updateSubjectMutation.isPending}
+                onClick={() => setMovingDoc(null)}
+                className="h-9 rounded-xl border border-[#F8E7E7] bg-white px-3.5 text-[12px] font-bold text-[#724060] hover:bg-[#F8E7E7] transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={updateSubjectMutation.isPending || targetMoveSubId === subject.id}
+                onClick={() => {
+                  if (!movingDoc) return;
+                  updateSubjectMutation.mutate({
+                    documentId: movingDoc.id,
+                    subjectId: targetMoveSubId
+                  });
+                }}
+                className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[#724060] px-4 text-[12px] font-bold text-white shadow-xs hover:bg-[#5a334c] transition cursor-pointer disabled:opacity-50"
+              >
+                {updateSubjectMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> Moving…
+                  </>
+                ) : (
+                  <>
+                    <FolderInput className="h-3.5 w-3.5" /> Move
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

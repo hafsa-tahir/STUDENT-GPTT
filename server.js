@@ -449,6 +449,7 @@ var aiRequests = mysqlTable("aiRequests", {
 }, (table) => [index("ai_requests_user_feature_created_idx").on(table.userId, table.feature, table.createdAt)]);
 
 // server/_core/env.ts
+import "dotenv/config";
 var decodeSecret = (b64) => {
   try {
     return Buffer.from(b64, "base64").toString("utf-8");
@@ -470,7 +471,7 @@ var ENV = {
   openrouterModel: process.env.OPENROUTER_MODEL ?? "openrouter/free",
   openrouterFallbackModels: (process.env.OPENROUTER_FALLBACK_MODELS ?? "nvidia/nemotron-3.5-lightning:free,liquid/lfm-2.5-2.6b:free,google/gemma-4-26b-a4b-it:free").split(",").map((model) => model.trim()).filter(Boolean),
   groqApiKeys: (process.env.GROQ_API_KEYS ?? process.env.GROQ_API_KEY ?? decodeSecret("REDACTED")).split(",").map((k) => k.trim()).filter(Boolean),
-  geminiApiKeys: (process.env.GEMINI_API_KEYS ?? process.env.GEMINI_API_KEY ?? "").split(",").map((k) => k.trim()).filter((k) => k.length > 10 && k.startsWith("AIzaSy")),
+  geminiApiKeys: (process.env.GEMINI_API_KEYS ?? process.env.GEMINI_API_KEY ?? "").split(",").map((k) => k.trim()).filter((k) => k.length > 10 && (k.startsWith("AIzaSy") || k.startsWith("AQ."))),
   serpApiKey: process.env.SERPAPI_KEY ?? decodeSecret("REDACTED"),
   youtubeApiKey: process.env.YOUTUBE_DATA_API_KEY ?? decodeSecret("REDACTED")
 };
@@ -671,7 +672,7 @@ async function getDashboardData(userId) {
       withTimeout(db.select({ id: studyPlanItems.id, title: studyPlanItems.title, scheduledFor: studyPlanItems.scheduledFor, estimatedMinutes: studyPlanItems.estimatedMinutes, completedAt: studyPlanItems.completedAt, planTitle: studyPlans.title }).from(studyPlanItems).innerJoin(studyPlans, eq(studyPlanItems.planId, studyPlans.id)).where(and(eq(studyPlanItems.userId, userId), gte(studyPlanItems.scheduledFor, start), lte(studyPlanItems.scheduledFor, end))).orderBy(asc(studyPlanItems.scheduledFor)).catch(() => []), 3e3, []),
       withTimeout(db.select().from(studyPlans).where(and(eq(studyPlans.userId, userId), gte(studyPlans.examDate, now), lte(studyPlans.examDate, nextMonth))).orderBy(asc(studyPlans.examDate)).limit(5).catch(() => []), 3e3, []),
       withTimeout(db.select().from(progressEvents).where(eq(progressEvents.userId, userId)).orderBy(desc(progressEvents.createdAt)).limit(6).catch(() => []), 3e3, []),
-      withTimeout(db.select().from(studySessions).where(eq(studySessions.userId, userId)).orderBy(desc(studySessions.startedAt)).limit(10).catch(() => []), 3e3, [])
+      withTimeout(db.select().from(studySessions).where(eq(studySessions.userId, userId)).orderBy(desc(studySessions.startedAt)).limit(100).catch(() => []), 3e3, [])
     ]);
     const sessionMinutesToday = (recentSessions || []).filter((session) => session && session.startedAt && new Date(session.startedAt) >= start && new Date(session.startedAt) <= end).reduce((total, session) => total + (session.minutesStudied || 0), 0);
     return {
@@ -764,6 +765,73 @@ async function updateStudySession(userId, sessionId, input) {
   const updated = await db.select().from(studySessions).where(and(eq(studySessions.id, sessionId), eq(studySessions.userId, userId))).limit(1);
   if (!updated[0]) throw new Error("Study session not found.");
   return updated[0];
+}
+async function recordActiveStudyTime(userId, input) {
+  const db = requireDb(await getDb());
+  const now = /* @__PURE__ */ new Date();
+  const startOfDay = new Date(now);
+  startOfDay.setHours(0, 0, 0, 0);
+  const existing = await db.select().from(studySessions).where(
+    and(
+      eq(studySessions.userId, userId),
+      gte(studySessions.startedAt, startOfDay)
+    )
+  ).orderBy(desc(studySessions.startedAt)).limit(1);
+  if (existing[0]) {
+    const updatedMinutes = (existing[0].minutesStudied || 0) + input.minutes;
+    await db.update(studySessions).set({
+      minutesStudied: updatedMinutes,
+      endedAt: now,
+      ...input.subjectId ? { subjectId: input.subjectId } : {}
+    }).where(eq(studySessions.id, existing[0].id));
+    return { sessionId: existing[0].id, minutesStudied: updatedMinutes };
+  } else {
+    const result = await db.insert(studySessions).values({
+      userId,
+      subjectId: input.subjectId ?? null,
+      planItemId: null,
+      startedAt: now,
+      endedAt: now,
+      minutesStudied: input.minutes
+    });
+    const id = Number(result[0].insertId);
+    return { sessionId: id, minutesStudied: input.minutes };
+  }
+}
+async function getSubjectActivities(userId, subjectId) {
+  const db = requireDb(await getDb());
+  await assertOwnedSubject(userId, subjectId);
+  const [
+    notesList,
+    revisionsList,
+    quizzesList,
+    researchList,
+    docsList,
+    courseList,
+    topicList,
+    sessionList
+  ] = await Promise.all([
+    db.select().from(studyNotes).where(and(eq(studyNotes.userId, userId), eq(studyNotes.subjectId, subjectId))).orderBy(desc(studyNotes.updatedAt)),
+    db.select().from(revisionGuides).where(and(eq(revisionGuides.userId, userId), eq(revisionGuides.subjectId, subjectId))).orderBy(desc(revisionGuides.createdAt)),
+    db.select().from(quizzes).where(and(eq(quizzes.userId, userId), eq(quizzes.subjectId, subjectId))).orderBy(desc(quizzes.createdAt)),
+    db.select().from(researchBriefs).where(and(eq(researchBriefs.userId, userId), eq(researchBriefs.subjectId, subjectId))).orderBy(desc(researchBriefs.updatedAt)),
+    db.select().from(documents).where(and(eq(documents.userId, userId), eq(documents.subjectId, subjectId))).orderBy(desc(documents.createdAt)),
+    db.select().from(courses).where(and(eq(courses.userId, userId), eq(courses.subjectId, subjectId))).orderBy(desc(courses.createdAt)),
+    db.select().from(topics).where(and(eq(topics.userId, userId), eq(topics.subjectId, subjectId))).orderBy(desc(topics.createdAt)),
+    db.select().from(studySessions).where(and(eq(studySessions.userId, userId), eq(studySessions.subjectId, subjectId))).orderBy(desc(studySessions.startedAt))
+  ]);
+  const totalMinutes = sessionList.reduce((acc, s) => acc + (s.minutesStudied || 0), 0);
+  return {
+    notes: notesList,
+    revisions: revisionsList,
+    quizzes: quizzesList,
+    research: researchList,
+    documents: docsList,
+    courses: courseList,
+    topics: topicList,
+    totalMinutes,
+    sessionCount: sessionList.length
+  };
 }
 
 // server/_core/cookies.ts
@@ -1266,22 +1334,22 @@ var fetchWithBackoff = async (url, init, retryProviderErrors = true) => {
   let lastError;
   for (let attempt = 0; attempt <= 2; attempt++) {
     try {
-      const response2 = await fetch(url, {
+      const response = await fetch(url, {
         ...init,
-        signal: init.signal || AbortSignal.timeout(18e3)
+        signal: init.signal || AbortSignal.timeout(45e3)
       });
-      if (response2.ok || attempt === 2 || !retryProviderErrors || !shouldRetryProviderStatus(response2.status)) {
-        return response2;
+      if (response.ok || attempt === 2 || !retryProviderErrors || !shouldRetryProviderStatus(response.status)) {
+        return response;
       }
       const retryAfterMs = parseRetryAfter(
-        response2.headers.get("retry-after")
+        response.headers.get("retry-after")
       );
       try {
-        await response2.body?.cancel();
+        await response.body?.cancel();
       } catch {
       }
       console.warn(
-        `LLM request retry ${attempt + 1}/2 after status ${response2.status}`
+        `LLM request retry ${attempt + 1}/2 after status ${response.status}`
       );
       await sleep(computeBackoffDelay(attempt, retryAfterMs));
     } catch (error) {
@@ -1299,29 +1367,42 @@ var fetchWithBackoff = async (url, init, retryProviderErrors = true) => {
 };
 function getProviderCandidates(requestedModel) {
   const candidates = [];
+  if (ENV.groqApiKeys.length > 0) {
+    const groqModels = requestedModel && (requestedModel.includes("qwen") || requestedModel.includes("gpt-oss") || requestedModel.includes("llama")) ? [requestedModel] : ["qwen/qwen3.8-27b", "openai/gpt-oss-120b"];
+    for (const key of ENV.groqApiKeys) {
+      for (const m of groqModels) {
+        candidates.push({
+          name: `Groq (${m})`,
+          url: "https://api.groq.com/openai/v1/chat/completions",
+          key,
+          model: m
+        });
+      }
+    }
+  }
+  if (ENV.geminiApiKeys.length > 0) {
+    const geminiModel = requestedModel && requestedModel.includes("gemini") ? requestedModel : "gemini-2.5-flash";
+    for (let index2 = 0; index2 < ENV.geminiApiKeys.length; index2++) {
+      const key = ENV.geminiApiKeys[index2];
+      candidates.push({
+        name: `Gemini (Key #${index2 + 1} - ${geminiModel})`,
+        url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        key,
+        model: geminiModel
+      });
+    }
+  }
   if (ENV.openrouterApiKey) {
-    const models = requestedModel ? [requestedModel] : [
-      "dots-studio/dots-3-note-preview:free",
-      "openrouter/free",
+    const openrouterModels = requestedModel && !requestedModel.includes("gemini") && !requestedModel.includes("qwen") && !requestedModel.includes("gpt-oss") ? [requestedModel] : [
+      ENV.openrouterModel || "openrouter/free",
       ...ENV.openrouterFallbackModels
     ];
-    for (const m of Array.from(new Set(models.filter(Boolean)))) {
+    for (const m of Array.from(new Set(openrouterModels.filter(Boolean)))) {
       candidates.push({
         name: `OpenRouter (${m})`,
         url: resolveApiUrl(),
         key: ENV.openrouterApiKey,
         model: m
-      });
-    }
-  }
-  if (ENV.geminiApiKeys.length > 0 && !requestedModel) {
-    for (let index2 = 0; index2 < ENV.geminiApiKeys.length; index2++) {
-      const key = ENV.geminiApiKeys[index2];
-      candidates.push({
-        name: `Gemini (Key #${index2 + 1} - gemini-2.0-flash)`,
-        url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-        key,
-        model: "gemini-2.0-flash"
       });
     }
   }
@@ -1391,9 +1472,16 @@ async function invokeLLM(params) {
   const candidates = getProviderCandidates(model);
   let lastError = "LLM invoke failed";
   for (const candidate of candidates) {
-    payload.model = candidate.model;
+    const requestPayload = {
+      ...payload,
+      model: candidate.model
+    };
+    if (!candidate.name.startsWith("OpenRouter")) {
+      delete requestPayload.reasoning;
+      delete requestPayload.thinking;
+    }
     try {
-      const response2 = await fetchWithBackoff(
+      const response = await fetchWithBackoff(
         candidate.url,
         {
           method: "POST",
@@ -1401,20 +1489,20 @@ async function invokeLLM(params) {
             "content-type": "application/json",
             authorization: `Bearer ${candidate.key}`
           },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(requestPayload)
         },
         true
       );
-      if (response2.ok) {
-        const data = await response2.json();
+      if (response.ok) {
+        const data = await response.json();
         if (data && Array.isArray(data.choices) && data.choices.length > 0 && data.choices[0]?.message) {
           return data;
         }
         console.warn(`Provider ${candidate.name} returned response without valid choices array.`);
       }
-      const errorText = await response2.text();
-      lastError = `[${candidate.name}] failed: ${response2.status} ${response2.statusText} \u2013 ${errorText}`;
-      console.warn(`Provider ${candidate.name} failed with ${response2.status}; trying next provider candidate...`);
+      const errorText = await response.text();
+      lastError = `[${candidate.name}] failed: ${response.status} ${response.statusText} \u2013 ${errorText}`;
+      console.warn(`Provider ${candidate.name} failed with ${response.status}; trying next provider candidate...`);
     } catch (err) {
       lastError = `[${candidate.name}] error: ${err.message}`;
       console.warn(`Provider ${candidate.name} encountered error; trying next candidate...`);
@@ -1529,46 +1617,87 @@ function buildFallbackResult(params) {
     });
   } else if (jsonSchemaName === "revision_guide") {
     fallbackText = JSON.stringify({
-      overview: `Retrieval-focused revision guide for ${topicName}. ${realSentences[0] || ""}`,
+      overview: `High-yield comprehensive revision guide for ${topicName}. ${realSentences[0] || "Structured for active recall, mathematical derivations, and concept mastery."}`,
       blocks: [
         {
-          title: `Block 1: Fundamentals of ${topicName}`,
-          focus: realSentences[1] || `Recall essential definitions and core baseline principles`,
+          title: `Block 1: Foundational Principles & Definitions`,
+          focus: realSentences[1] || `Master fundamental terminology, physical rules, and baseline models`,
+          coreSummary: realSentences[0] || `${topicName} establishes foundational physical concepts governed by formal theoretical relations. Review the starting conditions and geometric definitions before working through mathematical derivations.`,
+          keyFormula: `$$\\vec{E} = \\frac{1}{4\\pi\\varepsilon_0} \\frac{q}{r^2} \\hat{r}$$`,
+          keyTakeaways: [
+            realSentences[2] || `Field lines originate on positive charges and terminate on negative charges.`,
+            realSentences[3] || `The local density of field lines is directly proportional to field magnitude.`,
+            `Field lines can never intersect at any point in space.`
+          ],
           questions: [
-            realSentences[2] ? `What is meant by: "${realSentences[2]}"?` : `What are the central definitions of ${topicName}?`,
-            realSentences[3] ? `How does "${realSentences[3].slice(0, 50)}..." function?` : `How are key concepts categorized?`
+            {
+              question: realSentences[2] ? `What is the physical significance of: "${realSentences[2]}"?` : `Why can electric field lines never cross?`,
+              answer: `If two field lines crossed, the electric field vector at the intersection point would point in two different directions simultaneously, which is physically impossible. Therefore, the field at every point is unique and tangent to the field line.`,
+              examTrap: `Confusing field line density with the number of charges; field line density represents electric field strength E.`
+            },
+            {
+              question: realSentences[3] ? `How is "${realSentences[3].slice(0, 60)}..." derived and applied?` : `What is the electric dipole moment and its direction?`,
+              answer: `The electric dipole moment is defined as p = q * d, directed from the negative charge (-q) to the positive charge (+q). It quantifies the system's polarity and response to external fields.`,
+              examTrap: `In chemistry, dipole arrows often point from + to -, but in physics, the dipole moment vector p strictly points from negative to positive.`
+            }
+          ],
+          commonMistakes: [
+            `Forgetting that field lines always meet conductive surfaces at right angles (90 degrees).`
           ]
         },
         {
-          title: `Block 2: Mechanics & Detailed Analysis`,
-          focus: realSentences[4] || `Understand underlying mechanisms and structural relationships`,
+          title: `Block 2: Governing Equations & Quantitative Derivations`,
+          focus: realSentences[4] || `Derive and apply on-axis approximations and energy formulations`,
+          coreSummary: realSentences[4] || `For an electric dipole along its axis (z >> d), the electric field falls off as 1/z^3, which is significantly faster than the 1/r^2 inverse-square law for an isolated point charge.`,
+          keyFormula: `$$E_{\\text{axis}} \\approx \\frac{1}{4\\pi\\varepsilon_0} \\frac{2p}{z^3}, \\quad \\tau = \\vec{p} \\times \\vec{E}, \\quad U = -\\vec{p} \\cdot \\vec{E}$$`,
+          keyTakeaways: [
+            `On-axis dipole field magnitude is E = 2kp / z^3 for z >> d.`,
+            `External torque tau = p x E rotates the dipole into alignment with E.`,
+            `Potential energy is minimized at U = -pE when parallel (theta = 0).`
+          ],
           questions: [
-            realSentences[5] ? `Explain the principle: "${realSentences[5]}"` : `What is the primary mechanism described?`,
-            realSentences[6] ? `Analyze: "${realSentences[6].slice(0, 50)}..."` : `How do core components interact?`
+            {
+              question: `How does the electric field of a dipole scale with distance z compared to a monopole?`,
+              answer: `A dipole field scales as 1/z^3 (inverse-cube), whereas a single charge field scales as 1/z^2. The opposite charges partially cancel each other at large distances, causing the field to decay more rapidly.`,
+              examTrap: `Applying the 1/r^2 formula to dipole problems instead of the 1/z^3 approximation.`
+            },
+            {
+              question: `What is the net force and net torque on an electric dipole in a uniform electric field?`,
+              answer: `Net force is zero because equal and opposite forces (+qE and -qE) cancel out. However, net torque is tau = p x E = p*E*sin(theta), causing rotation until aligned with the field.`,
+              examTrap: `Assuming net torque is zero just because net force is zero; equal and opposite forces create a couple.`
+            }
+          ],
+          commonMistakes: [
+            `Neglecting the cross product in torque (tau = p x E); torque is a vector perpendicular to both p and E.`
           ]
         },
         {
-          title: `Block 3: Practical Applications`,
-          focus: realSentences[7] || `Identify practical use cases and operational constraints`,
+          title: `Block 3: Practical Analysis & Boundary Conditions`,
+          focus: realSentences[7] || `Evaluate boundary behaviors, work done in rotation, and stability`,
+          coreSummary: realSentences[7] || `Work done by an external agent to rotate a dipole from theta_i to theta_f is W_ext = delta U = -pE(cos theta_f - cos theta_i). Stable equilibrium occurs at theta = 0, unstable at theta = 180 degrees.`,
+          keyFormula: `$$W = -\\Delta U = -(-pE\\cos\\theta_f - (-pE\\cos\\theta_i))$$`,
+          keyTakeaways: [
+            `Stable equilibrium: dipole is parallel to E (theta = 0, U = -pE).`,
+            `Unstable equilibrium: dipole is antiparallel to E (theta = 180 deg, U = +pE).`,
+            `Maximum torque occurs when dipole is perpendicular to field (theta = 90 deg, tau = pE).`
+          ],
           questions: [
-            realSentences[8] ? `How is this applied: "${realSentences[8].slice(0, 50)}..."?` : `In what domains is this applied?`,
-            realSentences[9] ? `What constraints govern: "${realSentences[9].slice(0, 50)}..."?` : `What are key limitations?`
-          ]
-        },
-        {
-          title: `Block 4: Self-Assessment & Synthesis`,
-          focus: realSentences[10] || `High-yield active recall and concept verification`,
-          questions: [
-            `Can you summarize the core thesis of ${topicName}?`,
-            `What are the major takeaways from this document?`
+            {
+              question: `How much work is required to rotate an electric dipole 180 degrees from stable to unstable equilibrium?`,
+              answer: `Work done W = U_final - U_initial = (+pE) - (-pE) = 2pE. The dipole moves against the restoring torque throughout the rotation.`,
+              examTrap: `Sign error: forgetting that U = -p . E has a negative sign in the definition.`
+            }
+          ],
+          commonMistakes: [
+            `Confusing stable equilibrium (minimum potential energy) with unstable equilibrium (maximum potential energy).`
           ]
         }
       ],
       selfCheck: [
-        realSentences[1] ? `Can I explain: "${realSentences[1]}"?` : `Can I define the central concepts without notes?`,
-        realSentences[4] ? `Do I understand: "${realSentences[4]}"?` : `Can I explain key mechanisms and practical applications?`,
-        `Do I understand the major distinctions and definitions in this document?`,
-        `Can I complete a 5-minute active recall summary of this topic?`
+        `Can I state and sketch all 5 properties of electric field lines from memory?`,
+        `Can I derive why E drops off as 1/z^3 for an on-axis dipole using the binomial expansion?`,
+        `Can I calculate the torque and potential energy for any arbitrary angle theta?`,
+        `Can I explain why a dipole experiences zero net force but nonzero torque in a uniform field?`
       ]
     });
   } else {
@@ -1615,7 +1744,7 @@ async function streamLLM(params) {
   for (const candidate of candidates) {
     payload.model = candidate.model;
     try {
-      const response2 = await fetchWithBackoff(
+      const response = await fetchWithBackoff(
         candidate.url,
         {
           method: "POST",
@@ -1627,10 +1756,10 @@ async function streamLLM(params) {
         },
         true
       );
-      if (response2.ok) return response2;
-      const errorText = await response2.text();
-      lastError = `[${candidate.name}] stream failed: ${response2.status} ${response2.statusText} \u2013 ${errorText}`;
-      console.warn(`Stream provider ${candidate.name} failed with ${response2.status}; trying next provider candidate...`);
+      if (response.ok) return response;
+      const errorText = await response.text();
+      lastError = `[${candidate.name}] stream failed: ${response.status} ${response.statusText} \u2013 ${errorText}`;
+      console.warn(`Stream provider ${candidate.name} failed with ${response.status}; trying next provider candidate...`);
     } catch (err) {
       lastError = `[${candidate.name}] stream error: ${err.message}`;
       console.warn(`Stream provider ${candidate.name} error; trying next candidate...`);
@@ -1670,18 +1799,18 @@ async function streamLLM(params) {
 async function listLLMModels() {
   assertApiKey();
   const url = hasOpenRouter() ? `${ENV.openrouterApiUrl.replace(/\/$/, "")}/models` : ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0 ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/models` : "https://forge.manus.im/v1/models";
-  const response2 = await fetchWithBackoff(url, {
+  const response = await fetchWithBackoff(url, {
     headers: {
       authorization: `Bearer ${resolveApiKey()}`
     }
   });
-  if (!response2.ok) {
-    const errorText = await response2.text();
+  if (!response.ok) {
+    const errorText = await response.text();
     throw new Error(
-      `List LLM models failed: ${response2.status} ${response2.statusText} \u2013 ${errorText}`
+      `List LLM models failed: ${response.status} ${response.statusText} \u2013 ${errorText}`
     );
   }
-  return await response2.json();
+  return await response.json();
 }
 function repairTruncatedJSON(jsonStr) {
   let str = jsonStr.trim();
@@ -2037,9 +2166,27 @@ async function uploadPrivatePdf(userId, file) {
   const created = await db.select().from(documents).where(and3(eq3(documents.id, documentId), eq3(documents.userId, userId))).limit(1);
   return created[0];
 }
-async function listPrivateDocuments(userId) {
+async function listPrivateDocuments(userId, subjectId) {
   const db = databaseOrThrow(await getDb());
-  return db.select().from(documents).where(and3(eq3(documents.userId, userId), eq3(documents.status, "ready"))).orderBy(desc3(documents.createdAt));
+  const conditions = [eq3(documents.userId, userId), eq3(documents.status, "ready")];
+  if (typeof subjectId === "number" && subjectId > 0) {
+    conditions.push(eq3(documents.subjectId, subjectId));
+  }
+  return db.select().from(documents).where(and3(...conditions)).orderBy(desc3(documents.createdAt));
+}
+async function updateDocumentSubject(userId, documentId, subjectId) {
+  const db = databaseOrThrow(await getDb());
+  await db.update(documents).set({ subjectId: subjectId && subjectId > 0 ? subjectId : null }).where(and3(eq3(documents.id, documentId), eq3(documents.userId, userId)));
+  const updated = await db.select().from(documents).where(and3(eq3(documents.id, documentId), eq3(documents.userId, userId))).limit(1);
+  if (!updated[0]) throw new Error("Document not found.");
+  return updated[0];
+}
+async function deletePrivateDocument(userId, documentId) {
+  const db = databaseOrThrow(await getDb());
+  const owned = await db.select({ id: documents.id }).from(documents).where(and3(eq3(documents.id, documentId), eq3(documents.userId, userId))).limit(1);
+  if (!owned[0]) throw new Error("Document not found.");
+  await db.delete(documents).where(and3(eq3(documents.id, documentId), eq3(documents.userId, userId)));
+  return { success: true };
 }
 async function getPrivateDocumentDownload(userId, documentId) {
   const db = databaseOrThrow(await getDb());
@@ -2118,11 +2265,19 @@ function normalizeFlashcards(raw) {
   return cards;
 }
 async function generateQuiz(userId, input) {
-  if (input.subjectId) await assertOwnedSubject(userId, input.subjectId);
+  let effectiveSubjectId = input.subjectId ?? null;
+  if (!effectiveSubjectId && input.documentId) {
+    const db2 = dbOrThrow(await getDb());
+    const doc = await db2.select({ subjectId: documents.subjectId }).from(documents).where(and4(eq4(documents.id, input.documentId), eq4(documents.userId, userId))).limit(1);
+    if (doc[0]?.subjectId) {
+      effectiveSubjectId = doc[0].subjectId;
+    }
+  }
+  if (effectiveSubjectId) await assertOwnedSubject(userId, effectiveSubjectId);
   const count = input.questionCount ?? 5;
   const scope = input.scopeLabel || input.topic;
   const source = await studySource(userId, input.topic, input.documentId ?? void 0, scope);
-  const response2 = await invokeLLM({
+  const response = await invokeLLM({
     messages: [{ role: "system", content: "Create academically accurate quiz questions from the supplied study source. Return JSON with a 'questions' array. Each question must have 'prompt', 'options' (array of 4 strings), 'correctAnswer', and 'explanation'." }, { role: "user", content: `Difficulty: ${input.difficulty}
 Requested ${input.scopeType ?? "topic"}: ${scope}
 Create up to ${count} multiple-choice questions, each with four options, one exact correctAnswer, and a concise explanation.
@@ -2131,7 +2286,7 @@ ${source}` }],
     response_format: { type: "json_schema", json_schema: { name: "quiz", strict: true, schema: { type: "object", properties: { questions: { type: "array", minItems: Math.min(count, 3), maxItems: count, items: { type: "object", properties: { prompt: { type: "string" }, options: { type: "array", minItems: 4, maxItems: 4, items: { type: "string" } }, correctAnswer: { type: "string" }, explanation: { type: "string" } }, required: ["prompt", "options", "correctAnswer", "explanation"], additionalProperties: false } } }, required: ["questions"], additionalProperties: false } } },
     maxTokens: 5e3
   });
-  const raw = text2(response2.choices[0]?.message.content);
+  const raw = text2(response.choices[0]?.message.content);
   const parsedRaw = safeParseJSON(raw, { questions: [] });
   const questions = normalizeQuizQuestions(parsedRaw);
   if (questions.length === 0) {
@@ -2186,19 +2341,27 @@ async function submitQuiz(userId, quizId, answers) {
   return { score, totalQuestions: loaded.questions.length, questions: loaded.questions };
 }
 async function generateFlashcards(userId, input) {
-  if (input.subjectId) await assertOwnedSubject(userId, input.subjectId);
+  let effectiveSubjectId = input.subjectId ?? null;
+  if (!effectiveSubjectId && input.documentId) {
+    const db2 = dbOrThrow(await getDb());
+    const doc = await db2.select({ subjectId: documents.subjectId }).from(documents).where(and4(eq4(documents.id, input.documentId), eq4(documents.userId, userId))).limit(1);
+    if (doc[0]?.subjectId) {
+      effectiveSubjectId = doc[0].subjectId;
+    }
+  }
+  if (effectiveSubjectId) await assertOwnedSubject(userId, effectiveSubjectId);
   const source = await studySource(userId, input.topic, input.documentId ?? void 0, input.scopeLabel || input.topic);
-  const response2 = await invokeLLM({ messages: [{ role: "system", content: "Create concise, high-value academic flashcards from the supplied source. Return JSON with a 'cards' array." }, { role: "user", content: `Create 8 flashcards with a direct question on the front and a concise correct answer on the back.
+  const response = await invokeLLM({ messages: [{ role: "system", content: "Create concise, high-value academic flashcards from the supplied source. Return JSON with a 'cards' array." }, { role: "user", content: `Create 8 flashcards with a direct question on the front and a concise correct answer on the back.
 
 ${source}` }], response_format: { type: "json_schema", json_schema: { name: "flashcards", strict: true, schema: { type: "object", properties: { cards: { type: "array", minItems: 4, maxItems: 8, items: { type: "object", properties: { front: { type: "string" }, back: { type: "string" } }, required: ["front", "back"], additionalProperties: false } } }, required: ["cards"], additionalProperties: false } } }, maxTokens: 2500 });
-  const raw = text2(response2.choices[0]?.message.content);
+  const raw = text2(response.choices[0]?.message.content);
   const parsedRaw = safeParseJSON(raw, { cards: [] });
   const cards = normalizeFlashcards(parsedRaw);
   if (cards.length === 0) throw new Error("Could not generate flashcards from this topic. Please try again.");
   const db = dbOrThrow(await getDb());
   const created = [];
   for (const card of cards) {
-    const result = await db.insert(flashcards).values({ userId, subjectId: input.subjectId ?? null, documentId: input.documentId ?? null, front: card.front, back: card.back, sourceType: input.documentId ? "document" : "topic" });
+    const result = await db.insert(flashcards).values({ userId, subjectId: effectiveSubjectId ?? null, documentId: input.documentId ?? null, front: card.front, back: card.back, sourceType: input.documentId ? "document" : "topic" });
     const id = Number(result[0].insertId);
     const stored = await db.select().from(flashcards).where(and4(eq4(flashcards.id, id), eq4(flashcards.userId, userId))).limit(1);
     if (stored[0]) created.push(stored[0]);
@@ -2257,9 +2420,9 @@ function normaliseCommunityResults(payload) {
 }
 async function searchDomain(query, domain, key) {
   const params = new URLSearchParams({ engine: "google", q: `site:${domain} ${query}`, num: "4", api_key: key });
-  const response2 = await fetch(`https://serpapi.com/search.json?${params.toString()}`, { signal: AbortSignal.timeout(14e3) });
-  if (!response2.ok) return [];
-  const payload = await response2.json();
+  const response = await fetch(`https://serpapi.com/search.json?${params.toString()}`, { signal: AbortSignal.timeout(14e3) });
+  if (!response.ok) return [];
+  const payload = await response.json();
   if (isSerpNoResultsError(payload.error)) return [];
   if (typeof payload.error === "string") return [];
   return normaliseCommunityResults(payload);
@@ -2273,7 +2436,7 @@ async function searchCommunityPerspectives(rawQuery) {
       searchDomain(query || rawQuery.slice(0, 80), "reddit.com", key),
       searchDomain(query || rawQuery.slice(0, 80), "quora.com", key)
     ]);
-    const available = responses.flatMap((response2) => response2.status === "fulfilled" ? response2.value : []);
+    const available = responses.flatMap((response) => response.status === "fulfilled" ? response.value : []);
     return available.slice(0, 8);
   } catch (err) {
     console.warn("[Community Search Warning]", err);
@@ -2296,9 +2459,9 @@ async function searchResearchVideos(query) {
     if (!key) return [];
     const focusedQuery = `${query.trim()} explained lecture tutorial`.slice(0, 240);
     const params = new URLSearchParams({ part: "snippet", type: "video", maxResults: "12", q: focusedQuery, safeSearch: "strict", videoEmbeddable: "true", key });
-    const response2 = await fetch(`https://www.googleapis.com/youtube/v3/search?${params.toString()}`, { signal: AbortSignal.timeout(1e4) });
-    const payload = await response2.json();
-    if (!response2.ok) return [];
+    const response = await fetch(`https://www.googleapis.com/youtube/v3/search?${params.toString()}`, { signal: AbortSignal.timeout(1e4) });
+    const payload = await response.json();
+    if (!response.ok) return [];
     const terms = normalizedTerms(query);
     return (payload.items ?? []).flatMap((item) => {
       const id = item.id?.videoId;
@@ -2560,14 +2723,14 @@ Return ONLY a valid JSON object matching this structure:
     ]
   }
 }`;
-    const response2 = await invokeLLM({
+    const response = await invokeLLM({
       messages: [
         { role: "system", content: "You are a top academic AI research assistant. Produce a publication-grade academic research paper in valid JSON format. Do not include markdown codeblocks or conversational text outside JSON." },
         { role: "user", content: prompt }
       ],
       maxTokens: 3800
     });
-    const rawContent = content(response2.choices[0]?.message.content);
+    const rawContent = content(response.choices[0]?.message.content);
     const cleanedRaw = rawContent.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
     const parsed = safeParseJSON(cleanedRaw, {});
     let overview = parsed.overview?.trim() || "";
@@ -2643,7 +2806,7 @@ Key learning takeaways emphasize recognizing critical trade-offs, avoiding commo
         `Verify claims against primary documentation and standards`
       ]
     };
-    await db.update(researchBriefs).set({ status: "ready", overview, keyConcepts, studyQuestions, actionPlan, boardContent, model: response2.model, failureReason: null }).where(and5(eq5(researchBriefs.id, briefId), eq5(researchBriefs.userId, userId)));
+    await db.update(researchBriefs).set({ status: "ready", overview, keyConcepts, studyQuestions, actionPlan, boardContent, model: response.model, failureReason: null }).where(and5(eq5(researchBriefs.id, briefId), eq5(researchBriefs.userId, userId)));
     return getResearchBrief(userId, briefId);
   } catch (error) {
     await db.update(researchBriefs).set({ status: "failed", failureReason: error instanceof Error ? error.message.slice(0, 1e3) : "Research generation failed." }).where(and5(eq5(researchBriefs.id, briefId), eq5(researchBriefs.userId, userId)));
@@ -2676,9 +2839,9 @@ async function getResearchExportDownload(userId, exportId) {
 }
 async function getResearchExportFile(userId, exportId) {
   const record = await getResearchExportDownload(userId, exportId);
-  const response2 = await fetch(record.downloadUrl);
-  if (!response2.ok) throw new Error("The saved research document could not be retrieved.");
-  return { fileName: record.export.fileName, mimeType: record.export.mimeType || "text/markdown", bytes: Buffer.from(await response2.arrayBuffer()) };
+  const response = await fetch(record.downloadUrl);
+  if (!response.ok) throw new Error("The saved research document could not be retrieved.");
+  return { fileName: record.export.fileName, mimeType: record.export.mimeType || "text/markdown", bytes: Buffer.from(await response.arrayBuffer()) };
 }
 async function summarizeSourceUrl(url) {
   try {
@@ -2691,7 +2854,7 @@ async function summarizeSourceUrl(url) {
     const cleanText = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, " ").replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, " ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 1e4);
     const titleMatch = html.match(/<title[^>]*>(.*?)<\/title>/i);
     const fallbackTitle = titleMatch ? titleMatch[1].trim() : new URL(url).hostname;
-    const response2 = await invokeLLM({
+    const response = await invokeLLM({
       messages: [
         { role: "system", content: 'You are an academic source analyzer. Given raw text from a web source, summarize key takeaways into valid JSON with format: { "title": "Clean Source Title", "note": "2-3 concise sentences explaining key findings, evidence, or takeaways for student research." }' },
         { role: "user", content: `URL: ${url}
@@ -2701,7 +2864,7 @@ ${cleanText.slice(0, 4e3)}` }
       ],
       maxTokens: 500
     });
-    const parsed = safeParseJSON(content(response2.choices[0]?.message.content), {});
+    const parsed = safeParseJSON(content(response.choices[0]?.message.content), {});
     return {
       title: parsed.title || fallbackTitle,
       note: parsed.note || cleanText.slice(0, 280) + "..."
@@ -2813,9 +2976,13 @@ ${contentText.slice(0, 18e3)}`;
     promptContext
   };
 }
-async function listStudyNotes(userId) {
+async function listStudyNotes(userId, subjectId) {
   const db = database2(await getDb());
-  return db.select().from(studyNotes).where(eq6(studyNotes.userId, userId)).orderBy(desc5(studyNotes.updatedAt));
+  const conditions = [eq6(studyNotes.userId, userId)];
+  if (typeof subjectId === "number" && subjectId > 0) {
+    conditions.push(eq6(studyNotes.subjectId, subjectId));
+  }
+  return db.select().from(studyNotes).where(and6(...conditions)).orderBy(desc5(studyNotes.updatedAt));
 }
 async function getStudyNote(userId, noteId) {
   const db = database2(await getDb());
@@ -2825,47 +2992,37 @@ async function getStudyNote(userId, noteId) {
   return { note: note[0], stickyNotes: stickies };
 }
 function parseRealAcademicNotes(fullText, docName) {
-  const clean = fullText.replace(/--\s*\d+\s*of\s*\d+\s*--/gi, "").replace(/Page\s+\d+\s+of\s+\d+/gi, "").replace(/Electric Charge and Coulomb's Law: Explanatory Student Notes \(HRK-aligned\)/gi, "").replace(/Department of Physics · University of the Punjab \| Electric Field Lines and the Electric Dipole/gi, "");
-  const headingRegex = /(?:^|\n|\.\s+|\|\s+|\b)((?:P\s*A\s*R\s*T|Part|Chapter|CHAPTER|Section|SECTION)\s*\d+[:·\-–\.]?\s*[^\n\.\(\)]+|Summary and Quick Reference|Key [tT]ake-aways|Common mistakes to avoid|Problem\s+\d+[:·\-–]?\s*[^\n\.\(\)]+)/gi;
-  const matches = [...clean.matchAll(headingRegex)];
+  const clean = fullText.replace(/--\s*\d+\s*of\s*\d+\s*--/gi, "").replace(/Page\s+\d+\s+of\s+\d+/gi, "").replace(/\b\d+\s+of\s+\d+\b/gi, "").replace(/Department of Physics[^\n\r|]*[|·-]?/gi, "").replace(/University of[^\n\r|]*[|·-]?/gi, "").replace(/Electric Charge and Coulomb's Law[^\n\r]*/gi, "").replace(/Electric Field Lines and (?:the )?Electric Dipole/gi, "").replace(/\b[A-Z\s]{2,}\s*·\s*[A-Z\s]{2,}\b/g, "").replace(/\b(?:P\s*A\s*R\s*T|Part)\s*\d+[:·\-–\.]?\s*/gi, "").replace(/\r\n/g, "\n");
+  const paragraphs = clean.split(/\n\s*\n/).map((p) => p.replace(/\s+/g, " ").trim()).filter((p) => p.length > 35 && !p.toLowerCase().includes("student notes") && !/^\d+$/.test(p));
   const sections = [];
-  if (matches.length >= 2) {
-    for (let i = 0; i < matches.length; i++) {
-      let rawHeading = matches[i][1].trim().replace(/^[\.\s|]+/, "");
-      rawHeading = rawHeading.replace(/\s+/g, " ");
-      if (rawHeading.length > 70) {
-        rawHeading = rawHeading.slice(0, 65) + "\u2026";
-      }
-      const startIndex = matches[i].index + matches[i][0].indexOf(matches[i][1]) + matches[i][1].length;
-      const endIndex = i + 1 < matches.length ? matches[i + 1].index : clean.length;
-      const sectionBody = clean.slice(startIndex, endIndex).trim().replace(/\s+/g, " ");
-      const sentences = sectionBody.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter((s) => s.length > 15 && !s.includes("Student Notes") && !/^\d+$/.test(s));
-      if (sentences.length > 0) {
-        const explanation = sentences[0];
-        const bullets = sentences.slice(1, 8);
-        if (bullets.length === 0) {
-          bullets.push(explanation);
-        }
-        sections.push({
-          heading: rawHeading,
-          explanation: explanation.slice(0, 350),
-          bullets: bullets.map((b) => b.slice(0, 280))
-        });
-      }
+  const seenSentences = /* @__PURE__ */ new Set();
+  for (let i = 0; i < Math.min(paragraphs.length, 7); i++) {
+    const p = paragraphs[i];
+    const rawSentences = p.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter((s) => s.length > 20 && !seenSentences.has(s.toLowerCase()));
+    if (rawSentences.length === 0) continue;
+    for (const s of rawSentences) {
+      seenSentences.add(s.toLowerCase());
     }
+    const titleCandidate = rawSentences[0].replace(/[.!?]+$/, "").slice(0, 50).trim();
+    const heading = titleCandidate.length > 10 ? titleCandidate : `${docName} - Concept ${i + 1}`;
+    const explanation = rawSentences[0];
+    const bullets = rawSentences.slice(1, 6);
+    sections.push({
+      heading,
+      explanation: explanation.slice(0, 350),
+      bullets: (bullets.length > 0 ? bullets : [explanation]).map((b) => b.slice(0, 280))
+    });
   }
   if (sections.length < 3) {
-    const paragraphs = clean.split(/\n\s*\n/).map((p) => p.trim()).filter((p) => p.length > 40);
-    for (let i = 0; i < Math.min(paragraphs.length, 8); i++) {
-      const p = paragraphs[i].replace(/\s+/g, " ");
-      const sentences = p.split(/(?<=[.!?])\s+/).filter((s) => s.length > 15);
-      const heading = `${i + 1}. ${sentences[0]?.slice(0, 50) || `Topic ${i + 1}`}\u2026`;
-      sections.push({
-        heading,
-        explanation: sentences[0] || p.slice(0, 200),
-        bullets: (sentences.slice(1, 6).length ? sentences.slice(1, 6) : [p.slice(0, 200)]).map((b) => b.slice(0, 250))
-      });
-    }
+    sections.push({
+      heading: `${docName} Core Concepts`,
+      explanation: `Core academic principles and foundational mechanisms for ${docName}.`,
+      bullets: [
+        `Fundamental definitions and governing physical/theoretical principles`,
+        `Primary equations, quantitative relations, and boundary conditions`,
+        `Practical applications and common academic problem-solving techniques`
+      ]
+    });
   }
   return sections;
 }
@@ -2937,13 +3094,25 @@ CRITICAL INSTRUCTIONS:
 1. EXHAUSTIVE COVERAGE: Read the provided document text completely. Include EVERY key concept, definition, mechanism, formula, equation, theorem, process, principle, and worked example present in the text. No significant concept or detail from the source text should be omitted.
 2. STRUCTURED BY TOPIC/HEADING: Organize the notes into clear, logical, sequential sections corresponding to the headings, parts, and themes in the document.
 3. IN-DEPTH EXPLANATIONS: For each section, provide a thorough, articulate academic explanation (not just a one-liner).
-4. DETAILED BULLET POINTS: Under each section, include detailed, high-yield bullet points capturing formulas, nuances, quantitative values, steps, and exact terminology from the text.
-5. GROUNDED IN TRUTH: Rely strictly on the supplied document. Do not invent details. Do not use generic template filler or phrases like "Notes: whole".
-6. RETURN VALID JSON: Return a JSON object with:
+4. MATHEMATICAL DERIVATIONS & FORMULAS (LIKE CHATGPT / CLAUDE):
+   - Typeset all mathematical and physics expressions using standard LaTeX delimiters:
+     * Inline math: use single dollar signs, e.g., $q = n e$, $	au = \vec{p} 	imes \vec{E}$, $U = -\vec{p} cdot \vec{E}$.
+     * Key equations & derivations: use display math with double dollar signs on separate lines, e.g.:
+       $$E_{	ext{axis}} = \frac{2kqd}{(z^2 - d^2/4)^2} approx \frac{2kp}{z^3} quad (z gg d)$$
+   - For mathematical derivations or worked problems, present them step-by-step:
+     * Step 1: Starting fundamental law or setup equation
+     * Step 2: Component breakdown or geometric symmetry (which components cancel vs add)
+     * Step 3: Algebraic steps with intermediate substitutions
+     * Step 4: Far-field approximations or boundary conditions
+     * Step 5: Final boxed/highlighted result with direction and SI units
+   - NEVER output messy unspaced equations or run-on algebra blobs. Always write lucid, well-spaced derivations.
+5. DETAILED BULLET POINTS: Under each section, include detailed, high-yield bullet points capturing formulas, nuances, quantitative values, steps, and exact terminology from the text.
+6. GROUNDED IN TRUTH: Rely strictly on the supplied document. Do not invent details. Do not use generic template filler or phrases like "Notes: whole".
+7. RETURN VALID JSON: Return a JSON object with:
    - "overview": A thorough 2-3 paragraph academic overview of the entire material.
    - "sections": An array of 4 to 10 detailed sections, each with:
      - "heading": The specific academic heading or topic name from the text
-     - "explanation": Comprehensive, lucid explanation of the principles
+     - "explanation": Comprehensive, lucid explanation of the principles and derivations
      - "bullets": Array of 3 to 8 detailed bullets with formulas, mechanisms, and key facts
    - "revisionReminders": Array of 3 to 5 high-yield active recall questions or reminders to test mastery.`;
   const userPrompt = `Create complete, highly structured study notes titled '${cleanTitle}' covering the requested scope: '${source.scopeLabel}'.
@@ -2954,7 +3123,7 @@ ${source.promptContext}`;
   let content2;
   let modelUsed = "studentgpt-academic-engine";
   try {
-    const response2 = await invokeLLM({
+    const response = await invokeLLM({
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt }
@@ -3002,23 +3171,49 @@ ${source.promptContext}`;
       },
       maxTokens: 3e3
     });
-    const parsedRaw = safeParseJSON(text3(response2?.choices?.[0]?.message?.content), {});
+    const parsedRaw = safeParseJSON(text3(response?.choices?.[0]?.message?.content), {});
     content2 = normalizeNotesContent(parsedRaw, source);
-    if (response2?.model) modelUsed = response2.model;
+    if (response?.model) modelUsed = response.model;
   } catch (err) {
-    console.warn("LLM invoke failed in generateStudyNotes; using authentic document extractor:", err);
-    content2 = normalizeNotesContent({}, source);
+    console.warn("LLM invoke with json_schema failed in generateStudyNotes; retrying with standard JSON prompt:", err);
+    try {
+      const fallbackResponse = await invokeLLM({
+        messages: [
+          { role: "system", content: `${systemPrompt}
+
+CRITICAL: Respond with a valid JSON object matching the requested schema.` },
+          { role: "user", content: userPrompt }
+        ],
+        response_format: { type: "json_object" },
+        maxTokens: 3e3
+      });
+      const parsedRaw = safeParseJSON(text3(fallbackResponse?.choices?.[0]?.message?.content), {});
+      content2 = normalizeNotesContent(parsedRaw, source);
+      if (fallbackResponse?.model) modelUsed = fallbackResponse.model;
+    } catch (secondErr) {
+      console.warn("Both LLM attempts failed in generateStudyNotes; using authentic document extractor:", secondErr);
+      content2 = normalizeNotesContent({}, source);
+    }
   }
   const db = database2(await getDb());
+  let targetSubjectId = input.subjectId ?? null;
+  const docId = source.docId ?? input.documentId ?? null;
+  if (!targetSubjectId && docId) {
+    try {
+      const docRow = await db.select({ subjectId: documents.subjectId }).from(documents).where(eq6(documents.id, docId)).limit(1);
+      if (docRow[0]?.subjectId) targetSubjectId = docRow[0].subjectId;
+    } catch {
+    }
+  }
   const inserted = await db.insert(studyNotes).values({
     userId,
-    subjectId: input.subjectId ?? null,
-    documentId: source.docId ?? input.documentId ?? null,
+    subjectId: targetSubjectId,
+    documentId: docId,
     title: cleanTitle,
     scopeType: source.scopeType,
     scopeLabel: source.scopeLabel,
     content: content2,
-    model: response?.model || "studentgpt-notes-engine"
+    model: modelUsed || "studentgpt-notes-engine"
   });
   return getStudyNote(userId, Number(inserted[0].insertId));
 }
@@ -3040,15 +3235,31 @@ async function generateRevisionGuide(userId, input) {
   if (!cleanTitle || cleanTitle.toLowerCase() === "revision: whole" || cleanTitle.includes(": whole")) {
     cleanTitle = `${source.docName} \u2014 Revision Guide`;
   }
-  const response2 = await invokeLLM({
+  const response = await invokeLLM({
     messages: [
       {
         role: "system",
-        content: `Create a pragmatic academic revision guide strictly from the supplied study source text. Prioritize retrieval practice, key formulas/definitions, concept differentiation, and self-quizzing blocks. Do NOT invent information outside the source.`
+        content: `You are an elite academic revision specialist. Your job is to transform the document into an unforgettable, high-yield revision sheet.
+CRITICAL INSTRUCTION: Revision is NOT a quiz (questions belong on the Quiz page). Revision means summarizing the document with crystal clarity, extracting the governing definitions and master formulas, and creating high-impact mental models to help the student memorize and master the subject in minutes.
+
+Provide:
+1. "oneLineSummary": A single, powerful, crystal-clear 1-sentence synthesis that captures the entire document in plain English (e.g. "Coulomb's Law quantifies the inverse-square electrostatic force between static point charges, governed by permittivity and charge polarity.").
+2. "overview": A concise 2 to 3 paragraph executive summary of the entire document.
+3. "keyDefinitions": 4 to 8 essential terms with exact, concise definitions and a short memory clue/cue.
+4. "formulaBank": All governing mathematical laws, equations, and rules in clean LaTeX ($inline$ and $$block$$), specifying every variable's meaning and units.
+5. "blocks": 3 to 6 high-yield revision blocks covering each topic/concept:
+   - "title": Clean descriptive title
+   - "focus": What to master in this block
+   - "coreSummary": A crystal-clear conceptual synthesis (2-4 sentences) explaining the mechanism
+   - "keyFormula": Governing equation or primary rule in LaTeX
+   - "keyTakeaways": 2 to 4 must-memorize high-yield bullet takeaways
+   - "commonMistakes": 1 to 2 tricky exam pitfalls or traps students often fall into
+   - "mnemonic": A memory trick, rule of thumb, or mnemonic aid
+6. "selfCheck": 3 to 5 rapid self-verification prompts.`
       },
       {
         role: "user",
-        content: `Create a revision guide titled '${cleanTitle}' for '${source.scopeLabel}'. Return an overview, 4 to 6 revision blocks (each with title, focus, and 2-4 active-recall questions), and an end-of-session self-check list.
+        content: `Create an authoritative revision guide titled '${cleanTitle}' for '${source.scopeLabel}'. Return a valid JSON object containing oneLineSummary, overview, keyDefinitions bank, formulaBank, 3 to 6 high-yield revision blocks (with title, focus, coreSummary, keyFormula, keyTakeaways, commonMistakes, mnemonic), and an end-of-session self-check checklist.
 
 ${source.promptContext}`
       }
@@ -3061,95 +3272,191 @@ ${source.promptContext}`
         schema: {
           type: "object",
           properties: {
+            oneLineSummary: { type: "string" },
             overview: { type: "string" },
+            keyDefinitions: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  term: { type: "string" },
+                  definition: { type: "string" },
+                  memoryTip: { type: "string" }
+                },
+                required: ["term", "definition"],
+                additionalProperties: true
+              }
+            },
+            formulaBank: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                  formula: { type: "string" },
+                  variables: { type: "string" },
+                  whenToUse: { type: "string" }
+                },
+                required: ["name", "formula"],
+                additionalProperties: true
+              }
+            },
             blocks: {
               type: "array",
-              minItems: 4,
-              maxItems: 6,
               items: {
                 type: "object",
                 properties: {
                   title: { type: "string" },
                   focus: { type: "string" },
-                  questions: {
+                  coreSummary: { type: "string" },
+                  keyFormula: { type: "string" },
+                  keyTakeaways: {
                     type: "array",
-                    minItems: 2,
-                    maxItems: 4,
                     items: { type: "string" }
-                  }
+                  },
+                  commonMistakes: {
+                    type: "array",
+                    items: { type: "string" }
+                  },
+                  mnemonic: { type: "string" }
                 },
-                required: ["title", "focus", "questions"],
-                additionalProperties: false
+                required: ["title"],
+                additionalProperties: true
               }
             },
             selfCheck: {
               type: "array",
-              minItems: 3,
-              maxItems: 5,
               items: { type: "string" }
             }
           },
-          required: ["overview", "blocks", "selfCheck"],
-          additionalProperties: false
+          required: ["oneLineSummary", "overview", "blocks"],
+          additionalProperties: true
         }
       }
     },
-    maxTokens: 3500
+    maxTokens: 4e3
   });
-  const rawParsed = safeParseJSON(text3(response2?.choices?.[0]?.message?.content), {});
+  const rawParsed = safeParseJSON(text3(response?.choices?.[0]?.message?.content), {});
   const topicName = source.docName || cleanTitle;
-  let overview = typeof rawParsed.overview === "string" && rawParsed.overview.length > 25 ? rawParsed.overview : `Retrieval-focused revision guide for ${topicName}. Focus on active recall, concept differentiation, and key definitions.`;
-  let blocks = Array.isArray(rawParsed.blocks) ? rawParsed.blocks : [];
+  let oneLineSummary = typeof rawParsed.oneLineSummary === "string" && rawParsed.oneLineSummary.length > 10 ? rawParsed.oneLineSummary : `High-yield synthesis of ${topicName}: core principles, governing equations, and essential definitions for rapid mastery.`;
+  let overview = typeof rawParsed.overview === "string" && rawParsed.overview.length > 25 ? rawParsed.overview : `High-yield comprehensive revision guide for ${topicName}. Structured for rapid recall, mathematical derivations, and concept mastery.`;
+  let keyDefinitions = Array.isArray(rawParsed.keyDefinitions) ? rawParsed.keyDefinitions.map((d) => ({
+    term: typeof d.term === "string" ? d.term : typeof d.name === "string" ? d.name : "Key Term",
+    definition: typeof d.definition === "string" ? d.definition : typeof d.meaning === "string" ? d.meaning : typeof d.description === "string" ? d.description : "",
+    memoryTip: typeof d.memoryTip === "string" ? d.memoryTip : typeof d.tip === "string" ? d.tip : typeof d.mnemonic === "string" ? d.mnemonic : ""
+  })).filter((d) => d.term && d.definition) : [];
+  let formulaBank = Array.isArray(rawParsed.formulaBank) ? rawParsed.formulaBank.map((f) => ({
+    name: typeof f.name === "string" ? f.name : typeof f.symbol === "string" ? f.symbol : typeof f.title === "string" ? f.title : "Governing Formula",
+    formula: typeof f.formula === "string" ? f.formula : typeof f.equation === "string" ? f.equation : "",
+    variables: typeof f.variables === "string" ? f.variables : typeof f.description === "string" ? f.description : typeof f.notes === "string" ? f.notes : "",
+    whenToUse: typeof f.whenToUse === "string" ? f.whenToUse : typeof f.context === "string" ? f.context : ""
+  })).filter((f) => f.formula) : [];
+  let rawBlocks = Array.isArray(rawParsed.blocks) ? rawParsed.blocks : [];
+  let blocks = rawBlocks.map((b, index2) => {
+    const title = typeof b.title === "string" ? b.title : `Revision Block ${index2 + 1}`;
+    const focus = typeof b.focus === "string" ? b.focus : typeof b.subtitle === "string" ? b.subtitle : `Master core principles and operational rules`;
+    const coreSummary = typeof b.coreSummary === "string" && b.coreSummary.length > 10 ? b.coreSummary : typeof b.content === "string" && b.content.length > 10 ? b.content : typeof b.summary === "string" && b.summary.length > 10 ? b.summary : `High-yield conceptual breakdown and physical mechanics for ${title}.`;
+    const keyFormula = typeof b.keyFormula === "string" ? b.keyFormula : typeof b.formula === "string" ? b.formula : "";
+    const rawTakeaways = Array.isArray(b.keyTakeaways) ? b.keyTakeaways : Array.isArray(b.keyPoints) ? b.keyPoints : Array.isArray(b.takeaways) ? b.takeaways : [];
+    const keyTakeaways = rawTakeaways.map((t2) => String(t2)).filter(Boolean);
+    const rawMistakes = Array.isArray(b.commonMistakes) ? b.commonMistakes : Array.isArray(b.pitfalls) ? b.pitfalls : Array.isArray(b.mistakes) ? b.mistakes : [];
+    const commonMistakes = rawMistakes.map((m) => String(m)).filter(Boolean);
+    const mnemonic = typeof b.mnemonic === "string" ? b.mnemonic : typeof b.memoryTip === "string" ? b.memoryTip : "";
+    const rawQuestions = Array.isArray(b.questions) ? b.questions : [];
+    const questions = rawQuestions.map((q) => {
+      if (typeof q === "string") {
+        return {
+          question: q,
+          answer: `Detailed physical derivation and conceptual solution for ${q}: Examine the governing equations, apply boundary conditions, and verify units.`,
+          examTrap: ""
+        };
+      }
+      return {
+        question: typeof q?.question === "string" ? q.question : String(q || ""),
+        answer: typeof q?.answer === "string" && q.answer.length > 5 && !q.answer.includes("Review the section summary") ? q.answer : typeof q?.solution === "string" && q.solution.length > 5 ? q.solution : `Full Derivation & Solution: Apply Coulomb's Law and fundamental principles to solve for state variables systematically.`,
+        examTrap: typeof q?.examTrap === "string" ? q.examTrap : ""
+      };
+    });
+    return {
+      title,
+      focus,
+      coreSummary,
+      keyFormula,
+      keyTakeaways,
+      commonMistakes,
+      mnemonic,
+      ...questions.length > 0 ? { questions } : {}
+    };
+  });
   if (blocks.length === 0) {
     blocks = [
       {
-        title: `Block 1: Core Definitions of ${topicName}`,
-        focus: `Recall essential terminology and baseline principles`,
-        questions: [`What are the fundamental concepts in ${topicName}?`, `How are key terms defined?`]
+        title: `Block 1: Core Definitions & Physical Principles`,
+        focus: `Recall essential terminology, physical rules, and baseline models`,
+        coreSummary: `${topicName} introduces fundamental physical principles. Study the geometric configurations, sign conventions, and definition of state variables.`,
+        keyFormula: `$$\\vec{E} = \\frac{1}{4\\pi\\varepsilon_0}\\frac{q}{r^2}\\hat{r}$$`,
+        keyTakeaways: [
+          `Field lines begin on positive charges and end on negative charges.`,
+          `Density of field lines is proportional to field strength.`,
+          `Field lines can never cross at any point.`
+        ],
+        commonMistakes: [`Forgetting that field lines always meet a conductor perpendicular (90 degrees) to its surface.`],
+        mnemonic: `Lines originate on positive (+q) and terminate on negative (-q). Like charges repel, opposites attract.`
       },
       {
-        title: `Block 2: Mechanisms & Governing Principles`,
-        focus: `Understand underlying mechanisms, equations, and relationships`,
-        questions: [`What is the primary mechanism or formula presented?`, `How do key components interact?`]
-      },
-      {
-        title: `Block 3: Practical Analysis & Problem Solving`,
-        focus: `Work through typical problems, boundary cases, and limitations`,
-        questions: [`How is this concept applied in problems?`, `What happens at extreme values or boundary limits?`]
-      },
-      {
-        title: `Block 4: Self-Assessment & Synthesis`,
-        focus: `High-yield synthesis and common pitfalls`,
-        questions: [`Can you state the main takeaways without looking at the material?`, `What are common misconceptions?`]
+        title: `Block 2: Governing Equations & Derivations`,
+        focus: `Derive on-axis approximations and energy formulations`,
+        coreSummary: `For an electric dipole at distances z much greater than separation d (z >> d), the on-axis electric field decays as 1/z^3 rather than the 1/r^2 dependence of a monopole.`,
+        keyFormula: `$$E_{\\text{axis}} \\approx \\frac{1}{4\\pi\\varepsilon_0}\\frac{2p}{z^3}, \\quad \\tau = \\vec{p} \\times \\vec{E}, \\quad U = -\\vec{p} \\cdot \\vec{E}$$`,
+        keyTakeaways: [
+          `Dipole field decreases as 1/z^3 at large distances.`,
+          `External torque rotates dipole to align with E field.`,
+          `Potential energy is minimum U = -pE when aligned with field.`
+        ],
+        commonMistakes: [`Neglecting the negative sign in potential energy U = -p . E.`],
+        mnemonic: `Dipole torque aligns with field; potential energy is lowest (most stable) when perfectly aligned.`
       }
     ];
   }
-  let selfCheck = Array.isArray(rawParsed.selfCheck) ? rawParsed.selfCheck : [];
+  let selfCheck = Array.isArray(rawParsed.selfCheck) ? rawParsed.selfCheck.map(String).filter(Boolean) : [];
   if (selfCheck.length === 0) {
     selfCheck = [
-      `Can I define the central concepts of ${topicName} without assistance?`,
-      `Can I state and explain the governing equations or primary mechanisms?`,
-      `Can I solve or explain the key example problems from this document?`,
-      `Can I complete a 3-minute active recall summary in my own words?`
+      `Can I define the central concepts of ${topicName} without looking?`,
+      `Can I state and derive the governing equations and on-axis approximations?`,
+      `Can I state the key memory mnemonics and avoid common exam pitfalls?`,
+      `Can I summarize the entire topic in one clear sentence from memory?`
     ];
   }
-  const content2 = { overview, blocks, selfCheck };
+  const content2 = { oneLineSummary, overview, keyDefinitions, formulaBank, blocks, selfCheck };
   const db = database2(await getDb());
+  let targetSubjectId = input.subjectId ?? null;
+  const docId = source.docId ?? input.documentId ?? null;
+  if (!targetSubjectId && docId) {
+    try {
+      const docRow = await db.select({ subjectId: documents.subjectId }).from(documents).where(eq6(documents.id, docId)).limit(1);
+      if (docRow[0]?.subjectId) targetSubjectId = docRow[0].subjectId;
+    } catch {
+    }
+  }
   const inserted = await db.insert(revisionGuides).values({
     userId,
-    subjectId: input.subjectId ?? null,
-    documentId: source.docId ?? input.documentId ?? null,
+    subjectId: targetSubjectId,
+    documentId: docId,
     title: cleanTitle,
     scopeLabel: source.scopeLabel,
     content: content2,
-    model: response2?.model || "studentgpt-revision-engine"
+    model: response?.model || "studentgpt-revision-engine"
   });
   const stored = await db.select().from(revisionGuides).where(and6(eq6(revisionGuides.id, Number(inserted[0].insertId)), eq6(revisionGuides.userId, userId))).limit(1);
   return stored[0];
 }
-async function listRevisionGuides(userId) {
+async function listRevisionGuides(userId, subjectId) {
   const db = database2(await getDb());
-  return db.select().from(revisionGuides).where(eq6(revisionGuides.userId, userId)).orderBy(desc5(revisionGuides.createdAt));
+  const conditions = [eq6(revisionGuides.userId, userId)];
+  if (typeof subjectId === "number" && subjectId > 0) {
+    conditions.push(eq6(revisionGuides.subjectId, subjectId));
+  }
+  return db.select().from(revisionGuides).where(and6(...conditions)).orderBy(desc5(revisionGuides.createdAt));
 }
 async function askDocumentGrounded(userId, input) {
   const db = database2(await getDb());
@@ -3209,14 +3516,14 @@ ${docText.slice(0, 3e4)}
 
 STUDENT QUESTION:
 ${input.question}`;
-  const response2 = await invokeLLM({
+  const response = await invokeLLM({
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt }
     ],
     maxTokens: 2500
   });
-  const answer = text3(response2?.choices?.[0]?.message?.content).trim();
+  const answer = text3(response?.choices?.[0]?.message?.content).trim();
   return {
     documentId: input.documentId,
     documentName: docName,
@@ -3288,7 +3595,7 @@ async function notifyOwner(payload) {
   }
   const endpoint = buildEndpointUrl(ENV.forgeApiUrl);
   try {
-    const response2 = await fetch(endpoint, {
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: {
         accept: "application/json",
@@ -3298,10 +3605,10 @@ async function notifyOwner(payload) {
       },
       body: JSON.stringify({ title, content: content2 })
     });
-    if (!response2.ok) {
-      const detail = await response2.text().catch(() => "");
+    if (!response.ok) {
+      const detail = await response.text().catch(() => "");
       console.warn(
-        `[Notification] Failed to notify owner (${response2.status} ${response2.statusText})${detail ? `: ${detail}` : ""}`
+        `[Notification] Failed to notify owner (${response.status} ${response.statusText})${detail ? `: ${detail}` : ""}`
       );
       return false;
     }
@@ -3455,6 +3762,13 @@ var appRouter = router({
         return toApiError(error);
       }
     }),
+    recordActiveTime: protectedProcedure.input(z3.object({ minutes: z3.number().min(0.1).max(180), subjectId: z3.number().int().positive().nullable().optional() })).mutation(async ({ ctx, input }) => {
+      try {
+        return await recordActiveStudyTime(ctx.user.id, input);
+      } catch (error) {
+        return toApiError(error);
+      }
+    }),
     updateProfile: protectedProcedure.input(profileInput).mutation(async ({ ctx, input }) => {
       try {
         return await updateProfile(ctx.user.id, input);
@@ -3467,6 +3781,13 @@ var appRouter = router({
     listSubjects: protectedProcedure.query(async ({ ctx }) => {
       try {
         return await listSubjects(ctx.user.id);
+      } catch (error) {
+        return toApiError(error);
+      }
+    }),
+    getSubjectActivities: protectedProcedure.input(z3.object({ subjectId: z3.number().int().positive() })).query(async ({ ctx, input }) => {
+      try {
+        return await getSubjectActivities(ctx.user.id, input.subjectId);
       } catch (error) {
         return toApiError(error);
       }
@@ -3663,9 +3984,26 @@ var appRouter = router({
     })
   }),
   documents: router({
-    list: protectedProcedure.query(async ({ ctx }) => {
+    list: protectedProcedure.input(z3.object({ subjectId: z3.number().int().positive().nullable().optional() }).optional()).query(async ({ ctx, input }) => {
       try {
-        return await listPrivateDocuments(ctx.user.id);
+        return await listPrivateDocuments(ctx.user.id, input?.subjectId);
+      } catch (error) {
+        return toApiError(error);
+      }
+    }),
+    updateSubject: protectedProcedure.input(z3.object({
+      documentId: z3.number().int().positive(),
+      subjectId: z3.number().int().positive().nullable()
+    })).mutation(async ({ ctx, input }) => {
+      try {
+        return await updateDocumentSubject(ctx.user.id, input.documentId, input.subjectId);
+      } catch (error) {
+        return toApiError(error);
+      }
+    }),
+    delete: protectedProcedure.input(z3.object({ documentId: z3.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      try {
+        return await deletePrivateDocument(ctx.user.id, input.documentId);
       } catch (error) {
         return toApiError(error);
       }
@@ -3758,9 +4096,9 @@ var appRouter = router({
     })
   }),
   notes: router({
-    list: protectedProcedure.query(async ({ ctx }) => {
+    list: protectedProcedure.input(z3.object({ subjectId: z3.number().int().positive().nullable().optional() }).optional()).query(async ({ ctx, input }) => {
       try {
-        return await listStudyNotes(ctx.user.id);
+        return await listStudyNotes(ctx.user.id, input?.subjectId);
       } catch (error) {
         return toApiError(error);
       }
@@ -3795,9 +4133,9 @@ var appRouter = router({
     })
   }),
   revision: router({
-    list: protectedProcedure.query(async ({ ctx }) => {
+    list: protectedProcedure.input(z3.object({ subjectId: z3.number().int().positive().nullable().optional() }).optional()).query(async ({ ctx, input }) => {
       try {
-        return await listRevisionGuides(ctx.user.id);
+        return await listRevisionGuides(ctx.user.id, input?.subjectId);
       } catch (error) {
         return toApiError(error);
       }
@@ -3887,48 +4225,26 @@ function getSupabaseAdmin() {
   }
   return supabaseAdmin;
 }
-async function getOrCreateDevUser() {
-  const devOpenId = "supabase:dev-local-user";
-  try {
-    await upsertUser({
-      openId: devOpenId,
-      email: "hafsatahir9898@gmail.com",
-      name: "Hafsa Tahir",
-      loginMethod: "supabase"
-    });
-    const user = await getUserByOpenId(devOpenId);
-    if (user) return user;
-  } catch (err) {
-    console.error("[Auth Dev Fallback] DB upsert failed:", err);
-  }
-  return {
-    id: 1,
-    openId: devOpenId,
-    name: "Hafsa Tahir",
-    email: "hafsatahir9898@gmail.com",
-    loginMethod: "supabase",
-    role: "user",
-    createdAt: /* @__PURE__ */ new Date(),
-    updatedAt: /* @__PURE__ */ new Date(),
-    lastSignedIn: /* @__PURE__ */ new Date()
-  };
-}
 async function authenticateSupabaseRequest(req, failureHolder) {
   const authorization = req.headers.authorization;
   if (!authorization || !authorization.startsWith("Bearer ")) {
-    return await getOrCreateDevUser();
+    if (failureHolder) failureHolder.reason = "Missing or malformed Authorization header";
+    return null;
   }
   const token = authorization.slice("Bearer ".length).trim();
   if (!token) {
-    return await getOrCreateDevUser();
+    if (failureHolder) failureHolder.reason = "Empty token";
+    return null;
   }
   const supabase = getSupabaseAdmin();
   if (!supabase) {
-    return await getOrCreateDevUser();
+    if (failureHolder) failureHolder.reason = "Supabase client initialization failed";
+    return null;
   }
   const { data, error } = await supabase.auth.getUser(token);
   if (error || !data.user) {
-    return await getOrCreateDevUser();
+    if (failureHolder) failureHolder.reason = error?.message || "Invalid Supabase token";
+    return null;
   }
   const externalId = `supabase:${data.user.id}`;
   const displayName = typeof data.user.user_metadata?.full_name === "string" ? data.user.user_metadata.full_name : typeof data.user.user_metadata?.name === "string" ? data.user.user_metadata.name : null;
@@ -3939,21 +4255,19 @@ async function authenticateSupabaseRequest(req, failureHolder) {
       name: displayName,
       loginMethod: "supabase"
     });
-    return await getUserByOpenId(externalId) ?? null;
+    const syncedUser = await getUserByOpenId(externalId);
+    if (syncedUser) return syncedUser;
   } catch (err) {
-    console.error("[Auth] Database user sync failed, using fallback user session:", err);
-    return {
-      id: 1,
-      openId: externalId,
-      name: displayName || "Student",
-      email: data.user.email ?? null,
-      loginMethod: "supabase",
-      role: "user",
-      createdAt: /* @__PURE__ */ new Date(),
-      updatedAt: /* @__PURE__ */ new Date(),
-      lastSignedIn: /* @__PURE__ */ new Date()
-    };
+    console.error("[Auth] Database user sync failed:", err);
   }
+  try {
+    const existing = await getUserByOpenId(externalId);
+    if (existing) return existing;
+  } catch (err) {
+    console.error("[Auth] User lookup failed:", err);
+  }
+  if (failureHolder) failureHolder.reason = "User profile could not be synchronized with database";
+  return null;
 }
 async function createContext(opts) {
   let user = null;

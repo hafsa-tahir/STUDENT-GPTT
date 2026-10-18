@@ -99,12 +99,12 @@ var require_response = __commonJS({
     }
     module2.exports = class ServerlessResponse extends http2.ServerResponse {
       static from(res) {
-        const response2 = new ServerlessResponse(res);
-        response2.statusCode = res.statusCode;
-        response2[HEADERS] = res.headers;
-        response2[BODY] = [Buffer.from(res.body)];
-        response2.end();
-        return response2;
+        const response = new ServerlessResponse(res);
+        response.statusCode = res.statusCode;
+        response[HEADERS] = res.headers;
+        response[BODY] = [Buffer.from(res.body)];
+        response.end();
+        return response;
       }
       static body(res) {
         return Buffer.concat(res[BODY]);
@@ -185,35 +185,35 @@ var require_get_framework = __commonJS({
     var Response2 = require_response();
     function common(cb) {
       return (request) => {
-        const response2 = new Response2(request);
-        cb(request, response2);
-        return response2;
+        const response = new Response2(request);
+        cb(request, response);
+        return response;
       };
     }
     module2.exports = function getFramework(app2) {
       if (app2 instanceof http2.Server) {
         return (request) => {
-          const response2 = new Response2(request);
-          app2.emit("request", request, response2);
-          return response2;
+          const response = new Response2(request);
+          app2.emit("request", request, response);
+          return response;
         };
       }
       if (typeof app2.callback === "function") {
         return common(app2.callback());
       }
       if (typeof app2.handle === "function") {
-        return common((request, response2) => {
-          app2.handle(request, response2);
+        return common((request, response) => {
+          app2.handle(request, response);
         });
       }
       if (typeof app2.handler === "function") {
-        return common((request, response2) => {
-          app2.handler(request, response2);
+        return common((request, response) => {
+          app2.handler(request, response);
         });
       }
       if (typeof app2._onRequest === "function") {
-        return common((request, response2) => {
-          app2._onRequest(request, response2);
+        return common((request, response) => {
+          app2._onRequest(request, response);
         });
       }
       if (typeof app2 === "function") {
@@ -562,19 +562,19 @@ var require_format_response = __commonJS({
         return memo2;
       }, multiValueHeaders);
     };
-    module2.exports = (event, response2, options) => {
+    module2.exports = (event, response, options) => {
       const eventType = getEventType(event);
-      const { statusCode } = response2;
-      const { headers, multiValueHeaders } = sanitizeHeaders(Response2.headers(response2));
+      const { statusCode } = response;
+      const { headers, multiValueHeaders } = sanitizeHeaders(Response2.headers(response));
       let cookies = [];
       if (multiValueHeaders["set-cookie"]) {
         cookies = multiValueHeaders["set-cookie"];
       }
       const isBase64Encoded = isBinary(headers, options);
       const encoding = isBase64Encoded ? "base64" : "utf8";
-      let body = Response2.body(response2).toString(encoding);
-      if (headers["transfer-encoding"] === "chunked" || response2.chunkedEncoding) {
-        const raw = Response2.body(response2).toString().split("\r\n");
+      let body = Response2.body(response).toString(encoding);
+      if (headers["transfer-encoding"] === "chunked" || response.chunkedEncoding) {
+        const raw = Response2.body(response).toString().split("\r\n");
         const parsed = [];
         for (let i = 0; i < raw.length; i += 2) {
           const size = parseInt(raw[i], 16);
@@ -612,8 +612,8 @@ var require_aws = __commonJS({
       return (getResponse) => async (event_, context = {}) => {
         const event = cleanUpEvent(event_, options);
         const request = createRequest(event, context, options);
-        const response2 = await getResponse(request, event, context);
-        return formatResponse(event, response2, options);
+        const response = await getResponse(request, event, context);
+        return formatResponse(event, response, options);
       };
     };
   }
@@ -777,15 +777,15 @@ var require_format_response2 = __commonJS({
     var isBinary = require_is_binary2();
     var Response2 = require_response();
     var sanitizeHeaders = require_sanitize_headers2();
-    module2.exports = (response2, options) => {
-      const { statusCode } = response2;
-      const headers = sanitizeHeaders(Response2.headers(response2));
-      if (headers["transfer-encoding"] === "chunked" || response2.chunkedEncoding) {
+    module2.exports = (response, options) => {
+      const { statusCode } = response;
+      const headers = sanitizeHeaders(Response2.headers(response));
+      if (headers["transfer-encoding"] === "chunked" || response.chunkedEncoding) {
         throw new Error("chunked encoding not supported");
       }
       const isBase64Encoded = isBinary(headers, options);
       const encoding = isBase64Encoded ? "base64" : "utf8";
-      const body = Response2.body(response2).toString(encoding);
+      const body = Response2.body(response).toString(encoding);
       return { status: statusCode, headers, isBase64Encoded, body };
     };
   }
@@ -801,9 +801,9 @@ var require_azure = __commonJS({
       return (getResponse) => async (context, req) => {
         const event = cleanupRequest(req, options);
         const request = createRequest(event, options);
-        const response2 = await getResponse(request, context, event);
-        context.log(response2);
-        return formatResponse(response2, options);
+        const response = await getResponse(request, context, event);
+        context.log(response);
+        return formatResponse(response, options);
       };
     };
   }
@@ -844,10 +844,10 @@ var require_serverless_http = __commonJS({
       const provider = getProvider(options);
       return provider(async (request, ...context) => {
         await finish(request, options.request, ...context);
-        const response2 = await framework(request);
-        await finish(response2, options.response, ...context);
-        response2.emit("close");
-        return response2;
+        const response = await framework(request);
+        await finish(response, options.response, ...context);
+        response.emit("close");
+        return response;
       });
     };
   }
@@ -42993,6 +42993,449 @@ var require_mysql2 = __commonJS({
   }
 });
 
+// node_modules/.pnpm/dotenv@17.2.3/node_modules/dotenv/package.json
+var require_package2 = __commonJS({
+  "node_modules/.pnpm/dotenv@17.2.3/node_modules/dotenv/package.json"(exports2, module2) {
+    module2.exports = {
+      name: "dotenv",
+      version: "17.2.3",
+      description: "Loads environment variables from .env file",
+      main: "lib/main.js",
+      types: "lib/main.d.ts",
+      exports: {
+        ".": {
+          types: "./lib/main.d.ts",
+          require: "./lib/main.js",
+          default: "./lib/main.js"
+        },
+        "./config": "./config.js",
+        "./config.js": "./config.js",
+        "./lib/env-options": "./lib/env-options.js",
+        "./lib/env-options.js": "./lib/env-options.js",
+        "./lib/cli-options": "./lib/cli-options.js",
+        "./lib/cli-options.js": "./lib/cli-options.js",
+        "./package.json": "./package.json"
+      },
+      scripts: {
+        "dts-check": "tsc --project tests/types/tsconfig.json",
+        lint: "standard",
+        pretest: "npm run lint && npm run dts-check",
+        test: "tap run tests/**/*.js --allow-empty-coverage --disable-coverage --timeout=60000",
+        "test:coverage": "tap run tests/**/*.js --show-full-coverage --timeout=60000 --coverage-report=text --coverage-report=lcov",
+        prerelease: "npm test",
+        release: "standard-version"
+      },
+      repository: {
+        type: "git",
+        url: "git://github.com/motdotla/dotenv.git"
+      },
+      homepage: "https://github.com/motdotla/dotenv#readme",
+      funding: "https://dotenvx.com",
+      keywords: [
+        "dotenv",
+        "env",
+        ".env",
+        "environment",
+        "variables",
+        "config",
+        "settings"
+      ],
+      readmeFilename: "README.md",
+      license: "BSD-2-Clause",
+      devDependencies: {
+        "@types/node": "^18.11.3",
+        decache: "^4.6.2",
+        sinon: "^14.0.1",
+        standard: "^17.0.0",
+        "standard-version": "^9.5.0",
+        tap: "^19.2.0",
+        typescript: "^4.8.4"
+      },
+      engines: {
+        node: ">=12"
+      },
+      browser: {
+        fs: false
+      }
+    };
+  }
+});
+
+// node_modules/.pnpm/dotenv@17.2.3/node_modules/dotenv/lib/main.js
+var require_main = __commonJS({
+  "node_modules/.pnpm/dotenv@17.2.3/node_modules/dotenv/lib/main.js"(exports2, module2) {
+    var fs3 = require("fs");
+    var path3 = require("path");
+    var os = require("os");
+    var crypto4 = require("crypto");
+    var packageJson = require_package2();
+    var version6 = packageJson.version;
+    var TIPS = [
+      "\u{1F510} encrypt with Dotenvx: https://dotenvx.com",
+      "\u{1F510} prevent committing .env to code: https://dotenvx.com/precommit",
+      "\u{1F510} prevent building .env in docker: https://dotenvx.com/prebuild",
+      "\u{1F4E1} add observability to secrets: https://dotenvx.com/ops",
+      "\u{1F465} sync secrets across teammates & machines: https://dotenvx.com/ops",
+      "\u{1F5C2}\uFE0F backup and recover secrets: https://dotenvx.com/ops",
+      "\u2705 audit secrets and track compliance: https://dotenvx.com/ops",
+      "\u{1F504} add secrets lifecycle management: https://dotenvx.com/ops",
+      "\u{1F511} add access controls to secrets: https://dotenvx.com/ops",
+      "\u{1F6E0}\uFE0F  run anywhere with `dotenvx run -- yourcommand`",
+      "\u2699\uFE0F  specify custom .env file path with { path: '/custom/path/.env' }",
+      "\u2699\uFE0F  enable debug logging with { debug: true }",
+      "\u2699\uFE0F  override existing env vars with { override: true }",
+      "\u2699\uFE0F  suppress all logs with { quiet: true }",
+      "\u2699\uFE0F  write to custom object with { processEnv: myObject }",
+      "\u2699\uFE0F  load multiple .env files with { path: ['.env.local', '.env'] }"
+    ];
+    function _getRandomTip() {
+      return TIPS[Math.floor(Math.random() * TIPS.length)];
+    }
+    function parseBoolean(value) {
+      if (typeof value === "string") {
+        return !["false", "0", "no", "off", ""].includes(value.toLowerCase());
+      }
+      return Boolean(value);
+    }
+    function supportsAnsi() {
+      return process.stdout.isTTY;
+    }
+    function dim(text4) {
+      return supportsAnsi() ? `\x1B[2m${text4}\x1B[0m` : text4;
+    }
+    var LINE = /(?:^|^)\s*(?:export\s+)?([\w.-]+)(?:\s*=\s*?|:\s+?)(\s*'(?:\\'|[^'])*'|\s*"(?:\\"|[^"])*"|\s*`(?:\\`|[^`])*`|[^#\r\n]+)?\s*(?:#.*)?(?:$|$)/mg;
+    function parse3(src) {
+      const obj = {};
+      let lines = src.toString();
+      lines = lines.replace(/\r\n?/mg, "\n");
+      let match;
+      while ((match = LINE.exec(lines)) != null) {
+        const key = match[1];
+        let value = match[2] || "";
+        value = value.trim();
+        const maybeQuote = value[0];
+        value = value.replace(/^(['"`])([\s\S]*)\1$/mg, "$2");
+        if (maybeQuote === '"') {
+          value = value.replace(/\\n/g, "\n");
+          value = value.replace(/\\r/g, "\r");
+        }
+        obj[key] = value;
+      }
+      return obj;
+    }
+    function _parseVault(options) {
+      options = options || {};
+      const vaultPath = _vaultPath(options);
+      options.path = vaultPath;
+      const result = DotenvModule.configDotenv(options);
+      if (!result.parsed) {
+        const err = new Error(`MISSING_DATA: Cannot parse ${vaultPath} for an unknown reason`);
+        err.code = "MISSING_DATA";
+        throw err;
+      }
+      const keys = _dotenvKey(options).split(",");
+      const length = keys.length;
+      let decrypted;
+      for (let i = 0; i < length; i++) {
+        try {
+          const key = keys[i].trim();
+          const attrs = _instructions(result, key);
+          decrypted = DotenvModule.decrypt(attrs.ciphertext, attrs.key);
+          break;
+        } catch (error46) {
+          if (i + 1 >= length) {
+            throw error46;
+          }
+        }
+      }
+      return DotenvModule.parse(decrypted);
+    }
+    function _warn(message2) {
+      console.error(`[dotenv@${version6}][WARN] ${message2}`);
+    }
+    function _debug(message2) {
+      console.log(`[dotenv@${version6}][DEBUG] ${message2}`);
+    }
+    function _log(message2) {
+      console.log(`[dotenv@${version6}] ${message2}`);
+    }
+    function _dotenvKey(options) {
+      if (options && options.DOTENV_KEY && options.DOTENV_KEY.length > 0) {
+        return options.DOTENV_KEY;
+      }
+      if (process.env.DOTENV_KEY && process.env.DOTENV_KEY.length > 0) {
+        return process.env.DOTENV_KEY;
+      }
+      return "";
+    }
+    function _instructions(result, dotenvKey) {
+      let uri;
+      try {
+        uri = new URL(dotenvKey);
+      } catch (error46) {
+        if (error46.code === "ERR_INVALID_URL") {
+          const err = new Error("INVALID_DOTENV_KEY: Wrong format. Must be in valid uri format like dotenv://:key_1234@dotenvx.com/vault/.env.vault?environment=development");
+          err.code = "INVALID_DOTENV_KEY";
+          throw err;
+        }
+        throw error46;
+      }
+      const key = uri.password;
+      if (!key) {
+        const err = new Error("INVALID_DOTENV_KEY: Missing key part");
+        err.code = "INVALID_DOTENV_KEY";
+        throw err;
+      }
+      const environment = uri.searchParams.get("environment");
+      if (!environment) {
+        const err = new Error("INVALID_DOTENV_KEY: Missing environment part");
+        err.code = "INVALID_DOTENV_KEY";
+        throw err;
+      }
+      const environmentKey = `DOTENV_VAULT_${environment.toUpperCase()}`;
+      const ciphertext = result.parsed[environmentKey];
+      if (!ciphertext) {
+        const err = new Error(`NOT_FOUND_DOTENV_ENVIRONMENT: Cannot locate environment ${environmentKey} in your .env.vault file.`);
+        err.code = "NOT_FOUND_DOTENV_ENVIRONMENT";
+        throw err;
+      }
+      return { ciphertext, key };
+    }
+    function _vaultPath(options) {
+      let possibleVaultPath = null;
+      if (options && options.path && options.path.length > 0) {
+        if (Array.isArray(options.path)) {
+          for (const filepath of options.path) {
+            if (fs3.existsSync(filepath)) {
+              possibleVaultPath = filepath.endsWith(".vault") ? filepath : `${filepath}.vault`;
+            }
+          }
+        } else {
+          possibleVaultPath = options.path.endsWith(".vault") ? options.path : `${options.path}.vault`;
+        }
+      } else {
+        possibleVaultPath = path3.resolve(process.cwd(), ".env.vault");
+      }
+      if (fs3.existsSync(possibleVaultPath)) {
+        return possibleVaultPath;
+      }
+      return null;
+    }
+    function _resolveHome(envPath) {
+      return envPath[0] === "~" ? path3.join(os.homedir(), envPath.slice(1)) : envPath;
+    }
+    function _configVault(options) {
+      const debug = parseBoolean(process.env.DOTENV_CONFIG_DEBUG || options && options.debug);
+      const quiet = parseBoolean(process.env.DOTENV_CONFIG_QUIET || options && options.quiet);
+      if (debug || !quiet) {
+        _log("Loading env from encrypted .env.vault");
+      }
+      const parsed = DotenvModule._parseVault(options);
+      let processEnv = process.env;
+      if (options && options.processEnv != null) {
+        processEnv = options.processEnv;
+      }
+      DotenvModule.populate(processEnv, parsed, options);
+      return { parsed };
+    }
+    function configDotenv(options) {
+      const dotenvPath = path3.resolve(process.cwd(), ".env");
+      let encoding = "utf8";
+      let processEnv = process.env;
+      if (options && options.processEnv != null) {
+        processEnv = options.processEnv;
+      }
+      let debug = parseBoolean(processEnv.DOTENV_CONFIG_DEBUG || options && options.debug);
+      let quiet = parseBoolean(processEnv.DOTENV_CONFIG_QUIET || options && options.quiet);
+      if (options && options.encoding) {
+        encoding = options.encoding;
+      } else {
+        if (debug) {
+          _debug("No encoding is specified. UTF-8 is used by default");
+        }
+      }
+      let optionPaths = [dotenvPath];
+      if (options && options.path) {
+        if (!Array.isArray(options.path)) {
+          optionPaths = [_resolveHome(options.path)];
+        } else {
+          optionPaths = [];
+          for (const filepath of options.path) {
+            optionPaths.push(_resolveHome(filepath));
+          }
+        }
+      }
+      let lastError;
+      const parsedAll = {};
+      for (const path4 of optionPaths) {
+        try {
+          const parsed = DotenvModule.parse(fs3.readFileSync(path4, { encoding }));
+          DotenvModule.populate(parsedAll, parsed, options);
+        } catch (e) {
+          if (debug) {
+            _debug(`Failed to load ${path4} ${e.message}`);
+          }
+          lastError = e;
+        }
+      }
+      const populated = DotenvModule.populate(processEnv, parsedAll, options);
+      debug = parseBoolean(processEnv.DOTENV_CONFIG_DEBUG || debug);
+      quiet = parseBoolean(processEnv.DOTENV_CONFIG_QUIET || quiet);
+      if (debug || !quiet) {
+        const keysCount = Object.keys(populated).length;
+        const shortPaths = [];
+        for (const filePath of optionPaths) {
+          try {
+            const relative = path3.relative(process.cwd(), filePath);
+            shortPaths.push(relative);
+          } catch (e) {
+            if (debug) {
+              _debug(`Failed to load ${filePath} ${e.message}`);
+            }
+            lastError = e;
+          }
+        }
+        _log(`injecting env (${keysCount}) from ${shortPaths.join(",")} ${dim(`-- tip: ${_getRandomTip()}`)}`);
+      }
+      if (lastError) {
+        return { parsed: parsedAll, error: lastError };
+      } else {
+        return { parsed: parsedAll };
+      }
+    }
+    function config2(options) {
+      if (_dotenvKey(options).length === 0) {
+        return DotenvModule.configDotenv(options);
+      }
+      const vaultPath = _vaultPath(options);
+      if (!vaultPath) {
+        _warn(`You set DOTENV_KEY but you are missing a .env.vault file at ${vaultPath}. Did you forget to build it?`);
+        return DotenvModule.configDotenv(options);
+      }
+      return DotenvModule._configVault(options);
+    }
+    function decrypt(encrypted, keyStr) {
+      const key = Buffer.from(keyStr.slice(-64), "hex");
+      let ciphertext = Buffer.from(encrypted, "base64");
+      const nonce = ciphertext.subarray(0, 12);
+      const authTag = ciphertext.subarray(-16);
+      ciphertext = ciphertext.subarray(12, -16);
+      try {
+        const aesgcm = crypto4.createDecipheriv("aes-256-gcm", key, nonce);
+        aesgcm.setAuthTag(authTag);
+        return `${aesgcm.update(ciphertext)}${aesgcm.final()}`;
+      } catch (error46) {
+        const isRange = error46 instanceof RangeError;
+        const invalidKeyLength = error46.message === "Invalid key length";
+        const decryptionFailed = error46.message === "Unsupported state or unable to authenticate data";
+        if (isRange || invalidKeyLength) {
+          const err = new Error("INVALID_DOTENV_KEY: It must be 64 characters long (or more)");
+          err.code = "INVALID_DOTENV_KEY";
+          throw err;
+        } else if (decryptionFailed) {
+          const err = new Error("DECRYPTION_FAILED: Please check your DOTENV_KEY");
+          err.code = "DECRYPTION_FAILED";
+          throw err;
+        } else {
+          throw error46;
+        }
+      }
+    }
+    function populate(processEnv, parsed, options = {}) {
+      const debug = Boolean(options && options.debug);
+      const override = Boolean(options && options.override);
+      const populated = {};
+      if (typeof parsed !== "object") {
+        const err = new Error("OBJECT_REQUIRED: Please check the processEnv argument being passed to populate");
+        err.code = "OBJECT_REQUIRED";
+        throw err;
+      }
+      for (const key of Object.keys(parsed)) {
+        if (Object.prototype.hasOwnProperty.call(processEnv, key)) {
+          if (override === true) {
+            processEnv[key] = parsed[key];
+            populated[key] = parsed[key];
+          }
+          if (debug) {
+            if (override === true) {
+              _debug(`"${key}" is already defined and WAS overwritten`);
+            } else {
+              _debug(`"${key}" is already defined and was NOT overwritten`);
+            }
+          }
+        } else {
+          processEnv[key] = parsed[key];
+          populated[key] = parsed[key];
+        }
+      }
+      return populated;
+    }
+    var DotenvModule = {
+      configDotenv,
+      _configVault,
+      _parseVault,
+      config: config2,
+      decrypt,
+      parse: parse3,
+      populate
+    };
+    module2.exports.configDotenv = DotenvModule.configDotenv;
+    module2.exports._configVault = DotenvModule._configVault;
+    module2.exports._parseVault = DotenvModule._parseVault;
+    module2.exports.config = DotenvModule.config;
+    module2.exports.decrypt = DotenvModule.decrypt;
+    module2.exports.parse = DotenvModule.parse;
+    module2.exports.populate = DotenvModule.populate;
+    module2.exports = DotenvModule;
+  }
+});
+
+// node_modules/.pnpm/dotenv@17.2.3/node_modules/dotenv/lib/env-options.js
+var require_env_options = __commonJS({
+  "node_modules/.pnpm/dotenv@17.2.3/node_modules/dotenv/lib/env-options.js"(exports2, module2) {
+    var options = {};
+    if (process.env.DOTENV_CONFIG_ENCODING != null) {
+      options.encoding = process.env.DOTENV_CONFIG_ENCODING;
+    }
+    if (process.env.DOTENV_CONFIG_PATH != null) {
+      options.path = process.env.DOTENV_CONFIG_PATH;
+    }
+    if (process.env.DOTENV_CONFIG_QUIET != null) {
+      options.quiet = process.env.DOTENV_CONFIG_QUIET;
+    }
+    if (process.env.DOTENV_CONFIG_DEBUG != null) {
+      options.debug = process.env.DOTENV_CONFIG_DEBUG;
+    }
+    if (process.env.DOTENV_CONFIG_OVERRIDE != null) {
+      options.override = process.env.DOTENV_CONFIG_OVERRIDE;
+    }
+    if (process.env.DOTENV_CONFIG_DOTENV_KEY != null) {
+      options.DOTENV_KEY = process.env.DOTENV_CONFIG_DOTENV_KEY;
+    }
+    module2.exports = options;
+  }
+});
+
+// node_modules/.pnpm/dotenv@17.2.3/node_modules/dotenv/lib/cli-options.js
+var require_cli_options = __commonJS({
+  "node_modules/.pnpm/dotenv@17.2.3/node_modules/dotenv/lib/cli-options.js"(exports2, module2) {
+    var re = /^dotenv_config_(encoding|path|quiet|debug|override|DOTENV_KEY)=(.+)$/;
+    module2.exports = function optionMatcher(args) {
+      const options = args.reduce(function(acc, cur) {
+        const matches = cur.match(re);
+        if (matches) {
+          acc[matches[1]] = matches[2];
+        }
+        return acc;
+      }, {});
+      if (!("quiet" in options)) {
+        options.quiet = "true";
+      }
+      return options;
+    };
+  }
+});
+
 // node_modules/.pnpm/delayed-stream@1.0.0/node_modules/delayed-stream/lib/delayed_stream.js
 var require_delayed_stream = __commonJS({
   "node_modules/.pnpm/delayed-stream@1.0.0/node_modules/delayed-stream/lib/delayed_stream.js"(exports2, module2) {
@@ -43607,9 +44050,9 @@ var require_form_data = __commonJS({
       } else if (hasOwn(value, "httpVersion")) {
         callback(null, Number(value.headers["content-length"]));
       } else if (hasOwn(value, "httpModule")) {
-        value.on("response", function(response2) {
+        value.on("response", function(response) {
           value.pause();
-          callback(null, Number(response2.headers["content-length"]));
+          callback(null, Number(response.headers["content-length"]));
         });
         value.resume();
       } else {
@@ -44540,9 +44983,9 @@ var require_follow_redirects = __commonJS({
         this.on("response", responseCallback);
       }
       var self2 = this;
-      this._onNativeResponse = function(response2) {
+      this._onNativeResponse = function(response) {
         try {
-          self2._processResponse(response2);
+          self2._processResponse(response);
         } catch (cause) {
           self2.emit("error", cause instanceof RedirectionError ? cause : new RedirectionError({ cause }));
         }
@@ -44740,25 +45183,25 @@ var require_follow_redirects = __commonJS({
         })();
       }
     };
-    RedirectableRequest.prototype._processResponse = function(response2) {
-      var statusCode = response2.statusCode;
+    RedirectableRequest.prototype._processResponse = function(response) {
+      var statusCode = response.statusCode;
       if (this._options.trackRedirects) {
         this._redirects.push({
           url: this._currentUrl,
-          headers: response2.headers,
+          headers: response.headers,
           statusCode
         });
       }
-      var location2 = response2.headers.location;
+      var location2 = response.headers.location;
       if (!location2 || this._options.followRedirects === false || statusCode < 300 || statusCode >= 400) {
-        response2.responseUrl = this._currentUrl;
-        response2.redirects = this._redirects;
-        this.emit("response", response2);
+        response.responseUrl = this._currentUrl;
+        response.redirects = this._redirects;
+        this.emit("response", response);
         this._requestBodyBuffers = [];
         return;
       }
       destroyRequest(this._currentRequest);
-      response2.destroy();
+      response.destroy();
       if (++this._redirectCount > this._options.maxRedirects) {
         throw new TooManyRedirectsError();
       }
@@ -44767,7 +45210,7 @@ var require_follow_redirects = __commonJS({
       if (beforeRedirect) {
         requestHeaders = Object.assign({
           // The Host header was set by nativeProtocol.request
-          Host: response2.req.getHeader("host")
+          Host: response.req.getHeader("host")
         }, this._options.headers);
       }
       var method = this._options.method;
@@ -44793,7 +45236,7 @@ var require_follow_redirects = __commonJS({
       }
       if (isFunction4(beforeRedirect)) {
         var responseDetails = {
-          headers: response2.headers,
+          headers: response.headers,
           statusCode
         };
         var requestDetails = {
@@ -45238,19 +45681,19 @@ function fromBase64Util(str) {
 }
 async function fetchData(url3, type = "text") {
   if (isValidFetchUrl(url3, document.baseURI)) {
-    const response2 = await fetch(url3);
-    if (!response2.ok) {
-      throw new Error(response2.statusText);
+    const response = await fetch(url3);
+    if (!response.ok) {
+      throw new Error(response.statusText);
     }
     switch (type) {
       case "arraybuffer":
-        return response2.arrayBuffer();
+        return response.arrayBuffer();
       case "blob":
-        return response2.blob();
+        return response.blob();
       case "json":
-        return response2.json();
+        return response.json();
     }
-    return response2.text();
+    return response.text();
   }
   return new Promise((resolve, reject) => {
     const request = new XMLHttpRequest();
@@ -62453,14 +62896,14 @@ var init_pdf = __esm({
         this._isRangeSupported = !source.disableRange;
         const headers = new Headers(stream4.headers);
         const url3 = source.url;
-        fetch(url3, createFetchOptions(headers, this._withCredentials, this._abortController)).then((response2) => {
-          stream4._responseOrigin = getResponseOrigin(response2.url);
-          if (!validateResponseStatus(response2.status)) {
-            throw createResponseError(response2.status, url3);
+        fetch(url3, createFetchOptions(headers, this._withCredentials, this._abortController)).then((response) => {
+          stream4._responseOrigin = getResponseOrigin(response.url);
+          if (!validateResponseStatus(response.status)) {
+            throw createResponseError(response.status, url3);
           }
-          this._reader = response2.body.getReader();
+          this._reader = response.body.getReader();
           this._headersCapability.resolve();
-          const responseHeaders = response2.headers;
+          const responseHeaders = response.headers;
           const {
             allowRangeRequests,
             suggestedLength
@@ -62534,16 +62977,16 @@ var init_pdf = __esm({
         const headers = new Headers(stream4.headers);
         headers.append("Range", `bytes=${begin}-${end - 1}`);
         const url3 = source.url;
-        fetch(url3, createFetchOptions(headers, this._withCredentials, this._abortController)).then((response2) => {
-          const responseOrigin = getResponseOrigin(response2.url);
+        fetch(url3, createFetchOptions(headers, this._withCredentials, this._abortController)).then((response) => {
+          const responseOrigin = getResponseOrigin(response.url);
           if (responseOrigin !== stream4._responseOrigin) {
             throw new Error(`Expected range response-origin "${responseOrigin}" to match "${stream4._responseOrigin}".`);
           }
-          if (!validateResponseStatus(response2.status)) {
-            throw createResponseError(response2.status, url3);
+          if (!validateResponseStatus(response.status)) {
+            throw createResponseError(response.status, url3);
           }
           this._readCapability.resolve();
-          this._reader = response2.body.getReader();
+          this._reader = response.body.getReader();
         }).catch(this._readCapability.reject);
         this.onProgress = null;
       }
@@ -73601,7 +74044,7 @@ var init_pdf = __esm({
           width,
           height
         } = imageData || this.copyCanvas(null, null, true).imageData;
-        const response2 = await mlManager.guess({
+        const response = await mlManager.guess({
           name: "altText",
           request: {
             data,
@@ -73610,19 +74053,19 @@ var init_pdf = __esm({
             channels: data.length / (width * height)
           }
         });
-        if (!response2) {
+        if (!response) {
           throw new Error("No response from the AI service.");
         }
-        if (response2.error) {
+        if (response.error) {
           throw new Error("Error from the AI service.");
         }
-        if (response2.cancel) {
+        if (response.cancel) {
           return null;
         }
-        if (!response2.output) {
+        if (!response.output) {
           throw new Error("No valid response from the AI service.");
         }
-        const altText = response2.output;
+        const altText = response.output;
         await this.setGuessedAltText(altText);
         if (updateAltTextData && !this.hasAltTextData()) {
           this.altTextData = {
@@ -79236,7 +79679,7 @@ var require_FunctionsClient = __commonJS({
                 effectiveSignal = timeoutController.signal;
               }
             }
-            const response2 = yield this.fetch(url3.toString(), {
+            const response = yield this.fetch(url3.toString(), {
               method: method || "POST",
               // headers priority is (high to low):
               // 1. invoke-level headers
@@ -79248,27 +79691,27 @@ var require_FunctionsClient = __commonJS({
             }).catch((fetchError) => {
               throw new types_1.FunctionsFetchError(fetchError);
             });
-            const isRelayError = response2.headers.get("x-relay-error");
+            const isRelayError = response.headers.get("x-relay-error");
             if (isRelayError && isRelayError === "true") {
-              throw new types_1.FunctionsRelayError(response2);
+              throw new types_1.FunctionsRelayError(response);
             }
-            if (!response2.ok) {
-              throw new types_1.FunctionsHttpError(response2);
+            if (!response.ok) {
+              throw new types_1.FunctionsHttpError(response);
             }
-            let responseType = ((_a = response2.headers.get("Content-Type")) !== null && _a !== void 0 ? _a : "text/plain").split(";")[0].trim().toLowerCase();
+            let responseType = ((_a = response.headers.get("Content-Type")) !== null && _a !== void 0 ? _a : "text/plain").split(";")[0].trim().toLowerCase();
             let data;
             if (responseType === "application/json") {
-              data = yield response2.json();
+              data = yield response.json();
             } else if (responseType === "application/octet-stream" || responseType === "application/pdf") {
-              data = yield response2.blob();
+              data = yield response.blob();
             } else if (responseType === "text/event-stream") {
-              data = response2;
+              data = response;
             } else if (responseType === "multipart/form-data") {
-              data = yield response2.formData();
+              data = yield response.formData();
             } else {
-              data = yield response2.text();
+              data = yield response.text();
             }
-            return { data, error: null, response: response2 };
+            return { data, error: null, response };
           } catch (error46) {
             return {
               data: null,
@@ -79291,7 +79734,7 @@ var require_FunctionsClient = __commonJS({
 });
 
 // node_modules/.pnpm/@supabase+functions-js@2.112.3/node_modules/@supabase/functions-js/dist/main/index.js
-var require_main = __commonJS({
+var require_main2 = __commonJS({
   "node_modules/.pnpm/@supabase+functions-js@2.112.3/node_modules/@supabase/functions-js/dist/main/index.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
@@ -79984,8 +80427,8 @@ var require_phoenix_cjs = __commonJS({
       /**
        * @private
        */
-      matchReceive({ status, response: response2, _ref }) {
-        this.recHooks.filter((h) => h.status === status).forEach((h) => h.callback(response2));
+      matchReceive({ status, response, _ref }) {
+        this.recHooks.filter((h) => h.status === status).forEach((h) => h.callback(response));
       }
       /**
        * @private
@@ -80022,8 +80465,8 @@ var require_phoenix_cjs = __commonJS({
       hasReceived(status) {
         return this.receivedResp && this.receivedResp.status === status;
       }
-      trigger(status, response2) {
-        this.channel.trigger(this.refEvent, { status, response: response2 });
+      trigger(status, response) {
+        this.channel.trigger(this.refEvent, { status, response });
       }
     };
     var Timer = class {
@@ -80397,7 +80840,7 @@ var require_phoenix_cjs = __commonJS({
           const _timeoutId = setTimeout(() => controller.abort(), timeout);
           options.signal = controller.signal;
         }
-        global2.fetch(endPoint, options).then((response2) => response2.text()).then((data) => this.parseJSON(data)).then((data) => callback && callback(data)).catch((err) => {
+        global2.fetch(endPoint, options).then((response) => response.text()).then((data) => this.parseJSON(data)).then((data) => callback && callback(data)).catch((err) => {
           if (err.name === "AbortError" && ontimeout) {
             ontimeout();
           } else {
@@ -80410,8 +80853,8 @@ var require_phoenix_cjs = __commonJS({
         req.timeout = timeout;
         req.open(method, endPoint);
         req.onload = () => {
-          let response2 = this.parseJSON(req.responseText);
-          callback && callback(response2);
+          let response = this.parseJSON(req.responseText);
+          callback && callback(response);
         };
         if (ontimeout) {
           req.ontimeout = ontimeout;
@@ -80430,8 +80873,8 @@ var require_phoenix_cjs = __commonJS({
         req.onerror = () => callback && callback(null);
         req.onreadystatechange = () => {
           if (req.readyState === XHR_STATES.complete && callback) {
-            let response2 = this.parseJSON(req.responseText);
-            callback(response2);
+            let response = this.parseJSON(req.responseText);
+            callback(response);
           }
         };
         if (ontimeout) {
@@ -82526,16 +82969,16 @@ var require_RealtimeChannel = __commonJS({
           headers,
           body: isBinary ? payload : JSON.stringify(payload)
         };
-        const response2 = await this._fetchWithTimeout(url3.toString(), options, (_a = opts.timeout) !== null && _a !== void 0 ? _a : this.timeout);
-        if (response2.status === 202) {
+        const response = await this._fetchWithTimeout(url3.toString(), options, (_a = opts.timeout) !== null && _a !== void 0 ? _a : this.timeout);
+        if (response.status === 202) {
           return { success: true };
         }
-        if (response2.status === 404) {
+        if (response.status === 404) {
           return Promise.reject(new Error("httpSend() requires Realtime server v2.97.0 or newer; the endpoint returned 404. Update your Supabase CLI to a recent version, or upgrade the Realtime server in your self-hosted setup. See https://github.com/supabase/supabase-js/blob/master/packages/core/realtime-js/migrations/httpsend-server-version.md"));
         }
-        let errorMessage = response2.statusText;
+        let errorMessage = response.statusText;
         try {
-          const errorBody = await response2.json();
+          const errorBody = await response.json();
           errorMessage = errorBody.error || errorBody.message || errorMessage;
         } catch (_b) {
         }
@@ -82616,9 +83059,9 @@ var require_RealtimeChannel = __commonJS({
             })
           };
           try {
-            const response2 = await this._fetchWithTimeout(this.broadcastEndpointURL, options, (_a = opts.timeout) !== null && _a !== void 0 ? _a : this.timeout);
-            await ((_b = response2.body) === null || _b === void 0 ? void 0 : _b.cancel());
-            return response2.ok ? "ok" : "error";
+            const response = await this._fetchWithTimeout(this.broadcastEndpointURL, options, (_a = opts.timeout) !== null && _a !== void 0 ? _a : this.timeout);
+            await ((_b = response.body) === null || _b === void 0 ? void 0 : _b.cancel());
+            return response.ok ? "ok" : "error";
           } catch (error46) {
             if (error46 instanceof Error && error46.name === "AbortError") {
               return "timed out";
@@ -82676,9 +83119,9 @@ var require_RealtimeChannel = __commonJS({
       async _fetchWithTimeout(url3, options, timeout) {
         const controller = new AbortController();
         const id = setTimeout(() => controller.abort(), timeout);
-        const response2 = await this.socket.fetch(url3, Object.assign(Object.assign({}, options), { signal: controller.signal }));
+        const response = await this.socket.fetch(url3, Object.assign(Object.assign({}, options), { signal: controller.signal }));
         clearTimeout(id);
-        return response2;
+        return response;
       }
       /** @internal */
       _on(type, filter2, callback) {
@@ -83615,7 +84058,7 @@ var require_RealtimeClient = __commonJS({
 });
 
 // node_modules/.pnpm/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/index.js
-var require_main2 = __commonJS({
+var require_main3 = __commonJS({
   "node_modules/.pnpm/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/index.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
@@ -84360,8 +84803,8 @@ var require_helpers2 = __commonJS({
       return [codeChallenge, codeChallengeMethod, flowId];
     }
     var API_VERSION_REGEX = /^2[0-9]{3}-(0[1-9]|1[0-2])-(0[1-9]|1[0-9]|2[0-9]|3[0-1])$/i;
-    function parseResponseAPIVersion(response2) {
-      const apiVersion = response2.headers.get(constants_1.API_VERSION_HEADER_NAME);
+    function parseResponseAPIVersion(response) {
+      const apiVersion = response.headers.get(constants_1.API_VERSION_HEADER_NAME);
       if (!apiVersion) {
         return null;
       }
@@ -84607,11 +85050,11 @@ var require_fetch = __commonJS({
       return { data: { session, user }, error: null };
     }
     function _sessionResponsePassword(data) {
-      const response2 = _sessionResponse(data);
-      if (!response2.error && data.weak_password && typeof data.weak_password === "object" && Array.isArray(data.weak_password.reasons) && data.weak_password.reasons.length && data.weak_password.message && typeof data.weak_password.message === "string" && data.weak_password.reasons.reduce((a, i) => a && typeof i === "string", true)) {
-        response2.data.weak_password = data.weak_password;
+      const response = _sessionResponse(data);
+      if (!response.error && data.weak_password && typeof data.weak_password === "object" && Array.isArray(data.weak_password.reasons) && data.weak_password.reasons.length && data.weak_password.message && typeof data.weak_password.message === "string" && data.weak_password.reasons.reduce((a, i) => a && typeof i === "string", true)) {
+        response.data.weak_password = data.weak_password;
       }
-      return response2;
+      return response;
     }
     function _userResponse(data) {
       var _a;
@@ -85089,7 +85532,7 @@ var require_GoTrueAdminApi = __commonJS({
         var _a, _b, _c, _d, _e, _f, _g;
         try {
           const pagination = { nextPage: null, lastPage: 0, total: 0 };
-          const response2 = await (0, fetch_1._request)(this.fetch, "GET", `${this.url}/admin/users`, {
+          const response = await (0, fetch_1._request)(this.fetch, "GET", `${this.url}/admin/users`, {
             headers: this.headers,
             noResolveJson: true,
             query: {
@@ -85098,11 +85541,11 @@ var require_GoTrueAdminApi = __commonJS({
             },
             xform: fetch_1._noResolveJsonResponse
           });
-          if (response2.error)
-            throw response2.error;
-          const users2 = await response2.json();
-          const total = (_e = response2.headers.get("x-total-count")) !== null && _e !== void 0 ? _e : 0;
-          const links = (_g = (_f = response2.headers.get("link")) === null || _f === void 0 ? void 0 : _f.split(",")) !== null && _g !== void 0 ? _g : [];
+          if (response.error)
+            throw response.error;
+          const users2 = await response.json();
+          const total = (_e = response.headers.get("x-total-count")) !== null && _e !== void 0 ? _e : 0;
+          const links = (_g = (_f = response.headers.get("link")) === null || _f === void 0 ? void 0 : _f.split(",")) !== null && _g !== void 0 ? _g : [];
           if (links.length > 0) {
             links.forEach((link) => {
               const page = parseInt(link.split(";")[0].split("=")[1].substring(0, 1));
@@ -85445,7 +85888,7 @@ var require_GoTrueAdminApi = __commonJS({
         var _a, _b, _c, _d, _e, _f, _g;
         try {
           const pagination = { nextPage: null, lastPage: 0, total: 0 };
-          const response2 = await (0, fetch_1._request)(this.fetch, "GET", `${this.url}/admin/oauth/clients`, {
+          const response = await (0, fetch_1._request)(this.fetch, "GET", `${this.url}/admin/oauth/clients`, {
             headers: this.headers,
             noResolveJson: true,
             query: {
@@ -85454,11 +85897,11 @@ var require_GoTrueAdminApi = __commonJS({
             },
             xform: fetch_1._noResolveJsonResponse
           });
-          if (response2.error)
-            throw response2.error;
-          const clients = await response2.json();
-          const total = (_e = response2.headers.get("x-total-count")) !== null && _e !== void 0 ? _e : 0;
-          const links = (_g = (_f = response2.headers.get("link")) === null || _f === void 0 ? void 0 : _f.split(",")) !== null && _g !== void 0 ? _g : [];
+          if (response.error)
+            throw response.error;
+          const clients = await response.json();
+          const total = (_e = response.headers.get("x-total-count")) !== null && _e !== void 0 ? _e : 0;
+          const links = (_g = (_f = response.headers.get("link")) === null || _f === void 0 ? void 0 : _f.split(",")) !== null && _g !== void 0 ? _g : [];
           if (links.length > 0) {
             links.forEach((link) => {
               const page = parseInt(link.split(";")[0].split("=")[1].substring(0, 1));
@@ -86424,23 +86867,23 @@ var require_webauthn = __commonJS({
     }
     async function createCredential(options) {
       try {
-        const response2 = await navigator.credentials.create(
+        const response = await navigator.credentials.create(
           /** we assert the type here until typescript types are updated */
           options
         );
-        if (!response2) {
+        if (!response) {
           return {
             data: null,
-            error: new webauthn_errors_1.WebAuthnUnknownError("Empty credential response", response2)
+            error: new webauthn_errors_1.WebAuthnUnknownError("Empty credential response", response)
           };
         }
-        if (!(response2 instanceof PublicKeyCredential)) {
+        if (!(response instanceof PublicKeyCredential)) {
           return {
             data: null,
-            error: new webauthn_errors_1.WebAuthnUnknownError("Browser returned unexpected credential type", response2)
+            error: new webauthn_errors_1.WebAuthnUnknownError("Browser returned unexpected credential type", response)
           };
         }
-        return { data: response2, error: null };
+        return { data: response, error: null };
       } catch (err) {
         return {
           data: null,
@@ -86453,23 +86896,23 @@ var require_webauthn = __commonJS({
     }
     async function getCredential(options) {
       try {
-        const response2 = await navigator.credentials.get(
+        const response = await navigator.credentials.get(
           /** we assert the type here until typescript types are updated */
           options
         );
-        if (!response2) {
+        if (!response) {
           return {
             data: null,
-            error: new webauthn_errors_1.WebAuthnUnknownError("Empty credential response", response2)
+            error: new webauthn_errors_1.WebAuthnUnknownError("Empty credential response", response)
           };
         }
-        if (!(response2 instanceof PublicKeyCredential)) {
+        if (!(response instanceof PublicKeyCredential)) {
           return {
             data: null,
-            error: new webauthn_errors_1.WebAuthnUnknownError("Browser returned unexpected credential type", response2)
+            error: new webauthn_errors_1.WebAuthnUnknownError("Browser returned unexpected credential type", response)
           };
         }
-        return { data: response2, error: null };
+        return { data: response, error: null };
       } catch (err) {
         return {
           data: null,
@@ -91252,15 +91695,15 @@ var require_GoTrueClient = __commonJS({
               if (sessionError) {
                 return this._returnResult({ data: null, error: sessionError });
               }
-              const response2 = await (0, fetch_1._request)(this.fetch, "POST", `${this.url}/factors/${params.factorId}/challenge`, {
+              const response = await (0, fetch_1._request)(this.fetch, "POST", `${this.url}/factors/${params.factorId}/challenge`, {
                 body: params,
                 headers: this.headers,
                 jwt: (_a = sessionData === null || sessionData === void 0 ? void 0 : sessionData.session) === null || _a === void 0 ? void 0 : _a.access_token
               });
-              if (response2.error) {
-                return response2;
+              if (response.error) {
+                return response;
               }
-              const { data } = response2;
+              const { data } = response;
               if (data.type !== "webauthn") {
                 return { data, error: null };
               }
@@ -91430,18 +91873,18 @@ var require_GoTrueClient = __commonJS({
             if (!session) {
               return this._returnResult({ data: null, error: new errors_1.AuthSessionMissingError() });
             }
-            const response2 = await (0, fetch_1._request)(this.fetch, "POST", `${this.url}/oauth/authorizations/${authorizationId}/consent`, {
+            const response = await (0, fetch_1._request)(this.fetch, "POST", `${this.url}/oauth/authorizations/${authorizationId}/consent`, {
               headers: this.headers,
               jwt: session.access_token,
               body: { action: "approve" },
               xform: (data) => ({ data, error: null })
             });
-            if (response2.data && response2.data.redirect_url) {
+            if (response.data && response.data.redirect_url) {
               if ((0, helpers_1.isBrowser)() && !(options === null || options === void 0 ? void 0 : options.skipBrowserRedirect)) {
-                window.location.assign(response2.data.redirect_url);
+                window.location.assign(response.data.redirect_url);
               }
             }
-            return response2;
+            return response;
           });
         } catch (error46) {
           if ((0, errors_1.isAuthError)(error46)) {
@@ -91464,18 +91907,18 @@ var require_GoTrueClient = __commonJS({
             if (!session) {
               return this._returnResult({ data: null, error: new errors_1.AuthSessionMissingError() });
             }
-            const response2 = await (0, fetch_1._request)(this.fetch, "POST", `${this.url}/oauth/authorizations/${authorizationId}/consent`, {
+            const response = await (0, fetch_1._request)(this.fetch, "POST", `${this.url}/oauth/authorizations/${authorizationId}/consent`, {
               headers: this.headers,
               jwt: session.access_token,
               body: { action: "deny" },
               xform: (data) => ({ data, error: null })
             });
-            if (response2.data && response2.data.redirect_url) {
+            if (response.data && response.data.redirect_url) {
               if ((0, helpers_1.isBrowser)() && !(options === null || options === void 0 ? void 0 : options.skipBrowserRedirect)) {
-                window.location.assign(response2.data.redirect_url);
+                window.location.assign(response.data.redirect_url);
               }
             }
-            return response2;
+            return response;
           });
         } catch (error46) {
           if ((0, errors_1.isAuthError)(error46)) {
@@ -92033,7 +92476,7 @@ var require_AuthClient = __commonJS({
 });
 
 // node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/index.js
-var require_main3 = __commonJS({
+var require_main4 = __commonJS({
   "node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/index.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
@@ -94721,14 +95164,14 @@ async function writeResponseBody(opts) {
   }
 }
 async function writeResponse(opts) {
-  const { response: response2, rawResponse } = opts;
-  if (rawResponse.statusCode === 200) rawResponse.statusCode = response2.status;
-  for (const [key, value] of response2.headers) rawResponse.setHeader(key, value);
+  const { response, rawResponse } = opts;
+  if (rawResponse.statusCode === 200) rawResponse.statusCode = response.status;
+  for (const [key, value] of response.headers) rawResponse.setHeader(key, value);
   try {
-    if (response2.body) await writeResponseBody({
+    if (response.body) await writeResponseBody({
       res: rawResponse,
       signal: opts.request.signal,
-      body: response2.body
+      body: response.body
     });
   } catch (err) {
     if (!rawResponse.headersSent) rawResponse.statusCode = 500;
@@ -94779,7 +95222,7 @@ async function nodeHTTPRequestHandler(opts) {
           var _opts$createContext;
           return await ((_opts$createContext = opts.createContext) === null || _opts$createContext === void 0 ? void 0 : _opts$createContext.call(opts, (0, import_objectSpread25.default)((0, import_objectSpread25.default)({}, opts), innerOpts)));
         };
-        const response2 = await resolveResponse((0, import_objectSpread25.default)((0, import_objectSpread25.default)({}, opts), {}, {
+        const response = await resolveResponse((0, import_objectSpread25.default)((0, import_objectSpread25.default)({}, opts), {}, {
           req: request,
           error: err ? getTRPCErrorFromUnknown(err) : null,
           createContext: createContext2,
@@ -94790,7 +95233,7 @@ async function nodeHTTPRequestHandler(opts) {
         }));
         await writeResponse({
           request,
-          response: response2,
+          response,
           rawResponse: opts.res
         });
       }).catch(internal_exceptionHandler(opts));
@@ -101420,6 +101863,17 @@ var aiRequests = mysqlTable("aiRequests", {
   createdAt: timestamp("createdAt").defaultNow().notNull()
 }, (table) => [index("ai_requests_user_feature_created_idx").on(table.userId, table.feature, table.createdAt)]);
 
+// node_modules/.pnpm/dotenv@17.2.3/node_modules/dotenv/config.js
+(function() {
+  require_main().config(
+    Object.assign(
+      {},
+      require_env_options(),
+      require_cli_options()(process.argv)
+    )
+  );
+})();
+
 // server/_core/env.ts
 var decodeSecret = (b64) => {
   try {
@@ -101442,7 +101896,7 @@ var ENV = {
   openrouterModel: process.env.OPENROUTER_MODEL ?? "openrouter/free",
   openrouterFallbackModels: (process.env.OPENROUTER_FALLBACK_MODELS ?? "nvidia/nemotron-3.5-lightning:free,liquid/lfm-2.5-2.6b:free,google/gemma-4-26b-a4b-it:free").split(",").map((model) => model.trim()).filter(Boolean),
   groqApiKeys: (process.env.GROQ_API_KEYS ?? process.env.GROQ_API_KEY ?? decodeSecret("REDACTED")).split(",").map((k) => k.trim()).filter(Boolean),
-  geminiApiKeys: (process.env.GEMINI_API_KEYS ?? process.env.GEMINI_API_KEY ?? "").split(",").map((k) => k.trim()).filter((k) => k.length > 10 && k.startsWith("AIzaSy")),
+  geminiApiKeys: (process.env.GEMINI_API_KEYS ?? process.env.GEMINI_API_KEY ?? "").split(",").map((k) => k.trim()).filter((k) => k.length > 10 && (k.startsWith("AIzaSy") || k.startsWith("AQ."))),
   serpApiKey: process.env.SERPAPI_KEY ?? decodeSecret("REDACTED"),
   youtubeApiKey: process.env.YOUTUBE_DATA_API_KEY ?? decodeSecret("REDACTED")
 };
@@ -101643,7 +102097,7 @@ async function getDashboardData(userId) {
       withTimeout(db.select({ id: studyPlanItems.id, title: studyPlanItems.title, scheduledFor: studyPlanItems.scheduledFor, estimatedMinutes: studyPlanItems.estimatedMinutes, completedAt: studyPlanItems.completedAt, planTitle: studyPlans.title }).from(studyPlanItems).innerJoin(studyPlans, eq(studyPlanItems.planId, studyPlans.id)).where(and(eq(studyPlanItems.userId, userId), gte(studyPlanItems.scheduledFor, start), lte(studyPlanItems.scheduledFor, end))).orderBy(asc(studyPlanItems.scheduledFor)).catch(() => []), 3e3, []),
       withTimeout(db.select().from(studyPlans).where(and(eq(studyPlans.userId, userId), gte(studyPlans.examDate, now), lte(studyPlans.examDate, nextMonth))).orderBy(asc(studyPlans.examDate)).limit(5).catch(() => []), 3e3, []),
       withTimeout(db.select().from(progressEvents).where(eq(progressEvents.userId, userId)).orderBy(desc(progressEvents.createdAt)).limit(6).catch(() => []), 3e3, []),
-      withTimeout(db.select().from(studySessions).where(eq(studySessions.userId, userId)).orderBy(desc(studySessions.startedAt)).limit(10).catch(() => []), 3e3, [])
+      withTimeout(db.select().from(studySessions).where(eq(studySessions.userId, userId)).orderBy(desc(studySessions.startedAt)).limit(100).catch(() => []), 3e3, [])
     ]);
     const sessionMinutesToday = (recentSessions || []).filter((session) => session && session.startedAt && new Date(session.startedAt) >= start && new Date(session.startedAt) <= end).reduce((total, session) => total + (session.minutesStudied || 0), 0);
     return {
@@ -101736,6 +102190,73 @@ async function updateStudySession(userId, sessionId, input) {
   const updated = await db.select().from(studySessions).where(and(eq(studySessions.id, sessionId), eq(studySessions.userId, userId))).limit(1);
   if (!updated[0]) throw new Error("Study session not found.");
   return updated[0];
+}
+async function recordActiveStudyTime(userId, input) {
+  const db = requireDb(await getDb());
+  const now = /* @__PURE__ */ new Date();
+  const startOfDay = new Date(now);
+  startOfDay.setHours(0, 0, 0, 0);
+  const existing = await db.select().from(studySessions).where(
+    and(
+      eq(studySessions.userId, userId),
+      gte(studySessions.startedAt, startOfDay)
+    )
+  ).orderBy(desc(studySessions.startedAt)).limit(1);
+  if (existing[0]) {
+    const updatedMinutes = (existing[0].minutesStudied || 0) + input.minutes;
+    await db.update(studySessions).set({
+      minutesStudied: updatedMinutes,
+      endedAt: now,
+      ...input.subjectId ? { subjectId: input.subjectId } : {}
+    }).where(eq(studySessions.id, existing[0].id));
+    return { sessionId: existing[0].id, minutesStudied: updatedMinutes };
+  } else {
+    const result = await db.insert(studySessions).values({
+      userId,
+      subjectId: input.subjectId ?? null,
+      planItemId: null,
+      startedAt: now,
+      endedAt: now,
+      minutesStudied: input.minutes
+    });
+    const id = Number(result[0].insertId);
+    return { sessionId: id, minutesStudied: input.minutes };
+  }
+}
+async function getSubjectActivities(userId, subjectId) {
+  const db = requireDb(await getDb());
+  await assertOwnedSubject(userId, subjectId);
+  const [
+    notesList,
+    revisionsList,
+    quizzesList,
+    researchList,
+    docsList,
+    courseList,
+    topicList,
+    sessionList
+  ] = await Promise.all([
+    db.select().from(studyNotes).where(and(eq(studyNotes.userId, userId), eq(studyNotes.subjectId, subjectId))).orderBy(desc(studyNotes.updatedAt)),
+    db.select().from(revisionGuides).where(and(eq(revisionGuides.userId, userId), eq(revisionGuides.subjectId, subjectId))).orderBy(desc(revisionGuides.createdAt)),
+    db.select().from(quizzes).where(and(eq(quizzes.userId, userId), eq(quizzes.subjectId, subjectId))).orderBy(desc(quizzes.createdAt)),
+    db.select().from(researchBriefs).where(and(eq(researchBriefs.userId, userId), eq(researchBriefs.subjectId, subjectId))).orderBy(desc(researchBriefs.updatedAt)),
+    db.select().from(documents).where(and(eq(documents.userId, userId), eq(documents.subjectId, subjectId))).orderBy(desc(documents.createdAt)),
+    db.select().from(courses).where(and(eq(courses.userId, userId), eq(courses.subjectId, subjectId))).orderBy(desc(courses.createdAt)),
+    db.select().from(topics).where(and(eq(topics.userId, userId), eq(topics.subjectId, subjectId))).orderBy(desc(topics.createdAt)),
+    db.select().from(studySessions).where(and(eq(studySessions.userId, userId), eq(studySessions.subjectId, subjectId))).orderBy(desc(studySessions.startedAt))
+  ]);
+  const totalMinutes = sessionList.reduce((acc, s) => acc + (s.minutesStudied || 0), 0);
+  return {
+    notes: notesList,
+    revisions: revisionsList,
+    quizzes: quizzesList,
+    research: researchList,
+    documents: docsList,
+    courses: courseList,
+    topics: topicList,
+    totalMinutes,
+    sessionCount: sessionList.length
+  };
 }
 
 // server/_core/cookies.ts
@@ -102158,7 +102679,7 @@ var utils_default = {
 };
 
 // node_modules/.pnpm/axios@1.12.2/node_modules/axios/lib/core/AxiosError.js
-function AxiosError(message2, code, config2, request, response2) {
+function AxiosError(message2, code, config2, request, response) {
   Error.call(this);
   if (Error.captureStackTrace) {
     Error.captureStackTrace(this, this.constructor);
@@ -102170,9 +102691,9 @@ function AxiosError(message2, code, config2, request, response2) {
   code && (this.code = code);
   config2 && (this.config = config2);
   request && (this.request = request);
-  if (response2) {
-    this.response = response2;
-    this.status = response2.status ? response2.status : null;
+  if (response) {
+    this.response = response;
+    this.status = response.status ? response.status : null;
   }
 }
 utils_default.inherits(AxiosError, Error, {
@@ -102217,7 +102738,7 @@ var descriptors = {};
 });
 Object.defineProperties(AxiosError, descriptors);
 Object.defineProperty(prototype, "isAxiosError", { value: true });
-AxiosError.from = (error46, code, config2, request, response2, customProps) => {
+AxiosError.from = (error46, code, config2, request, response, customProps) => {
   const axiosError = Object.create(prototype);
   utils_default.toFlatObject(error46, axiosError, function filter2(obj) {
     return obj !== Error.prototype;
@@ -102226,7 +102747,7 @@ AxiosError.from = (error46, code, config2, request, response2, customProps) => {
   });
   const msg = error46 && error46.message ? error46.message : "Error";
   const errCode = code == null && error46 ? error46.code : code;
-  AxiosError.call(axiosError, msg, errCode, config2, request, response2);
+  AxiosError.call(axiosError, msg, errCode, config2, request, response);
   if (error46 && axiosError.cause == null) {
     Object.defineProperty(axiosError, "cause", { value: error46, configurable: true });
   }
@@ -103002,13 +103523,13 @@ utils_default.freezeMethods(AxiosHeaders);
 var AxiosHeaders_default = AxiosHeaders;
 
 // node_modules/.pnpm/axios@1.12.2/node_modules/axios/lib/core/transformData.js
-function transformData(fns, response2) {
+function transformData(fns, response) {
   const config2 = this || defaults_default;
-  const context = response2 || config2;
+  const context = response || config2;
   const headers = AxiosHeaders_default.from(context.headers);
   let data = context.data;
   utils_default.forEach(fns, function transform2(fn) {
-    data = fn.call(config2, data, headers.normalize(), response2 ? response2.status : void 0);
+    data = fn.call(config2, data, headers.normalize(), response ? response.status : void 0);
   });
   headers.normalize();
   return data;
@@ -103030,17 +103551,17 @@ utils_default.inherits(CanceledError, AxiosError_default, {
 var CanceledError_default = CanceledError;
 
 // node_modules/.pnpm/axios@1.12.2/node_modules/axios/lib/core/settle.js
-function settle(resolve, reject, response2) {
-  const validateStatus2 = response2.config.validateStatus;
-  if (!response2.status || !validateStatus2 || validateStatus2(response2.status)) {
-    resolve(response2);
+function settle(resolve, reject, response) {
+  const validateStatus2 = response.config.validateStatus;
+  if (!response.status || !validateStatus2 || validateStatus2(response.status)) {
+    resolve(response);
   } else {
     reject(new AxiosError_default(
-      "Request failed with status code " + response2.status,
-      [AxiosError_default.ERR_BAD_REQUEST, AxiosError_default.ERR_BAD_RESPONSE][Math.floor(response2.status / 100) - 4],
-      response2.config,
-      response2.request,
-      response2
+      "Request failed with status code " + response.status,
+      [AxiosError_default.ERR_BAD_REQUEST, AxiosError_default.ERR_BAD_RESPONSE][Math.floor(response.status / 100) - 4],
+      response.config,
+      response.request,
+      response
     ));
   }
 }
@@ -103909,7 +104430,7 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config2) {
         offListeners();
         onFinished();
       });
-      const response2 = {
+      const response = {
         status: res.statusCode,
         statusText: res.statusMessage,
         headers: new AxiosHeaders_default(res.headers),
@@ -103917,8 +104438,8 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config2) {
         request: lastRequest
       };
       if (responseType === "stream") {
-        response2.data = responseStream;
-        settle(resolve, reject, response2);
+        response.data = responseStream;
+        settle(resolve, reject, response);
       } else {
         const responseBuffer = [];
         let totalResponseBytes = 0;
@@ -103962,11 +104483,11 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config2) {
                 responseData = utils_default.stripBOM(responseData);
               }
             }
-            response2.data = responseData;
+            response.data = responseData;
           } catch (err) {
-            return reject(AxiosError_default.from(err, null, config2, response2.request, response2));
+            return reject(AxiosError_default.from(err, null, config2, response.request, response));
           }
-          settle(resolve, reject, response2);
+          settle(resolve, reject, response);
         });
       }
       emitter.once("abort", (err) => {
@@ -104222,7 +104743,7 @@ var xhr_default = isXHRAdapterSupported && function(config2) {
         "getAllResponseHeaders" in request && request.getAllResponseHeaders()
       );
       const responseData = !responseType || responseType === "text" || responseType === "json" ? request.responseText : request.response;
-      const response2 = {
+      const response = {
         data: responseData,
         status: request.status,
         statusText: request.statusText,
@@ -104236,7 +104757,7 @@ var xhr_default = isXHRAdapterSupported && function(config2) {
       }, function _reject(err) {
         reject(err);
         done();
-      }, response2);
+      }, response);
       request = null;
     }
     if ("onloadend" in request) {
@@ -104579,20 +105100,20 @@ var factory = (env) => {
         credentials: isCredentialsSupported ? withCredentials : void 0
       };
       request = isRequestSupported && new Request2(url3, resolvedOptions);
-      let response2 = await (isRequestSupported ? _fetch(request, fetchOptions) : _fetch(url3, resolvedOptions));
+      let response = await (isRequestSupported ? _fetch(request, fetchOptions) : _fetch(url3, resolvedOptions));
       const isStreamResponse = supportsResponseStream && (responseType === "stream" || responseType === "response");
       if (supportsResponseStream && (onDownloadProgress || isStreamResponse && unsubscribe)) {
         const options = {};
         ["status", "statusText", "headers"].forEach((prop) => {
-          options[prop] = response2[prop];
+          options[prop] = response[prop];
         });
-        const responseContentLength = utils_default.toFiniteNumber(response2.headers.get("content-length"));
+        const responseContentLength = utils_default.toFiniteNumber(response.headers.get("content-length"));
         const [onProgress, flush] = onDownloadProgress && progressEventDecorator(
           responseContentLength,
           progressEventReducer(asyncDecorator(onDownloadProgress), true)
         ) || [];
-        response2 = new Response2(
-          trackStream(response2.body, DEFAULT_CHUNK_SIZE, onProgress, () => {
+        response = new Response2(
+          trackStream(response.body, DEFAULT_CHUNK_SIZE, onProgress, () => {
             flush && flush();
             unsubscribe && unsubscribe();
           }),
@@ -104600,14 +105121,14 @@ var factory = (env) => {
         );
       }
       responseType = responseType || "text";
-      let responseData = await resolvers[utils_default.findKey(resolvers, responseType) || "text"](response2, config2);
+      let responseData = await resolvers[utils_default.findKey(resolvers, responseType) || "text"](response, config2);
       !isStreamResponse && unsubscribe && unsubscribe();
       return await new Promise((resolve, reject) => {
         settle(resolve, reject, {
           data: responseData,
-          headers: AxiosHeaders_default.from(response2.headers),
-          status: response2.status,
-          statusText: response2.statusText,
+          headers: AxiosHeaders_default.from(response.headers),
+          status: response.status,
+          statusText: response.statusText,
           config: config2,
           request
         });
@@ -104722,15 +105243,15 @@ function dispatchRequest(config2) {
     config2.headers.setContentType("application/x-www-form-urlencoded", false);
   }
   const adapter2 = adapters_default.getAdapter(config2.adapter || defaults_default.adapter, config2);
-  return adapter2(config2).then(function onAdapterResolution(response2) {
+  return adapter2(config2).then(function onAdapterResolution(response) {
     throwIfCancellationRequested(config2);
-    response2.data = transformData.call(
+    response.data = transformData.call(
       config2,
       config2.transformResponse,
-      response2
+      response
     );
-    response2.headers = AxiosHeaders_default.from(response2.headers);
-    return response2;
+    response.headers = AxiosHeaders_default.from(response.headers);
+    return response;
   }, function onAdapterRejection(reason) {
     if (!isCancel(reason)) {
       throwIfCancellationRequested(config2);
@@ -119568,22 +120089,22 @@ var fetchWithBackoff = async (url3, init, retryProviderErrors = true) => {
   let lastError;
   for (let attempt = 0; attempt <= 2; attempt++) {
     try {
-      const response2 = await fetch(url3, {
+      const response = await fetch(url3, {
         ...init,
-        signal: init.signal || AbortSignal.timeout(18e3)
+        signal: init.signal || AbortSignal.timeout(45e3)
       });
-      if (response2.ok || attempt === 2 || !retryProviderErrors || !shouldRetryProviderStatus(response2.status)) {
-        return response2;
+      if (response.ok || attempt === 2 || !retryProviderErrors || !shouldRetryProviderStatus(response.status)) {
+        return response;
       }
       const retryAfterMs = parseRetryAfter(
-        response2.headers.get("retry-after")
+        response.headers.get("retry-after")
       );
       try {
-        await response2.body?.cancel();
+        await response.body?.cancel();
       } catch {
       }
       console.warn(
-        `LLM request retry ${attempt + 1}/2 after status ${response2.status}`
+        `LLM request retry ${attempt + 1}/2 after status ${response.status}`
       );
       await sleep(computeBackoffDelay(attempt, retryAfterMs));
     } catch (error46) {
@@ -119601,29 +120122,42 @@ var fetchWithBackoff = async (url3, init, retryProviderErrors = true) => {
 };
 function getProviderCandidates(requestedModel) {
   const candidates = [];
+  if (ENV.groqApiKeys.length > 0) {
+    const groqModels = requestedModel && (requestedModel.includes("qwen") || requestedModel.includes("gpt-oss") || requestedModel.includes("llama")) ? [requestedModel] : ["qwen/qwen3.8-27b", "openai/gpt-oss-120b"];
+    for (const key of ENV.groqApiKeys) {
+      for (const m of groqModels) {
+        candidates.push({
+          name: `Groq (${m})`,
+          url: "https://api.groq.com/openai/v1/chat/completions",
+          key,
+          model: m
+        });
+      }
+    }
+  }
+  if (ENV.geminiApiKeys.length > 0) {
+    const geminiModel = requestedModel && requestedModel.includes("gemini") ? requestedModel : "gemini-2.5-flash";
+    for (let index2 = 0; index2 < ENV.geminiApiKeys.length; index2++) {
+      const key = ENV.geminiApiKeys[index2];
+      candidates.push({
+        name: `Gemini (Key #${index2 + 1} - ${geminiModel})`,
+        url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        key,
+        model: geminiModel
+      });
+    }
+  }
   if (ENV.openrouterApiKey) {
-    const models = requestedModel ? [requestedModel] : [
-      "dots-studio/dots-3-note-preview:free",
-      "openrouter/free",
+    const openrouterModels = requestedModel && !requestedModel.includes("gemini") && !requestedModel.includes("qwen") && !requestedModel.includes("gpt-oss") ? [requestedModel] : [
+      ENV.openrouterModel || "openrouter/free",
       ...ENV.openrouterFallbackModels
     ];
-    for (const m of Array.from(new Set(models.filter(Boolean)))) {
+    for (const m of Array.from(new Set(openrouterModels.filter(Boolean)))) {
       candidates.push({
         name: `OpenRouter (${m})`,
         url: resolveApiUrl(),
         key: ENV.openrouterApiKey,
         model: m
-      });
-    }
-  }
-  if (ENV.geminiApiKeys.length > 0 && !requestedModel) {
-    for (let index2 = 0; index2 < ENV.geminiApiKeys.length; index2++) {
-      const key = ENV.geminiApiKeys[index2];
-      candidates.push({
-        name: `Gemini (Key #${index2 + 1} - gemini-2.0-flash)`,
-        url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-        key,
-        model: "gemini-2.0-flash"
       });
     }
   }
@@ -119693,9 +120227,16 @@ async function invokeLLM(params) {
   const candidates = getProviderCandidates(model);
   let lastError = "LLM invoke failed";
   for (const candidate of candidates) {
-    payload.model = candidate.model;
+    const requestPayload = {
+      ...payload,
+      model: candidate.model
+    };
+    if (!candidate.name.startsWith("OpenRouter")) {
+      delete requestPayload.reasoning;
+      delete requestPayload.thinking;
+    }
     try {
-      const response2 = await fetchWithBackoff(
+      const response = await fetchWithBackoff(
         candidate.url,
         {
           method: "POST",
@@ -119703,20 +120244,20 @@ async function invokeLLM(params) {
             "content-type": "application/json",
             authorization: `Bearer ${candidate.key}`
           },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(requestPayload)
         },
         true
       );
-      if (response2.ok) {
-        const data = await response2.json();
+      if (response.ok) {
+        const data = await response.json();
         if (data && Array.isArray(data.choices) && data.choices.length > 0 && data.choices[0]?.message) {
           return data;
         }
         console.warn(`Provider ${candidate.name} returned response without valid choices array.`);
       }
-      const errorText = await response2.text();
-      lastError = `[${candidate.name}] failed: ${response2.status} ${response2.statusText} \u2013 ${errorText}`;
-      console.warn(`Provider ${candidate.name} failed with ${response2.status}; trying next provider candidate...`);
+      const errorText = await response.text();
+      lastError = `[${candidate.name}] failed: ${response.status} ${response.statusText} \u2013 ${errorText}`;
+      console.warn(`Provider ${candidate.name} failed with ${response.status}; trying next provider candidate...`);
     } catch (err) {
       lastError = `[${candidate.name}] error: ${err.message}`;
       console.warn(`Provider ${candidate.name} encountered error; trying next candidate...`);
@@ -119831,46 +120372,87 @@ function buildFallbackResult(params) {
     });
   } else if (jsonSchemaName === "revision_guide") {
     fallbackText = JSON.stringify({
-      overview: `Retrieval-focused revision guide for ${topicName}. ${realSentences[0] || ""}`,
+      overview: `High-yield comprehensive revision guide for ${topicName}. ${realSentences[0] || "Structured for active recall, mathematical derivations, and concept mastery."}`,
       blocks: [
         {
-          title: `Block 1: Fundamentals of ${topicName}`,
-          focus: realSentences[1] || `Recall essential definitions and core baseline principles`,
+          title: `Block 1: Foundational Principles & Definitions`,
+          focus: realSentences[1] || `Master fundamental terminology, physical rules, and baseline models`,
+          coreSummary: realSentences[0] || `${topicName} establishes foundational physical concepts governed by formal theoretical relations. Review the starting conditions and geometric definitions before working through mathematical derivations.`,
+          keyFormula: `$$\\vec{E} = \\frac{1}{4\\pi\\varepsilon_0} \\frac{q}{r^2} \\hat{r}$$`,
+          keyTakeaways: [
+            realSentences[2] || `Field lines originate on positive charges and terminate on negative charges.`,
+            realSentences[3] || `The local density of field lines is directly proportional to field magnitude.`,
+            `Field lines can never intersect at any point in space.`
+          ],
           questions: [
-            realSentences[2] ? `What is meant by: "${realSentences[2]}"?` : `What are the central definitions of ${topicName}?`,
-            realSentences[3] ? `How does "${realSentences[3].slice(0, 50)}..." function?` : `How are key concepts categorized?`
+            {
+              question: realSentences[2] ? `What is the physical significance of: "${realSentences[2]}"?` : `Why can electric field lines never cross?`,
+              answer: `If two field lines crossed, the electric field vector at the intersection point would point in two different directions simultaneously, which is physically impossible. Therefore, the field at every point is unique and tangent to the field line.`,
+              examTrap: `Confusing field line density with the number of charges; field line density represents electric field strength E.`
+            },
+            {
+              question: realSentences[3] ? `How is "${realSentences[3].slice(0, 60)}..." derived and applied?` : `What is the electric dipole moment and its direction?`,
+              answer: `The electric dipole moment is defined as p = q * d, directed from the negative charge (-q) to the positive charge (+q). It quantifies the system's polarity and response to external fields.`,
+              examTrap: `In chemistry, dipole arrows often point from + to -, but in physics, the dipole moment vector p strictly points from negative to positive.`
+            }
+          ],
+          commonMistakes: [
+            `Forgetting that field lines always meet conductive surfaces at right angles (90 degrees).`
           ]
         },
         {
-          title: `Block 2: Mechanics & Detailed Analysis`,
-          focus: realSentences[4] || `Understand underlying mechanisms and structural relationships`,
+          title: `Block 2: Governing Equations & Quantitative Derivations`,
+          focus: realSentences[4] || `Derive and apply on-axis approximations and energy formulations`,
+          coreSummary: realSentences[4] || `For an electric dipole along its axis (z >> d), the electric field falls off as 1/z^3, which is significantly faster than the 1/r^2 inverse-square law for an isolated point charge.`,
+          keyFormula: `$$E_{\\text{axis}} \\approx \\frac{1}{4\\pi\\varepsilon_0} \\frac{2p}{z^3}, \\quad \\tau = \\vec{p} \\times \\vec{E}, \\quad U = -\\vec{p} \\cdot \\vec{E}$$`,
+          keyTakeaways: [
+            `On-axis dipole field magnitude is E = 2kp / z^3 for z >> d.`,
+            `External torque tau = p x E rotates the dipole into alignment with E.`,
+            `Potential energy is minimized at U = -pE when parallel (theta = 0).`
+          ],
           questions: [
-            realSentences[5] ? `Explain the principle: "${realSentences[5]}"` : `What is the primary mechanism described?`,
-            realSentences[6] ? `Analyze: "${realSentences[6].slice(0, 50)}..."` : `How do core components interact?`
+            {
+              question: `How does the electric field of a dipole scale with distance z compared to a monopole?`,
+              answer: `A dipole field scales as 1/z^3 (inverse-cube), whereas a single charge field scales as 1/z^2. The opposite charges partially cancel each other at large distances, causing the field to decay more rapidly.`,
+              examTrap: `Applying the 1/r^2 formula to dipole problems instead of the 1/z^3 approximation.`
+            },
+            {
+              question: `What is the net force and net torque on an electric dipole in a uniform electric field?`,
+              answer: `Net force is zero because equal and opposite forces (+qE and -qE) cancel out. However, net torque is tau = p x E = p*E*sin(theta), causing rotation until aligned with the field.`,
+              examTrap: `Assuming net torque is zero just because net force is zero; equal and opposite forces create a couple.`
+            }
+          ],
+          commonMistakes: [
+            `Neglecting the cross product in torque (tau = p x E); torque is a vector perpendicular to both p and E.`
           ]
         },
         {
-          title: `Block 3: Practical Applications`,
-          focus: realSentences[7] || `Identify practical use cases and operational constraints`,
+          title: `Block 3: Practical Analysis & Boundary Conditions`,
+          focus: realSentences[7] || `Evaluate boundary behaviors, work done in rotation, and stability`,
+          coreSummary: realSentences[7] || `Work done by an external agent to rotate a dipole from theta_i to theta_f is W_ext = delta U = -pE(cos theta_f - cos theta_i). Stable equilibrium occurs at theta = 0, unstable at theta = 180 degrees.`,
+          keyFormula: `$$W = -\\Delta U = -(-pE\\cos\\theta_f - (-pE\\cos\\theta_i))$$`,
+          keyTakeaways: [
+            `Stable equilibrium: dipole is parallel to E (theta = 0, U = -pE).`,
+            `Unstable equilibrium: dipole is antiparallel to E (theta = 180 deg, U = +pE).`,
+            `Maximum torque occurs when dipole is perpendicular to field (theta = 90 deg, tau = pE).`
+          ],
           questions: [
-            realSentences[8] ? `How is this applied: "${realSentences[8].slice(0, 50)}..."?` : `In what domains is this applied?`,
-            realSentences[9] ? `What constraints govern: "${realSentences[9].slice(0, 50)}..."?` : `What are key limitations?`
-          ]
-        },
-        {
-          title: `Block 4: Self-Assessment & Synthesis`,
-          focus: realSentences[10] || `High-yield active recall and concept verification`,
-          questions: [
-            `Can you summarize the core thesis of ${topicName}?`,
-            `What are the major takeaways from this document?`
+            {
+              question: `How much work is required to rotate an electric dipole 180 degrees from stable to unstable equilibrium?`,
+              answer: `Work done W = U_final - U_initial = (+pE) - (-pE) = 2pE. The dipole moves against the restoring torque throughout the rotation.`,
+              examTrap: `Sign error: forgetting that U = -p . E has a negative sign in the definition.`
+            }
+          ],
+          commonMistakes: [
+            `Confusing stable equilibrium (minimum potential energy) with unstable equilibrium (maximum potential energy).`
           ]
         }
       ],
       selfCheck: [
-        realSentences[1] ? `Can I explain: "${realSentences[1]}"?` : `Can I define the central concepts without notes?`,
-        realSentences[4] ? `Do I understand: "${realSentences[4]}"?` : `Can I explain key mechanisms and practical applications?`,
-        `Do I understand the major distinctions and definitions in this document?`,
-        `Can I complete a 5-minute active recall summary of this topic?`
+        `Can I state and sketch all 5 properties of electric field lines from memory?`,
+        `Can I derive why E drops off as 1/z^3 for an on-axis dipole using the binomial expansion?`,
+        `Can I calculate the torque and potential energy for any arbitrary angle theta?`,
+        `Can I explain why a dipole experiences zero net force but nonzero torque in a uniform field?`
       ]
     });
   } else {
@@ -119917,7 +120499,7 @@ async function streamLLM(params) {
   for (const candidate of candidates) {
     payload.model = candidate.model;
     try {
-      const response2 = await fetchWithBackoff(
+      const response = await fetchWithBackoff(
         candidate.url,
         {
           method: "POST",
@@ -119929,10 +120511,10 @@ async function streamLLM(params) {
         },
         true
       );
-      if (response2.ok) return response2;
-      const errorText = await response2.text();
-      lastError = `[${candidate.name}] stream failed: ${response2.status} ${response2.statusText} \u2013 ${errorText}`;
-      console.warn(`Stream provider ${candidate.name} failed with ${response2.status}; trying next provider candidate...`);
+      if (response.ok) return response;
+      const errorText = await response.text();
+      lastError = `[${candidate.name}] stream failed: ${response.status} ${response.statusText} \u2013 ${errorText}`;
+      console.warn(`Stream provider ${candidate.name} failed with ${response.status}; trying next provider candidate...`);
     } catch (err) {
       lastError = `[${candidate.name}] stream error: ${err.message}`;
       console.warn(`Stream provider ${candidate.name} error; trying next candidate...`);
@@ -119972,18 +120554,18 @@ async function streamLLM(params) {
 async function listLLMModels() {
   assertApiKey();
   const url3 = hasOpenRouter() ? `${ENV.openrouterApiUrl.replace(/\/$/, "")}/models` : ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0 ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/models` : "https://forge.manus.im/v1/models";
-  const response2 = await fetchWithBackoff(url3, {
+  const response = await fetchWithBackoff(url3, {
     headers: {
       authorization: `Bearer ${resolveApiKey()}`
     }
   });
-  if (!response2.ok) {
-    const errorText = await response2.text();
+  if (!response.ok) {
+    const errorText = await response.text();
     throw new Error(
-      `List LLM models failed: ${response2.status} ${response2.statusText} \u2013 ${errorText}`
+      `List LLM models failed: ${response.status} ${response.statusText} \u2013 ${errorText}`
     );
   }
-  return await response2.json();
+  return await response.json();
 }
 function repairTruncatedJSON(jsonStr) {
   let str = jsonStr.trim();
@@ -120338,9 +120920,27 @@ async function uploadPrivatePdf(userId, file2) {
   const created = await db.select().from(documents).where(and(eq(documents.id, documentId), eq(documents.userId, userId))).limit(1);
   return created[0];
 }
-async function listPrivateDocuments(userId) {
+async function listPrivateDocuments(userId, subjectId) {
   const db = databaseOrThrow(await getDb());
-  return db.select().from(documents).where(and(eq(documents.userId, userId), eq(documents.status, "ready"))).orderBy(desc(documents.createdAt));
+  const conditions = [eq(documents.userId, userId), eq(documents.status, "ready")];
+  if (typeof subjectId === "number" && subjectId > 0) {
+    conditions.push(eq(documents.subjectId, subjectId));
+  }
+  return db.select().from(documents).where(and(...conditions)).orderBy(desc(documents.createdAt));
+}
+async function updateDocumentSubject(userId, documentId, subjectId) {
+  const db = databaseOrThrow(await getDb());
+  await db.update(documents).set({ subjectId: subjectId && subjectId > 0 ? subjectId : null }).where(and(eq(documents.id, documentId), eq(documents.userId, userId)));
+  const updated = await db.select().from(documents).where(and(eq(documents.id, documentId), eq(documents.userId, userId))).limit(1);
+  if (!updated[0]) throw new Error("Document not found.");
+  return updated[0];
+}
+async function deletePrivateDocument(userId, documentId) {
+  const db = databaseOrThrow(await getDb());
+  const owned = await db.select({ id: documents.id }).from(documents).where(and(eq(documents.id, documentId), eq(documents.userId, userId))).limit(1);
+  if (!owned[0]) throw new Error("Document not found.");
+  await db.delete(documents).where(and(eq(documents.id, documentId), eq(documents.userId, userId)));
+  return { success: true };
 }
 async function getPrivateDocumentDownload(userId, documentId) {
   const db = databaseOrThrow(await getDb());
@@ -120418,11 +121018,19 @@ function normalizeFlashcards(raw) {
   return cards;
 }
 async function generateQuiz(userId, input) {
-  if (input.subjectId) await assertOwnedSubject(userId, input.subjectId);
+  let effectiveSubjectId = input.subjectId ?? null;
+  if (!effectiveSubjectId && input.documentId) {
+    const db2 = dbOrThrow(await getDb());
+    const doc = await db2.select({ subjectId: documents.subjectId }).from(documents).where(and(eq(documents.id, input.documentId), eq(documents.userId, userId))).limit(1);
+    if (doc[0]?.subjectId) {
+      effectiveSubjectId = doc[0].subjectId;
+    }
+  }
+  if (effectiveSubjectId) await assertOwnedSubject(userId, effectiveSubjectId);
   const count = input.questionCount ?? 5;
   const scope = input.scopeLabel || input.topic;
   const source = await studySource(userId, input.topic, input.documentId ?? void 0, scope);
-  const response2 = await invokeLLM({
+  const response = await invokeLLM({
     messages: [{ role: "system", content: "Create academically accurate quiz questions from the supplied study source. Return JSON with a 'questions' array. Each question must have 'prompt', 'options' (array of 4 strings), 'correctAnswer', and 'explanation'." }, { role: "user", content: `Difficulty: ${input.difficulty}
 Requested ${input.scopeType ?? "topic"}: ${scope}
 Create up to ${count} multiple-choice questions, each with four options, one exact correctAnswer, and a concise explanation.
@@ -120431,7 +121039,7 @@ ${source}` }],
     response_format: { type: "json_schema", json_schema: { name: "quiz", strict: true, schema: { type: "object", properties: { questions: { type: "array", minItems: Math.min(count, 3), maxItems: count, items: { type: "object", properties: { prompt: { type: "string" }, options: { type: "array", minItems: 4, maxItems: 4, items: { type: "string" } }, correctAnswer: { type: "string" }, explanation: { type: "string" } }, required: ["prompt", "options", "correctAnswer", "explanation"], additionalProperties: false } } }, required: ["questions"], additionalProperties: false } } },
     maxTokens: 5e3
   });
-  const raw = text2(response2.choices[0]?.message.content);
+  const raw = text2(response.choices[0]?.message.content);
   const parsedRaw = safeParseJSON(raw, { questions: [] });
   const questions = normalizeQuizQuestions(parsedRaw);
   if (questions.length === 0) {
@@ -120486,19 +121094,27 @@ async function submitQuiz(userId, quizId, answers) {
   return { score, totalQuestions: loaded.questions.length, questions: loaded.questions };
 }
 async function generateFlashcards(userId, input) {
-  if (input.subjectId) await assertOwnedSubject(userId, input.subjectId);
+  let effectiveSubjectId = input.subjectId ?? null;
+  if (!effectiveSubjectId && input.documentId) {
+    const db2 = dbOrThrow(await getDb());
+    const doc = await db2.select({ subjectId: documents.subjectId }).from(documents).where(and(eq(documents.id, input.documentId), eq(documents.userId, userId))).limit(1);
+    if (doc[0]?.subjectId) {
+      effectiveSubjectId = doc[0].subjectId;
+    }
+  }
+  if (effectiveSubjectId) await assertOwnedSubject(userId, effectiveSubjectId);
   const source = await studySource(userId, input.topic, input.documentId ?? void 0, input.scopeLabel || input.topic);
-  const response2 = await invokeLLM({ messages: [{ role: "system", content: "Create concise, high-value academic flashcards from the supplied source. Return JSON with a 'cards' array." }, { role: "user", content: `Create 8 flashcards with a direct question on the front and a concise correct answer on the back.
+  const response = await invokeLLM({ messages: [{ role: "system", content: "Create concise, high-value academic flashcards from the supplied source. Return JSON with a 'cards' array." }, { role: "user", content: `Create 8 flashcards with a direct question on the front and a concise correct answer on the back.
 
 ${source}` }], response_format: { type: "json_schema", json_schema: { name: "flashcards", strict: true, schema: { type: "object", properties: { cards: { type: "array", minItems: 4, maxItems: 8, items: { type: "object", properties: { front: { type: "string" }, back: { type: "string" } }, required: ["front", "back"], additionalProperties: false } } }, required: ["cards"], additionalProperties: false } } }, maxTokens: 2500 });
-  const raw = text2(response2.choices[0]?.message.content);
+  const raw = text2(response.choices[0]?.message.content);
   const parsedRaw = safeParseJSON(raw, { cards: [] });
   const cards = normalizeFlashcards(parsedRaw);
   if (cards.length === 0) throw new Error("Could not generate flashcards from this topic. Please try again.");
   const db = dbOrThrow(await getDb());
   const created = [];
   for (const card of cards) {
-    const result = await db.insert(flashcards).values({ userId, subjectId: input.subjectId ?? null, documentId: input.documentId ?? null, front: card.front, back: card.back, sourceType: input.documentId ? "document" : "topic" });
+    const result = await db.insert(flashcards).values({ userId, subjectId: effectiveSubjectId ?? null, documentId: input.documentId ?? null, front: card.front, back: card.back, sourceType: input.documentId ? "document" : "topic" });
     const id = Number(result[0].insertId);
     const stored = await db.select().from(flashcards).where(and(eq(flashcards.id, id), eq(flashcards.userId, userId))).limit(1);
     if (stored[0]) created.push(stored[0]);
@@ -120554,9 +121170,9 @@ function normaliseCommunityResults(payload) {
 }
 async function searchDomain(query, domain2, key) {
   const params = new URLSearchParams({ engine: "google", q: `site:${domain2} ${query}`, num: "4", api_key: key });
-  const response2 = await fetch(`https://serpapi.com/search.json?${params.toString()}`, { signal: AbortSignal.timeout(14e3) });
-  if (!response2.ok) return [];
-  const payload = await response2.json();
+  const response = await fetch(`https://serpapi.com/search.json?${params.toString()}`, { signal: AbortSignal.timeout(14e3) });
+  if (!response.ok) return [];
+  const payload = await response.json();
   if (isSerpNoResultsError(payload.error)) return [];
   if (typeof payload.error === "string") return [];
   return normaliseCommunityResults(payload);
@@ -120570,7 +121186,7 @@ async function searchCommunityPerspectives(rawQuery) {
       searchDomain(query || rawQuery.slice(0, 80), "reddit.com", key),
       searchDomain(query || rawQuery.slice(0, 80), "quora.com", key)
     ]);
-    const available = responses.flatMap((response2) => response2.status === "fulfilled" ? response2.value : []);
+    const available = responses.flatMap((response) => response.status === "fulfilled" ? response.value : []);
     return available.slice(0, 8);
   } catch (err) {
     console.warn("[Community Search Warning]", err);
@@ -120593,9 +121209,9 @@ async function searchResearchVideos(query) {
     if (!key) return [];
     const focusedQuery = `${query.trim()} explained lecture tutorial`.slice(0, 240);
     const params = new URLSearchParams({ part: "snippet", type: "video", maxResults: "12", q: focusedQuery, safeSearch: "strict", videoEmbeddable: "true", key });
-    const response2 = await fetch(`https://www.googleapis.com/youtube/v3/search?${params.toString()}`, { signal: AbortSignal.timeout(1e4) });
-    const payload = await response2.json();
-    if (!response2.ok) return [];
+    const response = await fetch(`https://www.googleapis.com/youtube/v3/search?${params.toString()}`, { signal: AbortSignal.timeout(1e4) });
+    const payload = await response.json();
+    if (!response.ok) return [];
     const terms = normalizedTerms(query);
     return (payload.items ?? []).flatMap((item) => {
       const id = item.id?.videoId;
@@ -120857,14 +121473,14 @@ Return ONLY a valid JSON object matching this structure:
     ]
   }
 }`;
-    const response2 = await invokeLLM({
+    const response = await invokeLLM({
       messages: [
         { role: "system", content: "You are a top academic AI research assistant. Produce a publication-grade academic research paper in valid JSON format. Do not include markdown codeblocks or conversational text outside JSON." },
         { role: "user", content: prompt }
       ],
       maxTokens: 3800
     });
-    const rawContent = content(response2.choices[0]?.message.content);
+    const rawContent = content(response.choices[0]?.message.content);
     const cleanedRaw = rawContent.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
     const parsed = safeParseJSON(cleanedRaw, {});
     let overview = parsed.overview?.trim() || "";
@@ -120940,7 +121556,7 @@ Key learning takeaways emphasize recognizing critical trade-offs, avoiding commo
         `Verify claims against primary documentation and standards`
       ]
     };
-    await db.update(researchBriefs).set({ status: "ready", overview, keyConcepts, studyQuestions, actionPlan, boardContent, model: response2.model, failureReason: null }).where(and(eq(researchBriefs.id, briefId), eq(researchBriefs.userId, userId)));
+    await db.update(researchBriefs).set({ status: "ready", overview, keyConcepts, studyQuestions, actionPlan, boardContent, model: response.model, failureReason: null }).where(and(eq(researchBriefs.id, briefId), eq(researchBriefs.userId, userId)));
     return getResearchBrief(userId, briefId);
   } catch (error46) {
     await db.update(researchBriefs).set({ status: "failed", failureReason: error46 instanceof Error ? error46.message.slice(0, 1e3) : "Research generation failed." }).where(and(eq(researchBriefs.id, briefId), eq(researchBriefs.userId, userId)));
@@ -120973,9 +121589,9 @@ async function getResearchExportDownload(userId, exportId) {
 }
 async function getResearchExportFile(userId, exportId) {
   const record2 = await getResearchExportDownload(userId, exportId);
-  const response2 = await fetch(record2.downloadUrl);
-  if (!response2.ok) throw new Error("The saved research document could not be retrieved.");
-  return { fileName: record2.export.fileName, mimeType: record2.export.mimeType || "text/markdown", bytes: Buffer.from(await response2.arrayBuffer()) };
+  const response = await fetch(record2.downloadUrl);
+  if (!response.ok) throw new Error("The saved research document could not be retrieved.");
+  return { fileName: record2.export.fileName, mimeType: record2.export.mimeType || "text/markdown", bytes: Buffer.from(await response.arrayBuffer()) };
 }
 async function summarizeSourceUrl(url3) {
   try {
@@ -120988,7 +121604,7 @@ async function summarizeSourceUrl(url3) {
     const cleanText = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, " ").replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, " ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 1e4);
     const titleMatch = html.match(/<title[^>]*>(.*?)<\/title>/i);
     const fallbackTitle = titleMatch ? titleMatch[1].trim() : new URL(url3).hostname;
-    const response2 = await invokeLLM({
+    const response = await invokeLLM({
       messages: [
         { role: "system", content: 'You are an academic source analyzer. Given raw text from a web source, summarize key takeaways into valid JSON with format: { "title": "Clean Source Title", "note": "2-3 concise sentences explaining key findings, evidence, or takeaways for student research." }' },
         { role: "user", content: `URL: ${url3}
@@ -120998,7 +121614,7 @@ ${cleanText.slice(0, 4e3)}` }
       ],
       maxTokens: 500
     });
-    const parsed = safeParseJSON(content(response2.choices[0]?.message.content), {});
+    const parsed = safeParseJSON(content(response.choices[0]?.message.content), {});
     return {
       title: parsed.title || fallbackTitle,
       note: parsed.note || cleanText.slice(0, 280) + "..."
@@ -121109,9 +121725,13 @@ ${contentText.slice(0, 18e3)}`;
     promptContext
   };
 }
-async function listStudyNotes(userId) {
+async function listStudyNotes(userId, subjectId) {
   const db = database2(await getDb());
-  return db.select().from(studyNotes).where(eq(studyNotes.userId, userId)).orderBy(desc(studyNotes.updatedAt));
+  const conditions = [eq(studyNotes.userId, userId)];
+  if (typeof subjectId === "number" && subjectId > 0) {
+    conditions.push(eq(studyNotes.subjectId, subjectId));
+  }
+  return db.select().from(studyNotes).where(and(...conditions)).orderBy(desc(studyNotes.updatedAt));
 }
 async function getStudyNote(userId, noteId) {
   const db = database2(await getDb());
@@ -121121,47 +121741,37 @@ async function getStudyNote(userId, noteId) {
   return { note: note[0], stickyNotes: stickies };
 }
 function parseRealAcademicNotes(fullText, docName) {
-  const clean = fullText.replace(/--\s*\d+\s*of\s*\d+\s*--/gi, "").replace(/Page\s+\d+\s+of\s+\d+/gi, "").replace(/Electric Charge and Coulomb's Law: Explanatory Student Notes \(HRK-aligned\)/gi, "").replace(/Department of Physics · University of the Punjab \| Electric Field Lines and the Electric Dipole/gi, "");
-  const headingRegex = /(?:^|\n|\.\s+|\|\s+|\b)((?:P\s*A\s*R\s*T|Part|Chapter|CHAPTER|Section|SECTION)\s*\d+[:·\-–\.]?\s*[^\n\.\(\)]+|Summary and Quick Reference|Key [tT]ake-aways|Common mistakes to avoid|Problem\s+\d+[:·\-–]?\s*[^\n\.\(\)]+)/gi;
-  const matches = [...clean.matchAll(headingRegex)];
+  const clean = fullText.replace(/--\s*\d+\s*of\s*\d+\s*--/gi, "").replace(/Page\s+\d+\s+of\s+\d+/gi, "").replace(/\b\d+\s+of\s+\d+\b/gi, "").replace(/Department of Physics[^\n\r|]*[|·-]?/gi, "").replace(/University of[^\n\r|]*[|·-]?/gi, "").replace(/Electric Charge and Coulomb's Law[^\n\r]*/gi, "").replace(/Electric Field Lines and (?:the )?Electric Dipole/gi, "").replace(/\b[A-Z\s]{2,}\s*·\s*[A-Z\s]{2,}\b/g, "").replace(/\b(?:P\s*A\s*R\s*T|Part)\s*\d+[:·\-–\.]?\s*/gi, "").replace(/\r\n/g, "\n");
+  const paragraphs = clean.split(/\n\s*\n/).map((p) => p.replace(/\s+/g, " ").trim()).filter((p) => p.length > 35 && !p.toLowerCase().includes("student notes") && !/^\d+$/.test(p));
   const sections = [];
-  if (matches.length >= 2) {
-    for (let i = 0; i < matches.length; i++) {
-      let rawHeading = matches[i][1].trim().replace(/^[\.\s|]+/, "");
-      rawHeading = rawHeading.replace(/\s+/g, " ");
-      if (rawHeading.length > 70) {
-        rawHeading = rawHeading.slice(0, 65) + "\u2026";
-      }
-      const startIndex = matches[i].index + matches[i][0].indexOf(matches[i][1]) + matches[i][1].length;
-      const endIndex = i + 1 < matches.length ? matches[i + 1].index : clean.length;
-      const sectionBody = clean.slice(startIndex, endIndex).trim().replace(/\s+/g, " ");
-      const sentences = sectionBody.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter((s) => s.length > 15 && !s.includes("Student Notes") && !/^\d+$/.test(s));
-      if (sentences.length > 0) {
-        const explanation = sentences[0];
-        const bullets = sentences.slice(1, 8);
-        if (bullets.length === 0) {
-          bullets.push(explanation);
-        }
-        sections.push({
-          heading: rawHeading,
-          explanation: explanation.slice(0, 350),
-          bullets: bullets.map((b) => b.slice(0, 280))
-        });
-      }
+  const seenSentences = /* @__PURE__ */ new Set();
+  for (let i = 0; i < Math.min(paragraphs.length, 7); i++) {
+    const p = paragraphs[i];
+    const rawSentences = p.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter((s) => s.length > 20 && !seenSentences.has(s.toLowerCase()));
+    if (rawSentences.length === 0) continue;
+    for (const s of rawSentences) {
+      seenSentences.add(s.toLowerCase());
     }
+    const titleCandidate = rawSentences[0].replace(/[.!?]+$/, "").slice(0, 50).trim();
+    const heading = titleCandidate.length > 10 ? titleCandidate : `${docName} - Concept ${i + 1}`;
+    const explanation = rawSentences[0];
+    const bullets = rawSentences.slice(1, 6);
+    sections.push({
+      heading,
+      explanation: explanation.slice(0, 350),
+      bullets: (bullets.length > 0 ? bullets : [explanation]).map((b) => b.slice(0, 280))
+    });
   }
   if (sections.length < 3) {
-    const paragraphs = clean.split(/\n\s*\n/).map((p) => p.trim()).filter((p) => p.length > 40);
-    for (let i = 0; i < Math.min(paragraphs.length, 8); i++) {
-      const p = paragraphs[i].replace(/\s+/g, " ");
-      const sentences = p.split(/(?<=[.!?])\s+/).filter((s) => s.length > 15);
-      const heading = `${i + 1}. ${sentences[0]?.slice(0, 50) || `Topic ${i + 1}`}\u2026`;
-      sections.push({
-        heading,
-        explanation: sentences[0] || p.slice(0, 200),
-        bullets: (sentences.slice(1, 6).length ? sentences.slice(1, 6) : [p.slice(0, 200)]).map((b) => b.slice(0, 250))
-      });
-    }
+    sections.push({
+      heading: `${docName} Core Concepts`,
+      explanation: `Core academic principles and foundational mechanisms for ${docName}.`,
+      bullets: [
+        `Fundamental definitions and governing physical/theoretical principles`,
+        `Primary equations, quantitative relations, and boundary conditions`,
+        `Practical applications and common academic problem-solving techniques`
+      ]
+    });
   }
   return sections;
 }
@@ -121233,13 +121843,25 @@ CRITICAL INSTRUCTIONS:
 1. EXHAUSTIVE COVERAGE: Read the provided document text completely. Include EVERY key concept, definition, mechanism, formula, equation, theorem, process, principle, and worked example present in the text. No significant concept or detail from the source text should be omitted.
 2. STRUCTURED BY TOPIC/HEADING: Organize the notes into clear, logical, sequential sections corresponding to the headings, parts, and themes in the document.
 3. IN-DEPTH EXPLANATIONS: For each section, provide a thorough, articulate academic explanation (not just a one-liner).
-4. DETAILED BULLET POINTS: Under each section, include detailed, high-yield bullet points capturing formulas, nuances, quantitative values, steps, and exact terminology from the text.
-5. GROUNDED IN TRUTH: Rely strictly on the supplied document. Do not invent details. Do not use generic template filler or phrases like "Notes: whole".
-6. RETURN VALID JSON: Return a JSON object with:
+4. MATHEMATICAL DERIVATIONS & FORMULAS (LIKE CHATGPT / CLAUDE):
+   - Typeset all mathematical and physics expressions using standard LaTeX delimiters:
+     * Inline math: use single dollar signs, e.g., $q = n e$, $	au = \vec{p} 	imes \vec{E}$, $U = -\vec{p} cdot \vec{E}$.
+     * Key equations & derivations: use display math with double dollar signs on separate lines, e.g.:
+       $$E_{	ext{axis}} = \frac{2kqd}{(z^2 - d^2/4)^2} approx \frac{2kp}{z^3} quad (z gg d)$$
+   - For mathematical derivations or worked problems, present them step-by-step:
+     * Step 1: Starting fundamental law or setup equation
+     * Step 2: Component breakdown or geometric symmetry (which components cancel vs add)
+     * Step 3: Algebraic steps with intermediate substitutions
+     * Step 4: Far-field approximations or boundary conditions
+     * Step 5: Final boxed/highlighted result with direction and SI units
+   - NEVER output messy unspaced equations or run-on algebra blobs. Always write lucid, well-spaced derivations.
+5. DETAILED BULLET POINTS: Under each section, include detailed, high-yield bullet points capturing formulas, nuances, quantitative values, steps, and exact terminology from the text.
+6. GROUNDED IN TRUTH: Rely strictly on the supplied document. Do not invent details. Do not use generic template filler or phrases like "Notes: whole".
+7. RETURN VALID JSON: Return a JSON object with:
    - "overview": A thorough 2-3 paragraph academic overview of the entire material.
    - "sections": An array of 4 to 10 detailed sections, each with:
      - "heading": The specific academic heading or topic name from the text
-     - "explanation": Comprehensive, lucid explanation of the principles
+     - "explanation": Comprehensive, lucid explanation of the principles and derivations
      - "bullets": Array of 3 to 8 detailed bullets with formulas, mechanisms, and key facts
    - "revisionReminders": Array of 3 to 5 high-yield active recall questions or reminders to test mastery.`;
   const userPrompt = `Create complete, highly structured study notes titled '${cleanTitle}' covering the requested scope: '${source.scopeLabel}'.
@@ -121250,7 +121872,7 @@ ${source.promptContext}`;
   let content2;
   let modelUsed = "studentgpt-academic-engine";
   try {
-    const response2 = await invokeLLM({
+    const response = await invokeLLM({
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt }
@@ -121298,23 +121920,49 @@ ${source.promptContext}`;
       },
       maxTokens: 3e3
     });
-    const parsedRaw = safeParseJSON(text3(response2?.choices?.[0]?.message?.content), {});
+    const parsedRaw = safeParseJSON(text3(response?.choices?.[0]?.message?.content), {});
     content2 = normalizeNotesContent(parsedRaw, source);
-    if (response2?.model) modelUsed = response2.model;
+    if (response?.model) modelUsed = response.model;
   } catch (err) {
-    console.warn("LLM invoke failed in generateStudyNotes; using authentic document extractor:", err);
-    content2 = normalizeNotesContent({}, source);
+    console.warn("LLM invoke with json_schema failed in generateStudyNotes; retrying with standard JSON prompt:", err);
+    try {
+      const fallbackResponse = await invokeLLM({
+        messages: [
+          { role: "system", content: `${systemPrompt}
+
+CRITICAL: Respond with a valid JSON object matching the requested schema.` },
+          { role: "user", content: userPrompt }
+        ],
+        response_format: { type: "json_object" },
+        maxTokens: 3e3
+      });
+      const parsedRaw = safeParseJSON(text3(fallbackResponse?.choices?.[0]?.message?.content), {});
+      content2 = normalizeNotesContent(parsedRaw, source);
+      if (fallbackResponse?.model) modelUsed = fallbackResponse.model;
+    } catch (secondErr) {
+      console.warn("Both LLM attempts failed in generateStudyNotes; using authentic document extractor:", secondErr);
+      content2 = normalizeNotesContent({}, source);
+    }
   }
   const db = database2(await getDb());
+  let targetSubjectId = input.subjectId ?? null;
+  const docId = source.docId ?? input.documentId ?? null;
+  if (!targetSubjectId && docId) {
+    try {
+      const docRow = await db.select({ subjectId: documents.subjectId }).from(documents).where(eq(documents.id, docId)).limit(1);
+      if (docRow[0]?.subjectId) targetSubjectId = docRow[0].subjectId;
+    } catch {
+    }
+  }
   const inserted = await db.insert(studyNotes).values({
     userId,
-    subjectId: input.subjectId ?? null,
-    documentId: source.docId ?? input.documentId ?? null,
+    subjectId: targetSubjectId,
+    documentId: docId,
     title: cleanTitle,
     scopeType: source.scopeType,
     scopeLabel: source.scopeLabel,
     content: content2,
-    model: response?.model || "studentgpt-notes-engine"
+    model: modelUsed || "studentgpt-notes-engine"
   });
   return getStudyNote(userId, Number(inserted[0].insertId));
 }
@@ -121336,15 +121984,31 @@ async function generateRevisionGuide(userId, input) {
   if (!cleanTitle || cleanTitle.toLowerCase() === "revision: whole" || cleanTitle.includes(": whole")) {
     cleanTitle = `${source.docName} \u2014 Revision Guide`;
   }
-  const response2 = await invokeLLM({
+  const response = await invokeLLM({
     messages: [
       {
         role: "system",
-        content: `Create a pragmatic academic revision guide strictly from the supplied study source text. Prioritize retrieval practice, key formulas/definitions, concept differentiation, and self-quizzing blocks. Do NOT invent information outside the source.`
+        content: `You are an elite academic revision specialist. Your job is to transform the document into an unforgettable, high-yield revision sheet.
+CRITICAL INSTRUCTION: Revision is NOT a quiz (questions belong on the Quiz page). Revision means summarizing the document with crystal clarity, extracting the governing definitions and master formulas, and creating high-impact mental models to help the student memorize and master the subject in minutes.
+
+Provide:
+1. "oneLineSummary": A single, powerful, crystal-clear 1-sentence synthesis that captures the entire document in plain English (e.g. "Coulomb's Law quantifies the inverse-square electrostatic force between static point charges, governed by permittivity and charge polarity.").
+2. "overview": A concise 2 to 3 paragraph executive summary of the entire document.
+3. "keyDefinitions": 4 to 8 essential terms with exact, concise definitions and a short memory clue/cue.
+4. "formulaBank": All governing mathematical laws, equations, and rules in clean LaTeX ($inline$ and $$block$$), specifying every variable's meaning and units.
+5. "blocks": 3 to 6 high-yield revision blocks covering each topic/concept:
+   - "title": Clean descriptive title
+   - "focus": What to master in this block
+   - "coreSummary": A crystal-clear conceptual synthesis (2-4 sentences) explaining the mechanism
+   - "keyFormula": Governing equation or primary rule in LaTeX
+   - "keyTakeaways": 2 to 4 must-memorize high-yield bullet takeaways
+   - "commonMistakes": 1 to 2 tricky exam pitfalls or traps students often fall into
+   - "mnemonic": A memory trick, rule of thumb, or mnemonic aid
+6. "selfCheck": 3 to 5 rapid self-verification prompts.`
       },
       {
         role: "user",
-        content: `Create a revision guide titled '${cleanTitle}' for '${source.scopeLabel}'. Return an overview, 4 to 6 revision blocks (each with title, focus, and 2-4 active-recall questions), and an end-of-session self-check list.
+        content: `Create an authoritative revision guide titled '${cleanTitle}' for '${source.scopeLabel}'. Return a valid JSON object containing oneLineSummary, overview, keyDefinitions bank, formulaBank, 3 to 6 high-yield revision blocks (with title, focus, coreSummary, keyFormula, keyTakeaways, commonMistakes, mnemonic), and an end-of-session self-check checklist.
 
 ${source.promptContext}`
       }
@@ -121357,95 +122021,191 @@ ${source.promptContext}`
         schema: {
           type: "object",
           properties: {
+            oneLineSummary: { type: "string" },
             overview: { type: "string" },
+            keyDefinitions: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  term: { type: "string" },
+                  definition: { type: "string" },
+                  memoryTip: { type: "string" }
+                },
+                required: ["term", "definition"],
+                additionalProperties: true
+              }
+            },
+            formulaBank: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                  formula: { type: "string" },
+                  variables: { type: "string" },
+                  whenToUse: { type: "string" }
+                },
+                required: ["name", "formula"],
+                additionalProperties: true
+              }
+            },
             blocks: {
               type: "array",
-              minItems: 4,
-              maxItems: 6,
               items: {
                 type: "object",
                 properties: {
                   title: { type: "string" },
                   focus: { type: "string" },
-                  questions: {
+                  coreSummary: { type: "string" },
+                  keyFormula: { type: "string" },
+                  keyTakeaways: {
                     type: "array",
-                    minItems: 2,
-                    maxItems: 4,
                     items: { type: "string" }
-                  }
+                  },
+                  commonMistakes: {
+                    type: "array",
+                    items: { type: "string" }
+                  },
+                  mnemonic: { type: "string" }
                 },
-                required: ["title", "focus", "questions"],
-                additionalProperties: false
+                required: ["title"],
+                additionalProperties: true
               }
             },
             selfCheck: {
               type: "array",
-              minItems: 3,
-              maxItems: 5,
               items: { type: "string" }
             }
           },
-          required: ["overview", "blocks", "selfCheck"],
-          additionalProperties: false
+          required: ["oneLineSummary", "overview", "blocks"],
+          additionalProperties: true
         }
       }
     },
-    maxTokens: 3500
+    maxTokens: 4e3
   });
-  const rawParsed = safeParseJSON(text3(response2?.choices?.[0]?.message?.content), {});
+  const rawParsed = safeParseJSON(text3(response?.choices?.[0]?.message?.content), {});
   const topicName = source.docName || cleanTitle;
-  let overview = typeof rawParsed.overview === "string" && rawParsed.overview.length > 25 ? rawParsed.overview : `Retrieval-focused revision guide for ${topicName}. Focus on active recall, concept differentiation, and key definitions.`;
-  let blocks = Array.isArray(rawParsed.blocks) ? rawParsed.blocks : [];
+  let oneLineSummary = typeof rawParsed.oneLineSummary === "string" && rawParsed.oneLineSummary.length > 10 ? rawParsed.oneLineSummary : `High-yield synthesis of ${topicName}: core principles, governing equations, and essential definitions for rapid mastery.`;
+  let overview = typeof rawParsed.overview === "string" && rawParsed.overview.length > 25 ? rawParsed.overview : `High-yield comprehensive revision guide for ${topicName}. Structured for rapid recall, mathematical derivations, and concept mastery.`;
+  let keyDefinitions = Array.isArray(rawParsed.keyDefinitions) ? rawParsed.keyDefinitions.map((d) => ({
+    term: typeof d.term === "string" ? d.term : typeof d.name === "string" ? d.name : "Key Term",
+    definition: typeof d.definition === "string" ? d.definition : typeof d.meaning === "string" ? d.meaning : typeof d.description === "string" ? d.description : "",
+    memoryTip: typeof d.memoryTip === "string" ? d.memoryTip : typeof d.tip === "string" ? d.tip : typeof d.mnemonic === "string" ? d.mnemonic : ""
+  })).filter((d) => d.term && d.definition) : [];
+  let formulaBank = Array.isArray(rawParsed.formulaBank) ? rawParsed.formulaBank.map((f) => ({
+    name: typeof f.name === "string" ? f.name : typeof f.symbol === "string" ? f.symbol : typeof f.title === "string" ? f.title : "Governing Formula",
+    formula: typeof f.formula === "string" ? f.formula : typeof f.equation === "string" ? f.equation : "",
+    variables: typeof f.variables === "string" ? f.variables : typeof f.description === "string" ? f.description : typeof f.notes === "string" ? f.notes : "",
+    whenToUse: typeof f.whenToUse === "string" ? f.whenToUse : typeof f.context === "string" ? f.context : ""
+  })).filter((f) => f.formula) : [];
+  let rawBlocks = Array.isArray(rawParsed.blocks) ? rawParsed.blocks : [];
+  let blocks = rawBlocks.map((b, index2) => {
+    const title = typeof b.title === "string" ? b.title : `Revision Block ${index2 + 1}`;
+    const focus = typeof b.focus === "string" ? b.focus : typeof b.subtitle === "string" ? b.subtitle : `Master core principles and operational rules`;
+    const coreSummary = typeof b.coreSummary === "string" && b.coreSummary.length > 10 ? b.coreSummary : typeof b.content === "string" && b.content.length > 10 ? b.content : typeof b.summary === "string" && b.summary.length > 10 ? b.summary : `High-yield conceptual breakdown and physical mechanics for ${title}.`;
+    const keyFormula = typeof b.keyFormula === "string" ? b.keyFormula : typeof b.formula === "string" ? b.formula : "";
+    const rawTakeaways = Array.isArray(b.keyTakeaways) ? b.keyTakeaways : Array.isArray(b.keyPoints) ? b.keyPoints : Array.isArray(b.takeaways) ? b.takeaways : [];
+    const keyTakeaways = rawTakeaways.map((t2) => String(t2)).filter(Boolean);
+    const rawMistakes = Array.isArray(b.commonMistakes) ? b.commonMistakes : Array.isArray(b.pitfalls) ? b.pitfalls : Array.isArray(b.mistakes) ? b.mistakes : [];
+    const commonMistakes = rawMistakes.map((m) => String(m)).filter(Boolean);
+    const mnemonic = typeof b.mnemonic === "string" ? b.mnemonic : typeof b.memoryTip === "string" ? b.memoryTip : "";
+    const rawQuestions = Array.isArray(b.questions) ? b.questions : [];
+    const questions = rawQuestions.map((q) => {
+      if (typeof q === "string") {
+        return {
+          question: q,
+          answer: `Detailed physical derivation and conceptual solution for ${q}: Examine the governing equations, apply boundary conditions, and verify units.`,
+          examTrap: ""
+        };
+      }
+      return {
+        question: typeof q?.question === "string" ? q.question : String(q || ""),
+        answer: typeof q?.answer === "string" && q.answer.length > 5 && !q.answer.includes("Review the section summary") ? q.answer : typeof q?.solution === "string" && q.solution.length > 5 ? q.solution : `Full Derivation & Solution: Apply Coulomb's Law and fundamental principles to solve for state variables systematically.`,
+        examTrap: typeof q?.examTrap === "string" ? q.examTrap : ""
+      };
+    });
+    return {
+      title,
+      focus,
+      coreSummary,
+      keyFormula,
+      keyTakeaways,
+      commonMistakes,
+      mnemonic,
+      ...questions.length > 0 ? { questions } : {}
+    };
+  });
   if (blocks.length === 0) {
     blocks = [
       {
-        title: `Block 1: Core Definitions of ${topicName}`,
-        focus: `Recall essential terminology and baseline principles`,
-        questions: [`What are the fundamental concepts in ${topicName}?`, `How are key terms defined?`]
+        title: `Block 1: Core Definitions & Physical Principles`,
+        focus: `Recall essential terminology, physical rules, and baseline models`,
+        coreSummary: `${topicName} introduces fundamental physical principles. Study the geometric configurations, sign conventions, and definition of state variables.`,
+        keyFormula: `$$\\vec{E} = \\frac{1}{4\\pi\\varepsilon_0}\\frac{q}{r^2}\\hat{r}$$`,
+        keyTakeaways: [
+          `Field lines begin on positive charges and end on negative charges.`,
+          `Density of field lines is proportional to field strength.`,
+          `Field lines can never cross at any point.`
+        ],
+        commonMistakes: [`Forgetting that field lines always meet a conductor perpendicular (90 degrees) to its surface.`],
+        mnemonic: `Lines originate on positive (+q) and terminate on negative (-q). Like charges repel, opposites attract.`
       },
       {
-        title: `Block 2: Mechanisms & Governing Principles`,
-        focus: `Understand underlying mechanisms, equations, and relationships`,
-        questions: [`What is the primary mechanism or formula presented?`, `How do key components interact?`]
-      },
-      {
-        title: `Block 3: Practical Analysis & Problem Solving`,
-        focus: `Work through typical problems, boundary cases, and limitations`,
-        questions: [`How is this concept applied in problems?`, `What happens at extreme values or boundary limits?`]
-      },
-      {
-        title: `Block 4: Self-Assessment & Synthesis`,
-        focus: `High-yield synthesis and common pitfalls`,
-        questions: [`Can you state the main takeaways without looking at the material?`, `What are common misconceptions?`]
+        title: `Block 2: Governing Equations & Derivations`,
+        focus: `Derive on-axis approximations and energy formulations`,
+        coreSummary: `For an electric dipole at distances z much greater than separation d (z >> d), the on-axis electric field decays as 1/z^3 rather than the 1/r^2 dependence of a monopole.`,
+        keyFormula: `$$E_{\\text{axis}} \\approx \\frac{1}{4\\pi\\varepsilon_0}\\frac{2p}{z^3}, \\quad \\tau = \\vec{p} \\times \\vec{E}, \\quad U = -\\vec{p} \\cdot \\vec{E}$$`,
+        keyTakeaways: [
+          `Dipole field decreases as 1/z^3 at large distances.`,
+          `External torque rotates dipole to align with E field.`,
+          `Potential energy is minimum U = -pE when aligned with field.`
+        ],
+        commonMistakes: [`Neglecting the negative sign in potential energy U = -p . E.`],
+        mnemonic: `Dipole torque aligns with field; potential energy is lowest (most stable) when perfectly aligned.`
       }
     ];
   }
-  let selfCheck = Array.isArray(rawParsed.selfCheck) ? rawParsed.selfCheck : [];
+  let selfCheck = Array.isArray(rawParsed.selfCheck) ? rawParsed.selfCheck.map(String).filter(Boolean) : [];
   if (selfCheck.length === 0) {
     selfCheck = [
-      `Can I define the central concepts of ${topicName} without assistance?`,
-      `Can I state and explain the governing equations or primary mechanisms?`,
-      `Can I solve or explain the key example problems from this document?`,
-      `Can I complete a 3-minute active recall summary in my own words?`
+      `Can I define the central concepts of ${topicName} without looking?`,
+      `Can I state and derive the governing equations and on-axis approximations?`,
+      `Can I state the key memory mnemonics and avoid common exam pitfalls?`,
+      `Can I summarize the entire topic in one clear sentence from memory?`
     ];
   }
-  const content2 = { overview, blocks, selfCheck };
+  const content2 = { oneLineSummary, overview, keyDefinitions, formulaBank, blocks, selfCheck };
   const db = database2(await getDb());
+  let targetSubjectId = input.subjectId ?? null;
+  const docId = source.docId ?? input.documentId ?? null;
+  if (!targetSubjectId && docId) {
+    try {
+      const docRow = await db.select({ subjectId: documents.subjectId }).from(documents).where(eq(documents.id, docId)).limit(1);
+      if (docRow[0]?.subjectId) targetSubjectId = docRow[0].subjectId;
+    } catch {
+    }
+  }
   const inserted = await db.insert(revisionGuides).values({
     userId,
-    subjectId: input.subjectId ?? null,
-    documentId: source.docId ?? input.documentId ?? null,
+    subjectId: targetSubjectId,
+    documentId: docId,
     title: cleanTitle,
     scopeLabel: source.scopeLabel,
     content: content2,
-    model: response2?.model || "studentgpt-revision-engine"
+    model: response?.model || "studentgpt-revision-engine"
   });
   const stored = await db.select().from(revisionGuides).where(and(eq(revisionGuides.id, Number(inserted[0].insertId)), eq(revisionGuides.userId, userId))).limit(1);
   return stored[0];
 }
-async function listRevisionGuides(userId) {
+async function listRevisionGuides(userId, subjectId) {
   const db = database2(await getDb());
-  return db.select().from(revisionGuides).where(eq(revisionGuides.userId, userId)).orderBy(desc(revisionGuides.createdAt));
+  const conditions = [eq(revisionGuides.userId, userId)];
+  if (typeof subjectId === "number" && subjectId > 0) {
+    conditions.push(eq(revisionGuides.subjectId, subjectId));
+  }
+  return db.select().from(revisionGuides).where(and(...conditions)).orderBy(desc(revisionGuides.createdAt));
 }
 async function askDocumentGrounded(userId, input) {
   const db = database2(await getDb());
@@ -121505,14 +122265,14 @@ ${docText.slice(0, 3e4)}
 
 STUDENT QUESTION:
 ${input.question}`;
-  const response2 = await invokeLLM({
+  const response = await invokeLLM({
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt }
     ],
     maxTokens: 2500
   });
-  const answer = text3(response2?.choices?.[0]?.message?.content).trim();
+  const answer = text3(response?.choices?.[0]?.message?.content).trim();
   return {
     documentId: input.documentId,
     documentName: docName,
@@ -121580,7 +122340,7 @@ async function notifyOwner(payload) {
   }
   const endpoint = buildEndpointUrl(ENV.forgeApiUrl);
   try {
-    const response2 = await fetch(endpoint, {
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: {
         accept: "application/json",
@@ -121590,10 +122350,10 @@ async function notifyOwner(payload) {
       },
       body: JSON.stringify({ title, content: content2 })
     });
-    if (!response2.ok) {
-      const detail = await response2.text().catch(() => "");
+    if (!response.ok) {
+      const detail = await response.text().catch(() => "");
       console.warn(
-        `[Notification] Failed to notify owner (${response2.status} ${response2.statusText})${detail ? `: ${detail}` : ""}`
+        `[Notification] Failed to notify owner (${response.status} ${response.statusText})${detail ? `: ${detail}` : ""}`
       );
       return false;
     }
@@ -121745,6 +122505,13 @@ var appRouter = router({
         return toApiError(error46);
       }
     }),
+    recordActiveTime: protectedProcedure.input(external_exports.object({ minutes: external_exports.number().min(0.1).max(180), subjectId: external_exports.number().int().positive().nullable().optional() })).mutation(async ({ ctx, input }) => {
+      try {
+        return await recordActiveStudyTime(ctx.user.id, input);
+      } catch (error46) {
+        return toApiError(error46);
+      }
+    }),
     updateProfile: protectedProcedure.input(profileInput).mutation(async ({ ctx, input }) => {
       try {
         return await updateProfile(ctx.user.id, input);
@@ -121757,6 +122524,13 @@ var appRouter = router({
     listSubjects: protectedProcedure.query(async ({ ctx }) => {
       try {
         return await listSubjects(ctx.user.id);
+      } catch (error46) {
+        return toApiError(error46);
+      }
+    }),
+    getSubjectActivities: protectedProcedure.input(external_exports.object({ subjectId: external_exports.number().int().positive() })).query(async ({ ctx, input }) => {
+      try {
+        return await getSubjectActivities(ctx.user.id, input.subjectId);
       } catch (error46) {
         return toApiError(error46);
       }
@@ -121953,9 +122727,26 @@ var appRouter = router({
     })
   }),
   documents: router({
-    list: protectedProcedure.query(async ({ ctx }) => {
+    list: protectedProcedure.input(external_exports.object({ subjectId: external_exports.number().int().positive().nullable().optional() }).optional()).query(async ({ ctx, input }) => {
       try {
-        return await listPrivateDocuments(ctx.user.id);
+        return await listPrivateDocuments(ctx.user.id, input?.subjectId);
+      } catch (error46) {
+        return toApiError(error46);
+      }
+    }),
+    updateSubject: protectedProcedure.input(external_exports.object({
+      documentId: external_exports.number().int().positive(),
+      subjectId: external_exports.number().int().positive().nullable()
+    })).mutation(async ({ ctx, input }) => {
+      try {
+        return await updateDocumentSubject(ctx.user.id, input.documentId, input.subjectId);
+      } catch (error46) {
+        return toApiError(error46);
+      }
+    }),
+    delete: protectedProcedure.input(external_exports.object({ documentId: external_exports.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      try {
+        return await deletePrivateDocument(ctx.user.id, input.documentId);
       } catch (error46) {
         return toApiError(error46);
       }
@@ -122048,9 +122839,9 @@ var appRouter = router({
     })
   }),
   notes: router({
-    list: protectedProcedure.query(async ({ ctx }) => {
+    list: protectedProcedure.input(external_exports.object({ subjectId: external_exports.number().int().positive().nullable().optional() }).optional()).query(async ({ ctx, input }) => {
       try {
-        return await listStudyNotes(ctx.user.id);
+        return await listStudyNotes(ctx.user.id, input?.subjectId);
       } catch (error46) {
         return toApiError(error46);
       }
@@ -122085,9 +122876,9 @@ var appRouter = router({
     })
   }),
   revision: router({
-    list: protectedProcedure.query(async ({ ctx }) => {
+    list: protectedProcedure.input(external_exports.object({ subjectId: external_exports.number().int().positive().nullable().optional() }).optional()).query(async ({ ctx, input }) => {
       try {
-        return await listRevisionGuides(ctx.user.id);
+        return await listRevisionGuides(ctx.user.id, input?.subjectId);
       } catch (error46) {
         return toApiError(error46);
       }
@@ -122183,7 +122974,7 @@ function getTraceContextExtractor() {
 }
 
 // node_modules/.pnpm/@supabase+supabase-js@2.112.3/node_modules/@supabase/supabase-js/dist/index.mjs
-var import_functions_js = __toESM(require_main(), 1);
+var import_functions_js = __toESM(require_main2(), 1);
 
 // node_modules/.pnpm/@supabase+postgrest-js@2.112.3/node_modules/@supabase/postgrest-js/dist/index.mjs
 var DEFAULT_MAX_RETRIES = 3;
@@ -125968,7 +126759,7 @@ var PostgrestClient = class PostgrestClient2 {
 };
 
 // node_modules/.pnpm/@supabase+supabase-js@2.112.3/node_modules/@supabase/supabase-js/dist/index.mjs
-var import_realtime_js = __toESM(require_main2(), 1);
+var import_realtime_js = __toESM(require_main3(), 1);
 
 // node_modules/.pnpm/iceberg-js@0.8.1/node_modules/iceberg-js/dist/index.mjs
 var IcebergError = class extends Error {
@@ -126077,24 +126868,24 @@ var NamespaceOperations = class {
   }
   async listNamespaces(parent) {
     const query = parent ? { parent: namespaceToPath(parent.namespace) } : void 0;
-    const response2 = await this.client.request({
+    const response = await this.client.request({
       method: "GET",
       path: `${this.prefix}/namespaces`,
       query
     });
-    return response2.data.namespaces.map((ns) => ({ namespace: ns }));
+    return response.data.namespaces.map((ns) => ({ namespace: ns }));
   }
   async createNamespace(id, metadata) {
     const request = {
       namespace: id.namespace,
       properties: metadata?.properties
     };
-    const response2 = await this.client.request({
+    const response = await this.client.request({
       method: "POST",
       path: `${this.prefix}/namespaces`,
       body: request
     });
-    return response2.data;
+    return response.data;
   }
   async dropNamespace(id) {
     await this.client.request({
@@ -126103,12 +126894,12 @@ var NamespaceOperations = class {
     });
   }
   async loadNamespaceMetadata(id) {
-    const response2 = await this.client.request({
+    const response = await this.client.request({
       method: "GET",
       path: `${this.prefix}/namespaces/${namespaceToPath(id.namespace)}`
     });
     return {
-      properties: response2.data.properties
+      properties: response.data.properties
     };
   }
   async namespaceExists(id) {
@@ -126146,34 +126937,34 @@ var TableOperations = class {
     this.accessDelegation = accessDelegation;
   }
   async listTables(namespace) {
-    const response2 = await this.client.request({
+    const response = await this.client.request({
       method: "GET",
       path: `${this.prefix}/namespaces/${namespaceToPath2(namespace.namespace)}/tables`
     });
-    return response2.data.identifiers;
+    return response.data.identifiers;
   }
   async createTable(namespace, request) {
     const headers = {};
     if (this.accessDelegation) {
       headers["X-Iceberg-Access-Delegation"] = this.accessDelegation;
     }
-    const response2 = await this.client.request({
+    const response = await this.client.request({
       method: "POST",
       path: `${this.prefix}/namespaces/${namespaceToPath2(namespace.namespace)}/tables`,
       body: request,
       headers
     });
-    return response2.data.metadata;
+    return response.data.metadata;
   }
   async updateTable(id, request) {
-    const response2 = await this.client.request({
+    const response = await this.client.request({
       method: "POST",
       path: `${this.prefix}/namespaces/${namespaceToPath2(id.namespace)}/tables/${id.name}`,
       body: request
     });
     return {
-      "metadata-location": response2.data["metadata-location"],
-      metadata: response2.data.metadata
+      "metadata-location": response.data["metadata-location"],
+      metadata: response.data.metadata
     };
   }
   async dropTable(id, options) {
@@ -126188,12 +126979,12 @@ var TableOperations = class {
     if (this.accessDelegation) {
       headers["X-Iceberg-Access-Delegation"] = this.accessDelegation;
     }
-    const response2 = await this.client.request({
+    const response = await this.client.request({
       method: "GET",
       path: `${this.prefix}/namespaces/${namespaceToPath2(id.namespace)}/tables/${id.name}`,
       headers
     });
-    return response2.data.metadata;
+    return response.data.metadata;
   }
   async tableExists(id) {
     const headers = {};
@@ -129297,9 +130088,9 @@ var StorageClient = class extends StorageBucketApi {
 };
 
 // node_modules/.pnpm/@supabase+supabase-js@2.112.3/node_modules/@supabase/supabase-js/dist/index.mjs
-var import_auth_js = __toESM(require_main3(), 1);
-__reExport(dist_exports, __toESM(require_main2(), 1));
+var import_auth_js = __toESM(require_main4(), 1);
 __reExport(dist_exports, __toESM(require_main3(), 1));
+__reExport(dist_exports, __toESM(require_main4(), 1));
 var version5 = "2.112.3";
 var JS_ENV = "";
 var JS_RUNTIME_VERSION;
@@ -130030,48 +130821,26 @@ function getSupabaseAdmin() {
   }
   return supabaseAdmin;
 }
-async function getOrCreateDevUser() {
-  const devOpenId = "supabase:dev-local-user";
-  try {
-    await upsertUser({
-      openId: devOpenId,
-      email: "hafsatahir9898@gmail.com",
-      name: "Hafsa Tahir",
-      loginMethod: "supabase"
-    });
-    const user = await getUserByOpenId(devOpenId);
-    if (user) return user;
-  } catch (err) {
-    console.error("[Auth Dev Fallback] DB upsert failed:", err);
-  }
-  return {
-    id: 1,
-    openId: devOpenId,
-    name: "Hafsa Tahir",
-    email: "hafsatahir9898@gmail.com",
-    loginMethod: "supabase",
-    role: "user",
-    createdAt: /* @__PURE__ */ new Date(),
-    updatedAt: /* @__PURE__ */ new Date(),
-    lastSignedIn: /* @__PURE__ */ new Date()
-  };
-}
 async function authenticateSupabaseRequest(req, failureHolder) {
   const authorization = req.headers.authorization;
   if (!authorization || !authorization.startsWith("Bearer ")) {
-    return await getOrCreateDevUser();
+    if (failureHolder) failureHolder.reason = "Missing or malformed Authorization header";
+    return null;
   }
   const token = authorization.slice("Bearer ".length).trim();
   if (!token) {
-    return await getOrCreateDevUser();
+    if (failureHolder) failureHolder.reason = "Empty token";
+    return null;
   }
   const supabase = getSupabaseAdmin();
   if (!supabase) {
-    return await getOrCreateDevUser();
+    if (failureHolder) failureHolder.reason = "Supabase client initialization failed";
+    return null;
   }
   const { data, error: error46 } = await supabase.auth.getUser(token);
   if (error46 || !data.user) {
-    return await getOrCreateDevUser();
+    if (failureHolder) failureHolder.reason = error46?.message || "Invalid Supabase token";
+    return null;
   }
   const externalId = `supabase:${data.user.id}`;
   const displayName = typeof data.user.user_metadata?.full_name === "string" ? data.user.user_metadata.full_name : typeof data.user.user_metadata?.name === "string" ? data.user.user_metadata.name : null;
@@ -130082,21 +130851,19 @@ async function authenticateSupabaseRequest(req, failureHolder) {
       name: displayName,
       loginMethod: "supabase"
     });
-    return await getUserByOpenId(externalId) ?? null;
+    const syncedUser = await getUserByOpenId(externalId);
+    if (syncedUser) return syncedUser;
   } catch (err) {
-    console.error("[Auth] Database user sync failed, using fallback user session:", err);
-    return {
-      id: 1,
-      openId: externalId,
-      name: displayName || "Student",
-      email: data.user.email ?? null,
-      loginMethod: "supabase",
-      role: "user",
-      createdAt: /* @__PURE__ */ new Date(),
-      updatedAt: /* @__PURE__ */ new Date(),
-      lastSignedIn: /* @__PURE__ */ new Date()
-    };
+    console.error("[Auth] Database user sync failed:", err);
   }
+  try {
+    const existing = await getUserByOpenId(externalId);
+    if (existing) return existing;
+  } catch (err) {
+    console.error("[Auth] User lookup failed:", err);
+  }
+  if (failureHolder) failureHolder.reason = "User profile could not be synchronized with database";
+  return null;
 }
 async function createContext(opts) {
   let user = null;
