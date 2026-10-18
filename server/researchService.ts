@@ -275,7 +275,7 @@ export async function synthesizeResearchBrief(userId: number, briefId: number) {
     const title = loaded.brief.title;
     const prompt = buildResearchUserPrompt(title, loaded.brief.researchQuestion, sourceNotes);
 
-    let parsed: SynthesisResponse | null = null;
+    let parsed: Required<SynthesisResponse> | null = null;
     let modelUsed = "";
     let lastError = "";
 
