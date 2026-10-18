@@ -44,7 +44,7 @@ export const MathRenderer: React.FC<MathRendererProps> = ({ content, className =
         if (inline) {
           return (
             <span
-              className="inline-block px-1 align-baseline text-[#724060]"
+              className="inline-block px-1 align-baseline text-inherit"
               dangerouslySetInnerHTML={{ __html: html }}
             />
           );
@@ -141,7 +141,7 @@ export const MathRenderer: React.FC<MathRendererProps> = ({ content, className =
         return (
           <span
             key={key}
-            className="inline-block px-1 align-baseline text-[#724060]"
+            className="inline-block px-1 align-baseline text-inherit"
             dangerouslySetInnerHTML={{ __html: html }}
           />
         );
@@ -171,7 +171,7 @@ export const MathRenderer: React.FC<MathRendererProps> = ({ content, className =
 
             if (seg.startsWith("**") && seg.endsWith("**") && seg.length >= 4) {
               return (
-                <strong key={`${baseKey}-b-${idx}`} className="font-semibold text-[#724060]">
+                <strong key={`${baseKey}-b-${idx}`} className="font-semibold text-inherit">
                   {renderInlineElements(seg.slice(2, -2), `${baseKey}-b-inner-${idx}`)}
                 </strong>
               );
@@ -179,7 +179,7 @@ export const MathRenderer: React.FC<MathRendererProps> = ({ content, className =
 
             if (seg.startsWith("*") && seg.endsWith("*") && seg.length >= 2) {
               return (
-                <em key={`${baseKey}-i-${idx}`} className="italic text-[#724060]">
+                <em key={`${baseKey}-i-${idx}`} className="italic text-inherit">
                   {renderInlineElements(seg.slice(1, -1), `${baseKey}-i-inner-${idx}`)}
                 </em>
               );
@@ -223,7 +223,7 @@ export const MathRenderer: React.FC<MathRendererProps> = ({ content, className =
         blocks.push(
           <ListTag
             key={key}
-            className={`my-2 space-y-1.5 pl-5 text-[13px] leading-6 text-[#724060] ${
+            className={`my-2 space-y-1.5 pl-5 text-[13px] leading-6 text-inherit ${
               ListTag === "ul" ? "list-disc marker:text-[#A070A1]" : "list-decimal marker:font-bold marker:text-[#A070A1]"
             }`}
           >
@@ -293,7 +293,7 @@ export const MathRenderer: React.FC<MathRendererProps> = ({ content, className =
       if (trimmed.startsWith("### ")) {
         flushList();
         blocks.push(
-          <h4 key={`h3-${lineIdx}`} className="mt-4 mb-2 text-[15px] font-bold text-[#724060]">
+          <h4 key={`h3-${lineIdx}`} className="mt-4 mb-2 text-[15px] font-bold text-inherit">
             {renderInlineElements(trimmed.slice(4), `h3-inner-${lineIdx}`)}
           </h4>
         );
@@ -303,7 +303,7 @@ export const MathRenderer: React.FC<MathRendererProps> = ({ content, className =
       if (trimmed.startsWith("## ")) {
         flushList();
         blocks.push(
-          <h3 key={`h2-${lineIdx}`} className="mt-5 mb-2 text-[17px] font-bold text-[#724060]">
+          <h3 key={`h2-${lineIdx}`} className="mt-5 mb-2 text-[17px] font-bold text-inherit">
             {renderInlineElements(trimmed.slice(3), `h2-inner-${lineIdx}`)}
           </h3>
         );
@@ -313,7 +313,7 @@ export const MathRenderer: React.FC<MathRendererProps> = ({ content, className =
       if (trimmed.startsWith("# ")) {
         flushList();
         blocks.push(
-          <h2 key={`h1-${lineIdx}`} className="mt-6 mb-3 text-[19px] font-extrabold text-[#724060]">
+          <h2 key={`h1-${lineIdx}`} className="mt-6 mb-3 text-[19px] font-extrabold text-inherit">
             {renderInlineElements(trimmed.slice(2), `h1-inner-${lineIdx}`)}
           </h2>
         );
@@ -348,7 +348,7 @@ export const MathRenderer: React.FC<MathRendererProps> = ({ content, className =
         blocks.push(
           <blockquote
             key={`quote-${lineIdx}`}
-            className="my-3 border-l-4 border-[#A070A1] bg-[#FDF3F3] p-3 text-[13px] italic leading-6 text-[#724060]"
+            className="my-3 border-l-4 border-[#A070A1] bg-[#FDF3F3] p-3 text-[13px] italic leading-6 text-inherit"
           >
             {renderInlineElements(trimmed.slice(2), `quote-inner-${lineIdx}`)}
           </blockquote>
@@ -359,7 +359,7 @@ export const MathRenderer: React.FC<MathRendererProps> = ({ content, className =
       // Regular paragraph line
       flushList();
       blocks.push(
-        <p key={`p-${lineIdx}`} className="my-1.5 text-[13px] leading-6 text-[#724060]">
+        <p key={`p-${lineIdx}`} className="my-1.5 text-[13.5px] leading-6 text-inherit">
           {renderInlineElements(line, `p-inner-${lineIdx}`)}
         </p>
       );
@@ -372,10 +372,10 @@ export const MathRenderer: React.FC<MathRendererProps> = ({ content, className =
   }, [content, inline]);
 
   if (inline) {
-    return <span className={`inline-math-container ${className}`}>{renderedOutput}</span>;
+    return <span className={`inline-math-container text-inherit ${className}`}>{renderedOutput}</span>;
   }
 
-  return <div className={`math-markdown-content ${className}`}>{renderedOutput}</div>;
+  return <div className={`math-markdown-content text-inherit ${className}`}>{renderedOutput}</div>;
 };
 
 export default MathRenderer;

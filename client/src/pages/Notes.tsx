@@ -860,14 +860,18 @@ export default function Notes() {
 
                   {/* In One Line Summary Banner */}
                   {revision.oneLineSummary && (
-                    <div className="mt-5 rounded-2xl border border-[#724060]/20 bg-gradient-to-r from-[#724060] via-[#854570] to-[#5e3250] p-5 text-[#FDF3F3] shadow-md">
+                    <div className="mt-5 rounded-2xl border-2 border-[#A070A1]/30 bg-gradient-to-r from-[#4a243d] via-[#633053] to-[#4a243d] p-5 text-white shadow-md">
                       <div className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-widest text-amber-300">
-                        <Zap className="h-4 w-4 fill-amber-300" />
+                        <Zap className="h-4 w-4 fill-amber-300 text-amber-300" />
                         <span>In One Line · The Core Takeaway</span>
                       </div>
-                      <p className="mt-2 text-[15.5px] font-medium leading-relaxed text-[#FDF3F3]">
-                        <MathRenderer content={revision.oneLineSummary} />
-                      </p>
+                      <div className="mt-2.5 text-[15.5px] font-medium leading-relaxed text-white drop-shadow-xs">
+                        <MathRenderer
+                          content={revision.oneLineSummary}
+                          inline
+                          className="text-white font-medium text-[15.5px] leading-relaxed"
+                        />
+                      </div>
                     </div>
                   )}
 
