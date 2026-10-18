@@ -172,6 +172,7 @@ export default defineConfig({
   server: {
     host: true,
     allowedHosts: [
+      ".trycloudflare.com",
       ".manuspre.computer",
       ".manus.computer",
       ".manus-asia.computer",

@@ -9,7 +9,8 @@ const MAX_PDF_BYTES = 12 * 1024 * 1024;
 function databaseOrThrow<T>(value: T | null): T { if (!value) throw new Error("The database connection is not available."); return value; }
 function textChunks(text: string, size = 1600, overlap = 250) {
   const clean = text.replace(/\s+/g, " ").trim(); const chunks: string[] = [];
-  for (let start = 0; start < clean.length; start += size - overlap) { const chunk = clean.slice(start, start + size).trim(); if (chunk.length > 80) chunks.push(chunk); if (start + size >= clean.length) break; }
+  for (let start = 0; start < clean.length; start += size - overlap) { const chunk = clean.slice(start, start + size).trim(); if (chunk.length > 10) chunks.push(chunk); if (start + size >= clean.length) break; }
+  if (chunks.length === 0 && clean.length > 0) chunks.push(clean);
   return chunks;
 }
 
@@ -28,16 +29,18 @@ export async function uploadPrivatePdf(userId: number, file: { buffer: Buffer; n
     let content = "";
     let pageCount: number | null = null;
     try {
-      const pdfModule = await import("pdf-parse");
+      const pdfModule = await import("pdf-parse") as any;
       const PDFParseClass = pdfModule.PDFParse || pdfModule.default;
       if (PDFParseClass) {
-        const parser = new PDFParseClass({ data: file.buffer });
+        const uint8Data = new Uint8Array(file.buffer);
+        const parser = new PDFParseClass({ data: uint8Data });
         const result = await parser.getText();
         await parser.destroy();
         content = result.text?.trim() ?? "";
         pageCount = result.total ?? null;
       }
-    } catch {
+    } catch (parseErr) {
+      console.warn("[PDF Extraction Warning]:", parseErr);
       content = file.buffer.toString("binary").replace(/[^\x20-\x7E\n\r\t]/g, " ").replace(/\s+/g, " ").trim();
     }
     if (!content) content = safeName.replace(/[^a-zA-Z0-9 ]/g, " ");

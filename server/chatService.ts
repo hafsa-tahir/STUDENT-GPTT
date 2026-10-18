@@ -14,6 +14,15 @@ function requireDatabase<T>(database: T | null): T {
 
 function currentPeriod() { return new Date().toISOString().slice(0, 7); }
 
+function removeEmojis(str: string): string {
+  try {
+    const emojiRegex = new RegExp('[\\u{1F600}-\\u{1F64F}\\u{1F300}-\\u{1F5FF}\\u{1F680}-\\u{1F6FF}\\u{1F700}-\\u{1F77F}\\u{1F800}-\\u{1F8FF}\\u{1F900}-\\u{1F9FF}\\u{1FA00}-\\u{1FA6F}\\u{1FA70}-\\u{1FAFF}\\u{2600}-\\u{26FF}\\u{2700}-\\u{27BF}\\u{2300}-\\u{23FF}]', 'gu');
+    return str.replace(emojiRegex, '').replace(/  +/g, ' ').trim();
+  } catch {
+    return str.replace(/  +/g, ' ').trim();
+  }
+}
+
 function studentSystemPrompt(mode: LearningMode) {
   const directions: Record<LearningMode, string> = {
     explain: "Explain clearly with short sections, definitions, and one helpful example.",
@@ -25,7 +34,7 @@ function studentSystemPrompt(mode: LearningMode) {
     practice: "Give practice-oriented guidance, show a method, and leave a small part for the student to attempt.",
     exam_prep: "Prioritize exam-relevant concepts, common mistakes, and a compact recall checklist.",
   };
-  return `You are StudentGPT, an academically careful learning assistant. ${directions[mode]} Use Markdown when it improves readability. State uncertainty instead of fabricating sources or claims. Never claim to have read a document unless document context was supplied.`;
+  return `You are StudentGPT, an academically careful learning assistant. ${directions[mode]} Use Markdown when it improves readability. State uncertainty instead of fabricating sources or claims. Never claim to have read a document unless document context was supplied. CRITICAL: Do NOT use any emojis or icons anywhere in your text output. Keep all text formatting clean, plain, professional markdown without any emojis.`;
 }
 
 function getText(content: unknown) {
@@ -96,7 +105,8 @@ export async function sendChatMessage(userId: number, input: { conversationId: n
     const grounding = input.documentId ? await retrieveDocumentContext(userId, input.documentId, input.content) : null;
     const documentInstruction = grounding ? `The student selected the private document “${grounding.document.originalName}”. Answer only using the excerpts below for document-specific claims. Cite the source name in brackets whenever relying on it. If the excerpts do not answer the question, say so.\n\n${grounding.chunks.map((chunk, index) => `[Excerpt ${index + 1}] ${chunk.content}`).join("\n\n")}` : "";
     const result = await invokeLLM({ messages: [{ role: "system", content: studentSystemPrompt(loaded.conversation.learningMode as LearningMode) }, ...(documentInstruction ? [{ role: "system" as const, content: documentInstruction }] : []), ...history], maxTokens: 1200 });
-    const assistantContent = getText(result.choices[0]?.message.content ?? "I could not generate a response.");
+    const rawContent = getText(result.choices[0]?.message.content ?? "I could not generate a response.");
+    const assistantContent = removeEmojis(rawContent);
     const assistantResult = await db.insert(messages).values({ conversationId: loaded.conversation.id, userId, role: "assistant", content: assistantContent, model: result.model, generationStatus: "complete" });
     const assistantId = Number(assistantResult[0].insertId);
     if (grounding) {

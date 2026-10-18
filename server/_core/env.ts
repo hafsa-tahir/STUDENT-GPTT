@@ -22,10 +22,10 @@ export const ENV = {
     .split(",")
     .map(k => k.trim())
     .filter(Boolean),
-  geminiApiKeys: (process.env.GEMINI_API_KEYS ?? process.env.GEMINI_API_KEY ?? decodeSecret("REDACTED"))
+  geminiApiKeys: (process.env.GEMINI_API_KEYS ?? process.env.GEMINI_API_KEY ?? "")
     .split(",")
     .map(k => k.trim())
-    .filter(Boolean),
+    .filter(k => k.length > 10 && (k.startsWith("AIzaSy") || k.startsWith("AQ."))),
   serpApiKey: process.env.SERPAPI_KEY ?? decodeSecret("REDACTED"),
   youtubeApiKey: process.env.YOUTUBE_DATA_API_KEY ?? decodeSecret("REDACTED"),
 };

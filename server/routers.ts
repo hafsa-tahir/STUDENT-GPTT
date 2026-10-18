@@ -3,10 +3,10 @@ import { z } from "zod";
 import { availableChatModels, createChatConversation, getChatConversation, listChatConversations, regenerateChatMessage, sendChatMessage } from "./chatService";
 import { listPrivateDocuments } from "./documentService";
 import { generateFlashcards, generateQuiz, getQuiz, listFlashcardReviewHistory, listFlashcards, listQuizAttemptHistory, reviewFlashcard, submitQuiz } from "./learningArtifactsService";
-import { addResearchSource, createResearchBrief, createResearchBriefFromTopic, exportResearchBrief, getResearchBrief, getResearchExportDownload, listResearchBriefs, listResearchExports, synthesizeResearchBrief } from "./researchService";
+import { addResearchSource, createResearchBrief, createResearchBriefFromTopic, exportResearchBrief, getResearchBrief, getResearchExportDownload, listResearchBriefs, listResearchExports, summarizeSourceUrl, synthesizeResearchBrief } from "./researchService";
 import { searchResearchVideos } from "./youtubeService";
 import { searchCommunityPerspectives } from "./serpapiService";
-import { addStickyNote, generateRevisionGuide, generateStudyNotes, getStudyNote, listRevisionGuides, listStudyNotes } from "./notesService";
+import { addStickyNote, askDocumentGrounded, generateRevisionGuide, generateStudyNotes, getStudyNote, listRevisionGuides, listStudyNotes } from "./notesService";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
@@ -84,12 +84,14 @@ export const appRouter = router({
     exports: protectedProcedure.input(z.object({ briefId: z.number().int().positive() })).query(async ({ ctx, input }) => { try { return await listResearchExports(ctx.user.id, input.briefId); } catch (error) { return toApiError(error); } }),
     exportDocument: protectedProcedure.input(z.object({ briefId: z.number().int().positive() })).mutation(async ({ ctx, input }) => { try { return await exportResearchBrief(ctx.user.id, input.briefId); } catch (error) { return toApiError(error); } }),
     downloadExport: protectedProcedure.input(z.object({ exportId: z.number().int().positive() })).mutation(async ({ ctx, input }) => { try { return await getResearchExportDownload(ctx.user.id, input.exportId); } catch (error) { return toApiError(error); } }),
+    summarizeSourceUrl: protectedProcedure.input(z.object({ url: z.string().url() })).mutation(async ({ input }) => { try { return await summarizeSourceUrl(input.url); } catch (error) { return toApiError(error); } }),
   }),
   notes: router({
     list: protectedProcedure.query(async ({ ctx }) => { try { return await listStudyNotes(ctx.user.id); } catch (error) { return toApiError(error); } }),
     get: protectedProcedure.input(z.object({ noteId: z.number().int().positive() })).query(async ({ ctx, input }) => { try { return await getStudyNote(ctx.user.id, input.noteId); } catch (error) { return toApiError(error); } }),
     generate: protectedProcedure.input(z.object({ title: z.string().trim().min(3).max(260), topic: z.string().trim().max(6000).nullable().optional(), subjectId: z.number().int().positive().nullable().optional(), documentId: z.number().int().positive().nullable().optional(), scopeType: z.enum(["topic", "chapter", "section", "range", "document"]), scopeLabel: z.string().trim().min(2).max(300) })).mutation(async ({ ctx, input }) => { try { return await generateStudyNotes(ctx.user.id, input); } catch (error) { return toApiError(error); } }),
     addSticky: protectedProcedure.input(z.object({ studyNoteId: z.number().int().positive(), content: z.string().trim().min(1).max(3000), color: z.enum(["yellow", "mint", "lavender", "peach"]) })).mutation(async ({ ctx, input }) => { try { return await addStickyNote(ctx.user.id, input.studyNoteId, input); } catch (error) { return toApiError(error); } }),
+    askDocument: protectedProcedure.input(z.object({ documentId: z.number().int().positive(), question: z.string().trim().min(2).max(2000), studyNoteId: z.number().int().positive().optional() })).mutation(async ({ ctx, input }) => { try { return await askDocumentGrounded(ctx.user.id, input); } catch (error) { return toApiError(error); } }),
   }),
   revision: router({
     list: protectedProcedure.query(async ({ ctx }) => { try { return await listRevisionGuides(ctx.user.id); } catch (error) { return toApiError(error); } }),

@@ -4,7 +4,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { Loader2, Send, User, Sparkles } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { Streamdown } from "streamdown";
+import { MathRenderer } from "@/components/MathRenderer";
+import { VoiceReader } from "@/components/VoiceReader";
 
 /**
  * Message type matching server-side LLM Message interface
@@ -261,13 +262,14 @@ export function AIChatBox({
                       )}
                     >
                       {message.role === "assistant" ? (
-                        <div className="prose prose-sm dark:prose-invert max-w-none">
-                          <Streamdown>{message.content}</Streamdown>
+                        <div className="space-y-2">
+                          <MathRenderer content={message.content} />
+                          <div className="flex justify-end pt-1">
+                            <VoiceReader text={message.content} compact={true} />
+                          </div>
                         </div>
                       ) : (
-                        <p className="whitespace-pre-wrap text-sm">
-                          {message.content}
-                        </p>
+                        <MathRenderer content={message.content} inline={true} className="whitespace-pre-wrap text-sm" />
                       )}
                     </div>
 

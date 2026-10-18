@@ -6,22 +6,16 @@ import superjson from "superjson";
 import App from "./App";
 import { getSupabaseAccessToken, setSupabaseAccessToken, getSupabaseBrowserClient } from "./lib/supabase";
 import "./index.css";
+import "katex/dist/katex.min.css";
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      async retry(failureCount, error: any) {
+      retry(failureCount, error: any) {
         if (failureCount < 2 && (error?.data?.code === "UNAUTHORIZED" || error?.message?.includes("10001") || error?.message?.includes("Auth Error") || error?.message?.includes("expired"))) {
-          try {
-            const client = await getSupabaseBrowserClient();
-            const { data } = await client.auth.refreshSession();
-            if (data.session?.access_token) {
-              setSupabaseAccessToken(data.session.access_token);
-              return true;
-            }
-          } catch {
-            // refresh failed
-          }
+          getSupabaseBrowserClient().then(client => client.auth.refreshSession()).then(({ data }) => {
+            if (data?.session?.access_token) setSupabaseAccessToken(data.session.access_token);
+          }).catch(() => {});
           return true;
         }
         return false;
@@ -44,27 +38,18 @@ const trpcClient = trpc.createClient({
     httpLink({
       url: getTrpcUrl(),
       transformer: superjson,
-      headers() {
+      async headers() {
         let token = getSupabaseAccessToken();
         if (!token && typeof window !== "undefined") {
           try {
-            for (let i = 0; i < localStorage.length; i++) {
-              const key = localStorage.key(i);
-              if (key && (key.startsWith("sb-") || key.includes("auth-token") || key.includes("supabase"))) {
-                const raw = localStorage.getItem(key);
-                if (raw && raw.includes("access_token")) {
-                  const parsed = JSON.parse(raw);
-                  const found = parsed?.access_token || parsed?.currentSession?.access_token;
-                  if (found && typeof found === "string") {
-                    token = found;
-                    setSupabaseAccessToken(found);
-                    break;
-                  }
-                }
-              }
+            const client = await getSupabaseBrowserClient();
+            const { data } = await client.auth.getSession();
+            if (data.session?.access_token) {
+              token = data.session.access_token;
+              setSupabaseAccessToken(token);
             }
           } catch {
-            // localStorage unavailable or parse error
+            // session lookup failed
           }
         }
         return token ? { Authorization: `Bearer ${token}` } : {};

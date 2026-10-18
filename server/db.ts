@@ -4,6 +4,13 @@ import { courses, InsertUser, profiles, progressEvents, studyPlanItems, studyPla
 import { ENV } from "./_core/env";
 
 import mysql from "mysql2";
+import dns from "node:dns";
+
+try {
+  dns.setDefaultResultOrder("ipv4first");
+} catch {
+  // node version compatibility
+}
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -19,9 +26,11 @@ export async function getDb() {
         ssl: {
           rejectUnauthorized: false,
         },
-        connectTimeout: 5000,
+        connectTimeout: 20000,
         waitForConnections: true,
-        connectionLimit: 5,
+        connectionLimit: 10,
+        enableKeepAlive: true,
+        keepAliveInitialDelay: 10000,
       });
       _db = drizzle(pool);
     } catch (error) {
@@ -54,7 +63,17 @@ export async function upsertUser(user: InsertUser): Promise<void> {
   for (const field of ["name", "email", "loginMethod"] as const) {
     if (user[field] !== undefined) { values[field] = user[field] ?? null; updateSet[field] = user[field] ?? null; }
   }
-  await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
+  try {
+    await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
+  } catch (err) {
+    console.warn("[upsertUser warn, retrying]", err);
+    try {
+      await new Promise(r => setTimeout(r, 600));
+      await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
+    } catch (secondErr) {
+      console.warn("[upsertUser retry failed]", secondErr);
+    }
+  }
 }
 
 export async function getUserByOpenId(openId: string) {

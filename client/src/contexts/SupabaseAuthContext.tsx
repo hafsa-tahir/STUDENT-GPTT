@@ -20,6 +20,17 @@ function toMessage(error: unknown) {
   return error instanceof Error ? error.message : "Something went wrong. Please try again.";
 }
 
+const DEV_FALLBACK_USER: User = {
+  id: "dev-local-user-id",
+  app_metadata: { provider: "email" },
+  user_metadata: { full_name: "Hafsa Tahir" },
+  aud: "authenticated",
+  created_at: new Date().toISOString(),
+  email: "hafsatahir9898@gmail.com",
+  role: "authenticated",
+  updated_at: new Date().toISOString(),
+};
+
 export function SupabaseAuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -66,7 +77,7 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
   }, []);
 
   const value = useMemo<AuthContextValue>(() => ({
-    user: session?.user ?? null,
+    user: session?.user ?? (import.meta.env.DEV ? DEV_FALLBACK_USER : null),
     session,
     loading,
     authError,

@@ -47,11 +47,23 @@ async function searchDomain(query: string, domain: "reddit.com" | "quora.com", k
   return normaliseCommunityResults(payload);
 }
 
-export async function searchCommunityPerspectives(query: string): Promise<CommunityPerspective[]> {
+export async function searchCommunityPerspectives(rawQuery: string): Promise<CommunityPerspective[]> {
   try {
     const key = process.env.SERPAPI_KEY || ENV.serpApiKey;
     if (!key) return [];
-    const responses = await Promise.allSettled([searchDomain(query, "reddit.com", key), searchDomain(query, "quora.com", key)]);
+    
+    // Clean query: strip out long prompt templates, keep main topic keywords
+    const query = rawQuery
+      .replace(/^Develop a detailed student-ready understanding of\s*/i, "")
+      .replace(/:\s*foundational ideas.*/i, "")
+      .replace(/[^\w\s-]/g, " ")
+      .trim()
+      .slice(0, 100);
+
+    const responses = await Promise.allSettled([
+      searchDomain(query || rawQuery.slice(0, 80), "reddit.com", key),
+      searchDomain(query || rawQuery.slice(0, 80), "quora.com", key)
+    ]);
     const available = responses.flatMap((response) => response.status === "fulfilled" ? response.value : []);
     return available.slice(0, 8);
   } catch (err) {

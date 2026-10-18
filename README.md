@@ -77,5 +77,25 @@ pnpm db:push
 ## 🤝 Contributing
 Feel free to fork the repository, create a feature branch, and submit a pull request!
 
+## 🌐 Sharing locally
+
+To share your local development instance publicly using a Cloudflare Quick Tunnel (no Cloudflare account or domain required):
+
+1. **Start the development server:**
+   ```bash
+   pnpm dev
+   ```
+   *(Ensure the dev server is running on http://localhost:3001)*
+
+2. **Start the Cloudflare Quick Tunnel:**
+   ```bash
+   cloudflared tunnel --url http://localhost:3001
+   ```
+   *(Or on Windows if not in PATH: `& "C:\Program Files (x86)\cloudflared\cloudflared.exe" tunnel --url http://localhost:3001`)*
+
+> [!NOTE]
+> - The temporary `https://*.trycloudflare.com` URL is generated dynamically and changes every time the tunnel is restarted.
+> - The public tunnel stops working whenever your local computer or the tunnel process is turned off.
+
 ## 📄 License
 This project is licensed under the MIT License.
