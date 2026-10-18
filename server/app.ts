@@ -14,7 +14,7 @@ export function createExpressApp() {
   
   // Normalize Netlify / Vercel serverless function path prefixes
   app.use((req, _res, next) => {
-    if (req.originalUrl && (req.url === "/api" || req.url === "/") && req.originalUrl.startsWith("/api/")) {
+    if (req.originalUrl && req.originalUrl.startsWith("/api")) {
       req.url = req.originalUrl;
     }
     if (req.url.startsWith("/.netlify/functions/api")) {
