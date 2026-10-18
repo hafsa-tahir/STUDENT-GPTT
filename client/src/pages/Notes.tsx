@@ -23,7 +23,7 @@ import {
   Binary
 } from "lucide-react";
 import { FormEvent, useEffect, useState, useMemo } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { MathRenderer } from "@/components/MathRenderer";
 import { VoiceReader } from "@/components/VoiceReader";
 import { generateNotesLecture, generateRevisionLecture } from "@/lib/lectureGenerator";
@@ -89,6 +89,7 @@ function revisionContent(value: unknown): RevisionContent {
 export default function Notes() {
   const { user, loading, authError } = useSupabaseAuth();
   const [, setLocation] = useLocation();
+  const search = useSearch();
   const utils = trpc.useUtils();
 
   const notes = trpc.notes.list.useQuery(undefined, { enabled: Boolean(user) });
@@ -164,6 +165,19 @@ export default function Notes() {
       setSelectedRevisionId(revisions.data[0].id);
     }
   }, [revisions.data, selectedRevisionId]);
+
+  // Read URL query parameters for subjectId and mode
+  useEffect(() => {
+    const params = new URLSearchParams(search);
+    const sub = params.get("subjectId");
+    if (sub) {
+      setSubjectId(sub);
+    }
+    const m = params.get("mode");
+    if (m === "notes" || m === "revision") {
+      setMode(m);
+    }
+  }, [search]);
 
   const active = detail.data?.note;
   const content = noteContent(active?.content);

@@ -11,7 +11,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
-import { createCourse, createStudyPlan, createStudyPlanItem, createStudySession, createSubject, createTopic, deleteCourse, deleteStudyPlan, deleteSubject, deleteTopic, ensureProfile, getDashboardData, listCourses, listStudyPlans, listSubjects, listTopics, toggleStudyPlanItem, updateCourse, updateProfile, updateStudyPlan, updateStudyPlanItem, updateStudySession, updateSubject, updateTopic } from "./db";
+import { createCourse, createStudyPlan, createStudyPlanItem, createStudySession, createSubject, createTopic, deleteCourse, deleteStudyPlan, deleteSubject, deleteTopic, ensureProfile, getDashboardData, getSubjectActivities, listCourses, listStudyPlans, listSubjects, listTopics, recordActiveStudyTime, toggleStudyPlanItem, updateCourse, updateProfile, updateStudyPlan, updateStudyPlanItem, updateStudySession, updateSubject, updateTopic } from "./db";
 import { chatConversationInput, chatMessageInput, courseInput, flashcardGenerationInput, learningModeInput, profileInput, quizGenerationInput, studyPlanInput, studyPlanItemInput, studySessionInput, subjectInput, topicInput } from "./validators";
 
 function toApiError(error: unknown): never {
@@ -34,10 +34,12 @@ export const appRouter = router({
   workspace: router({
     bootstrap: protectedProcedure.query(async ({ ctx }) => { try { return await ensureProfile(ctx.user.id, ctx.user.name); } catch (error) { return toApiError(error); } }),
     dashboard: protectedProcedure.query(async ({ ctx }) => { try { return await getDashboardData(ctx.user.id); } catch (error) { return toApiError(error); } }),
+    recordActiveTime: protectedProcedure.input(z.object({ minutes: z.number().min(0.1).max(180), subjectId: z.number().int().positive().nullable().optional() })).mutation(async ({ ctx, input }) => { try { return await recordActiveStudyTime(ctx.user.id, input); } catch (error) { return toApiError(error); } }),
     updateProfile: protectedProcedure.input(profileInput).mutation(async ({ ctx, input }) => { try { return await updateProfile(ctx.user.id, input); } catch (error) { return toApiError(error); } }),
   }),
   academic: router({
     listSubjects: protectedProcedure.query(async ({ ctx }) => { try { return await listSubjects(ctx.user.id); } catch (error) { return toApiError(error); } }),
+    getSubjectActivities: protectedProcedure.input(z.object({ subjectId: z.number().int().positive() })).query(async ({ ctx, input }) => { try { return await getSubjectActivities(ctx.user.id, input.subjectId); } catch (error) { return toApiError(error); } }),
     createSubject: protectedProcedure.input(subjectInput).mutation(async ({ ctx, input }) => { try { return await createSubject(ctx.user.id, input); } catch (error) { return toApiError(error); } }),
     updateSubject: protectedProcedure.input(z.object({ id: z.number().int().positive(), data: subjectInput.partial() })).mutation(async ({ ctx, input }) => { try { return await updateSubject(ctx.user.id, input.id, input.data); } catch (error) { return toApiError(error); } }),
     deleteSubject: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => { try { await deleteSubject(ctx.user.id, input.id); return { success: true } as const; } catch (error) { return toApiError(error); } }),

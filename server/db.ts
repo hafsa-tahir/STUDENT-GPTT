@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, gte, lte } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { courses, InsertUser, profiles, progressEvents, studyPlanItems, studyPlans, studySessions, subjects, topics, users } from "../drizzle/schema";
+import { courses, documents, InsertUser, profiles, progressEvents, quizzes, researchBriefs, revisionGuides, studyNotes, studyPlanItems, studyPlans, studySessions, subjects, topics, users } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
 import mysql from "mysql2";
@@ -214,7 +214,7 @@ export async function getDashboardData(userId: number) {
       withTimeout(db.select({ id: studyPlanItems.id, title: studyPlanItems.title, scheduledFor: studyPlanItems.scheduledFor, estimatedMinutes: studyPlanItems.estimatedMinutes, completedAt: studyPlanItems.completedAt, planTitle: studyPlans.title }).from(studyPlanItems).innerJoin(studyPlans, eq(studyPlanItems.planId, studyPlans.id)).where(and(eq(studyPlanItems.userId, userId), gte(studyPlanItems.scheduledFor, start), lte(studyPlanItems.scheduledFor, end))).orderBy(asc(studyPlanItems.scheduledFor)).catch(() => []), 3000, []),
       withTimeout(db.select().from(studyPlans).where(and(eq(studyPlans.userId, userId), gte(studyPlans.examDate, now), lte(studyPlans.examDate, nextMonth))).orderBy(asc(studyPlans.examDate)).limit(5).catch(() => []), 3000, []),
       withTimeout(db.select().from(progressEvents).where(eq(progressEvents.userId, userId)).orderBy(desc(progressEvents.createdAt)).limit(6).catch(() => []), 3000, []),
-      withTimeout(db.select().from(studySessions).where(eq(studySessions.userId, userId)).orderBy(desc(studySessions.startedAt)).limit(10).catch(() => []), 3000, []),
+      withTimeout(db.select().from(studySessions).where(eq(studySessions.userId, userId)).orderBy(desc(studySessions.startedAt)).limit(100).catch(() => []), 3000, []),
     ]);
     const sessionMinutesToday = (recentSessions || []).filter(session => session && session.startedAt && new Date(session.startedAt) >= start && new Date(session.startedAt) <= end).reduce((total, session) => total + (session.minutesStudied || 0), 0);
     return {
@@ -316,6 +316,92 @@ export async function updateStudySession(userId: number, sessionId: number, inpu
   const updated = await db.select().from(studySessions).where(and(eq(studySessions.id, sessionId), eq(studySessions.userId, userId))).limit(1);
   if (!updated[0]) throw new Error("Study session not found.");
   return updated[0];
+}
+
+export async function recordActiveStudyTime(
+  userId: number,
+  input: { minutes: number; subjectId?: number | null }
+) {
+  const db = requireDb(await getDb());
+  const now = new Date();
+  const startOfDay = new Date(now);
+  startOfDay.setHours(0, 0, 0, 0);
+
+  // Check if there is already an active session recorded today for this user
+  const existing = await db
+    .select()
+    .from(studySessions)
+    .where(
+      and(
+        eq(studySessions.userId, userId),
+        gte(studySessions.startedAt, startOfDay)
+      )
+    )
+    .orderBy(desc(studySessions.startedAt))
+    .limit(1);
+
+  if (existing[0]) {
+    const updatedMinutes = (existing[0].minutesStudied || 0) + input.minutes;
+    await db
+      .update(studySessions)
+      .set({
+        minutesStudied: updatedMinutes,
+        endedAt: now,
+        ...(input.subjectId ? { subjectId: input.subjectId } : {})
+      })
+      .where(eq(studySessions.id, existing[0].id));
+    return { sessionId: existing[0].id, minutesStudied: updatedMinutes };
+  } else {
+    const result = await db.insert(studySessions).values({
+      userId,
+      subjectId: input.subjectId ?? null,
+      planItemId: null,
+      startedAt: now,
+      endedAt: now,
+      minutesStudied: input.minutes
+    });
+    const id = Number(result[0].insertId);
+    return { sessionId: id, minutesStudied: input.minutes };
+  }
+}
+
+export async function getSubjectActivities(userId: number, subjectId: number) {
+  const db = requireDb(await getDb());
+  await assertOwnedSubject(userId, subjectId);
+
+  const [
+    notesList,
+    revisionsList,
+    quizzesList,
+    researchList,
+    docsList,
+    courseList,
+    topicList,
+    sessionList
+  ] = await Promise.all([
+    db.select().from(studyNotes).where(and(eq(studyNotes.userId, userId), eq(studyNotes.subjectId, subjectId))).orderBy(desc(studyNotes.updatedAt)),
+    db.select().from(revisionGuides).where(and(eq(revisionGuides.userId, userId), eq(revisionGuides.subjectId, subjectId))).orderBy(desc(revisionGuides.createdAt)),
+    db.select().from(quizzes).where(and(eq(quizzes.userId, userId), eq(quizzes.subjectId, subjectId))).orderBy(desc(quizzes.createdAt)),
+    db.select().from(researchBriefs).where(and(eq(researchBriefs.userId, userId), eq(researchBriefs.subjectId, subjectId))).orderBy(desc(researchBriefs.updatedAt)),
+    db.select().from(documents).where(and(eq(documents.userId, userId), eq(documents.subjectId, subjectId))).orderBy(desc(documents.createdAt)),
+    db.select().from(courses).where(and(eq(courses.userId, userId), eq(courses.subjectId, subjectId))).orderBy(desc(courses.createdAt)),
+    db.select().from(topics).where(and(eq(topics.userId, userId), eq(topics.subjectId, subjectId))).orderBy(desc(topics.createdAt)),
+    db.select().from(studySessions).where(and(eq(studySessions.userId, userId), eq(studySessions.subjectId, subjectId))).orderBy(desc(studySessions.startedAt))
+  ]);
+
+  const totalMinutes = sessionList.reduce((acc, s) => acc + (s.minutesStudied || 0), 0);
+
+  return {
+    notes: notesList,
+    revisions: revisionsList,
+    quizzes: quizzesList,
+    research: researchList,
+    documents: docsList,
+    courses: courseList,
+    topics: topicList,
+    totalMinutes,
+    sessionCount: sessionList.length
+  };
 }
 
 

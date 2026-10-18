@@ -4,12 +4,13 @@ import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { trpc } from "@/lib/trpc";
 import { BrainCircuit, ChevronLeft, ChevronRight, Eye, Layers3 } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { MathRenderer } from "@/components/MathRenderer";
 
 export default function Practice() {
   const { user, loading, authError } = useSupabaseAuth();
   const [, setLocation] = useLocation();
+  const search = useSearch();
   const utils = trpc.useUtils();
 
   const [tab, setTab] = useState<"quiz" | "flashcards">("quiz");
@@ -56,6 +57,14 @@ export default function Practice() {
   useEffect(() => {
     if (!loading && !authError && !user) setLocation("/login");
   }, [authError, loading, setLocation, user]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(search);
+    const sub = params.get("subjectId");
+    if (sub) {
+      setSubjectId(sub);
+    }
+  }, [search]);
 
   if (loading) return <AppLoading />;
   if (authError) return <AuthError message={authError} />;

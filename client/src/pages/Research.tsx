@@ -10,7 +10,7 @@ import {
   Clock, Users, Rocket, Cpu, CheckCircle2, AlertTriangle 
 } from "lucide-react";
 import { FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { MathRenderer } from "@/components/MathRenderer";
 import { VoiceReader } from "@/components/VoiceReader";
 import { generateResearchLecture } from "@/lib/lectureGenerator";
@@ -131,6 +131,7 @@ function getResolvedPaperData(title: string, briefOverview?: string | null, boar
 export default function Research() {
   const { user, loading, authError } = useSupabaseAuth(); 
   const [, setLocation] = useLocation(); 
+  const search = useSearch();
   const utils = trpc.useUtils();
   
   const briefs = trpc.research.list.useQuery(undefined, { enabled: Boolean(user) }); 
@@ -157,6 +158,19 @@ export default function Research() {
   useEffect(() => { 
     if (!loading && !authError && !user) setLocation("/login"); 
   }, [authError, loading, setLocation, user]);
+
+  // Read search query params for subjectId or new=1
+  useEffect(() => {
+    const params = new URLSearchParams(search);
+    const sub = params.get("subjectId");
+    if (sub) {
+      setSubjectId(sub);
+      setComposerOpen(true);
+    }
+    if (params.get("new") === "1" || params.get("create") === "1") {
+      setComposerOpen(true);
+    }
+  }, [search]);
 
   useEffect(() => { 
     if (!selectedId && briefs.data?.[0]) setSelectedId(briefs.data[0].id); 
