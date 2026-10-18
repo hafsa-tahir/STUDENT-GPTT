@@ -83,13 +83,29 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
     authError,
     signIn: async (email, password) => {
       const client = await getSupabaseBrowserClient();
-      const { error } = await client.auth.signInWithPassword({ email, password });
+      const { data, error } = await client.auth.signInWithPassword({ email, password });
       if (error) throw new Error(error.message);
+      if (data?.session) {
+        setSession(data.session);
+        const token = data.session.access_token ?? null;
+        setSupabaseAccessToken(token);
+        if (token && typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("supabase-token-ready", { detail: token }));
+        }
+      }
     },
     signUp: async (email, password, fullName) => {
       const client = await getSupabaseBrowserClient();
       const { data, error } = await client.auth.signUp({ email, password, options: { data: { full_name: fullName }, emailRedirectTo: `${window.location.origin}/login` } });
       if (error) throw new Error(error.message);
+      if (data?.session) {
+        setSession(data.session);
+        const token = data.session.access_token ?? null;
+        setSupabaseAccessToken(token);
+        if (token && typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("supabase-token-ready", { detail: token }));
+        }
+      }
       return { emailConfirmationRequired: !data.session };
     },
     requestPasswordReset: async email => {
@@ -104,9 +120,10 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
     },
     signOut: async () => {
       const client = await getSupabaseBrowserClient();
+      setSession(null);
+      setSupabaseAccessToken(null);
       const { error } = await client.auth.signOut();
       if (error) throw new Error(error.message);
-      setSupabaseAccessToken(null);
     },
   }), [authError, loading, session]);
 

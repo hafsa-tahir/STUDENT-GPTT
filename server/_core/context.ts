@@ -95,21 +95,21 @@ export async function authenticateSupabaseRequest(
       name: displayName,
       loginMethod: "supabase",
     });
-    return (await getUserByOpenId(externalId)) ?? null;
+    const syncedUser = await getUserByOpenId(externalId);
+    if (syncedUser) return syncedUser;
   } catch (err) {
-    console.error("[Auth] Database user sync failed, using fallback user session:", err);
-    return {
-      id: 1,
-      openId: externalId,
-      name: displayName || "Student",
-      email: data.user.email ?? null,
-      loginMethod: "supabase",
-      role: "user",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      lastSignedIn: new Date(),
-    };
+    console.error("[Auth] Database user sync failed:", err);
   }
+
+  try {
+    const existing = await getUserByOpenId(externalId);
+    if (existing) return existing;
+  } catch (err) {
+    console.error("[Auth] User lookup failed:", err);
+  }
+
+  if (failureHolder) failureHolder.reason = "User profile could not be synchronized with database";
+  return null;
 }
 
 export async function createContext(
