@@ -28,27 +28,87 @@ export async function uploadPrivatePdf(userId: number, file: { buffer: Buffer; n
   try {
     let content = "";
     let pageCount: number | null = null;
+
+    // Strategy 1: Modern pdf-parse v2 (PDFParse class)
     try {
       const pdfModule = await import("pdf-parse") as any;
-      const PDFParseClass = pdfModule.PDFParse || pdfModule.default;
-      if (PDFParseClass) {
-        const uint8Data = new Uint8Array(file.buffer);
-        const parser = new PDFParseClass({ data: uint8Data });
+      const PDFParseClass = pdfModule.PDFParse;
+      if (typeof PDFParseClass === "function") {
+        const parser = new PDFParseClass({ data: new Uint8Array(file.buffer) });
         const result = await parser.getText();
         await parser.destroy();
-        content = result.text?.trim() ?? "";
-        pageCount = result.total ?? null;
+        if (result && typeof result.text === "string" && result.text.trim().length > 10) {
+          content = result.text.trim();
+          pageCount = typeof result.total === "number" ? result.total : null;
+        }
+      }
+      
+      // Strategy 2: Classic pdf-parse v1 function
+      if (!content) {
+        const pdfFn = typeof pdfModule === "function" ? pdfModule : pdfModule.default;
+        if (typeof pdfFn === "function" && pdfFn !== PDFParseClass) {
+          const result = await pdfFn(file.buffer);
+          if (result && typeof result.text === "string" && result.text.trim().length > 10) {
+            content = result.text.trim();
+            pageCount = typeof result.numpages === "number" ? result.numpages : null;
+          }
+        }
       }
     } catch (parseErr) {
-      console.warn("[PDF Extraction Warning]:", parseErr);
-      content = file.buffer.toString("binary").replace(/[^\x20-\x7E\n\r\t]/g, " ").replace(/\s+/g, " ").trim();
+      console.warn("[PDF Parse Engine Notice]:", parseErr);
     }
-    if (!content) content = safeName.replace(/[^a-zA-Z0-9 ]/g, " ");
+
+    // Strategy 3: Uncompressed PDF stream text extractor (/BT ... /ET and Tj operators)
+    if (!content) {
+      try {
+        const raw = file.buffer.toString("latin1");
+        const matches: string[] = [];
+        const tjRegex = /\(([^)]+)\)\s*Tj/g;
+        let match: RegExpExecArray | null;
+        while ((match = tjRegex.exec(raw)) !== null) {
+          if (match[1] && match[1].trim().length > 1) {
+            matches.push(match[1]);
+          }
+        }
+        if (matches.length > 5) {
+          content = matches.join(" ").replace(/\s+/g, " ").trim();
+        }
+      } catch (streamErr) {
+        console.warn("[PDF Stream Fallback Warning]:", streamErr);
+      }
+    }
+
+    // Clean text and remove binary artifacts
+    content = (content || "")
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    // Strict validation: Reject if content is empty or contains raw binary PDF markers
+    const hasRawPdfArtifacts = content.startsWith("%PDF-") || (content.includes("obj <<") && content.includes("endobj"));
+    const alphanumericCount = (content.match(/[a-zA-Z0-9]/g) || []).length;
+
+    if (!content || alphanumericCount < 15 || hasRawPdfArtifacts) {
+      throw new Error("Could not extract readable text from this document. Please ensure the PDF contains selectable text (not scanned images).");
+    }
+
     const chunks = textChunks(content);
     for (const [chunkIndex, chunk] of Array.from(chunks.entries())) {
-      await db.insert(documentChunks).values({ documentId, userId, chunkIndex, content: chunk, tokenCount: Math.ceil(chunk.length / 4), contentHash: crypto.createHash("sha256").update(chunk).digest("hex") });
+      await db.insert(documentChunks).values({
+        documentId,
+        userId,
+        chunkIndex,
+        content: chunk,
+        tokenCount: Math.ceil(chunk.length / 4),
+        contentHash: crypto.createHash("sha256").update(chunk).digest("hex")
+      });
     }
-    await db.update(documents).set({ status: "ready", extractedText: content, pageCount: pageCount ?? 1, processedAt: new Date() }).where(and(eq(documents.id, documentId), eq(documents.userId, userId)));
+    await db.update(documents).set({
+      status: "ready",
+      extractedText: content,
+      pageCount: pageCount ?? 1,
+      processedAt: new Date()
+    }).where(and(eq(documents.id, documentId), eq(documents.userId, userId)));
     await db.update(documentJobs).set({ status: "complete", completedAt: new Date() }).where(eq(documentJobs.id, jobId));
   } catch (error) {
     const reason = error instanceof Error ? error.message.slice(0, 1000) : "Extraction failed.";

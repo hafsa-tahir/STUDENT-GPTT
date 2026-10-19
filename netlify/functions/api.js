@@ -128826,25 +128826,70 @@ async function uploadPrivatePdf(userId, file2) {
     let pageCount = null;
     try {
       const pdfModule = await Promise.resolve().then(() => (init_esm(), esm_exports));
-      const PDFParseClass = pdfModule.PDFParse || pdfModule.default;
-      if (PDFParseClass) {
-        const uint8Data = new Uint8Array(file2.buffer);
-        const parser = new PDFParseClass({ data: uint8Data });
+      const PDFParseClass = pdfModule.PDFParse;
+      if (typeof PDFParseClass === "function") {
+        const parser = new PDFParseClass({ data: new Uint8Array(file2.buffer) });
         const result = await parser.getText();
         await parser.destroy();
-        content2 = result.text?.trim() ?? "";
-        pageCount = result.total ?? null;
+        if (result && typeof result.text === "string" && result.text.trim().length > 10) {
+          content2 = result.text.trim();
+          pageCount = typeof result.total === "number" ? result.total : null;
+        }
+      }
+      if (!content2) {
+        const pdfFn = typeof pdfModule === "function" ? pdfModule : pdfModule.default;
+        if (typeof pdfFn === "function" && pdfFn !== PDFParseClass) {
+          const result = await pdfFn(file2.buffer);
+          if (result && typeof result.text === "string" && result.text.trim().length > 10) {
+            content2 = result.text.trim();
+            pageCount = typeof result.numpages === "number" ? result.numpages : null;
+          }
+        }
       }
     } catch (parseErr) {
-      console.warn("[PDF Extraction Warning]:", parseErr);
-      content2 = file2.buffer.toString("binary").replace(/[^\x20-\x7E\n\r\t]/g, " ").replace(/\s+/g, " ").trim();
+      console.warn("[PDF Parse Engine Notice]:", parseErr);
     }
-    if (!content2) content2 = safeName.replace(/[^a-zA-Z0-9 ]/g, " ");
+    if (!content2) {
+      try {
+        const raw = file2.buffer.toString("latin1");
+        const matches = [];
+        const tjRegex = /\(([^)]+)\)\s*Tj/g;
+        let match;
+        while ((match = tjRegex.exec(raw)) !== null) {
+          if (match[1] && match[1].trim().length > 1) {
+            matches.push(match[1]);
+          }
+        }
+        if (matches.length > 5) {
+          content2 = matches.join(" ").replace(/\s+/g, " ").trim();
+        }
+      } catch (streamErr) {
+        console.warn("[PDF Stream Fallback Warning]:", streamErr);
+      }
+    }
+    content2 = (content2 || "").replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, " ").replace(/\s+/g, " ").trim();
+    const hasRawPdfArtifacts = content2.startsWith("%PDF-") || content2.includes("obj <<") && content2.includes("endobj");
+    const alphanumericCount = (content2.match(/[a-zA-Z0-9]/g) || []).length;
+    if (!content2 || alphanumericCount < 15 || hasRawPdfArtifacts) {
+      throw new Error("Could not extract readable text from this document. Please ensure the PDF contains selectable text (not scanned images).");
+    }
     const chunks = textChunks(content2);
     for (const [chunkIndex, chunk] of Array.from(chunks.entries())) {
-      await db.insert(documentChunks).values({ documentId, userId, chunkIndex, content: chunk, tokenCount: Math.ceil(chunk.length / 4), contentHash: import_node_crypto.default.createHash("sha256").update(chunk).digest("hex") });
+      await db.insert(documentChunks).values({
+        documentId,
+        userId,
+        chunkIndex,
+        content: chunk,
+        tokenCount: Math.ceil(chunk.length / 4),
+        contentHash: import_node_crypto.default.createHash("sha256").update(chunk).digest("hex")
+      });
     }
-    await db.update(documents).set({ status: "ready", extractedText: content2, pageCount: pageCount ?? 1, processedAt: /* @__PURE__ */ new Date() }).where(and(eq(documents.id, documentId), eq(documents.userId, userId)));
+    await db.update(documents).set({
+      status: "ready",
+      extractedText: content2,
+      pageCount: pageCount ?? 1,
+      processedAt: /* @__PURE__ */ new Date()
+    }).where(and(eq(documents.id, documentId), eq(documents.userId, userId)));
     await db.update(documentJobs).set({ status: "complete", completedAt: /* @__PURE__ */ new Date() }).where(eq(documentJobs.id, jobId));
   } catch (error46) {
     const reason = error46 instanceof Error ? error46.message.slice(0, 1e3) : "Extraction failed.";
@@ -130255,6 +130300,14 @@ ${input.question}`;
     relevantSnippets
   };
 }
+async function deleteStudyNote(userId, noteId) {
+  const db = database2(await getDb());
+  const owned = await db.select({ id: studyNotes.id }).from(studyNotes).where(and(eq(studyNotes.id, noteId), eq(studyNotes.userId, userId))).limit(1);
+  if (!owned[0]) throw new Error("Study note not found.");
+  await db.delete(stickyNotes).where(and(eq(stickyNotes.studyNoteId, noteId), eq(stickyNotes.userId, userId)));
+  await db.delete(studyNotes).where(and(eq(studyNotes.id, noteId), eq(studyNotes.userId, userId)));
+  return { success: true };
+}
 
 // server/_core/notification.ts
 var TITLE_MAX_LENGTH = 1200;
@@ -130846,6 +130899,13 @@ var appRouter = router({
       } catch (error46) {
         return toApiError(error46);
       }
+    }),
+    delete: protectedProcedure.input(external_exports.object({ noteId: external_exports.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      try {
+        return await deleteStudyNote(ctx.user.id, input.noteId);
+      } catch (error46) {
+        return toApiError(error46);
+      }
     })
   }),
   revision: router({
@@ -131029,7 +131089,11 @@ async function createContext(opts) {
 // server/app.ts
 function createExpressApp() {
   const app2 = (0, import_express.default)();
+  app2.set("trust proxy", true);
   app2.use((req, _res, next) => {
+    if (req.originalUrl && req.originalUrl.startsWith("/api")) {
+      req.url = req.originalUrl;
+    }
     if (req.url.startsWith("/.netlify/functions/api")) {
       req.url = req.url.replace("/.netlify/functions/api", "/api");
     }
@@ -131128,8 +131192,8 @@ function createExpressApp() {
   app2.use("/.netlify/functions/api/api/trpc", trpcHandler);
   app2.use("/api/trpc", trpcHandler);
   app2.use("/trpc", trpcHandler);
-  app2.use(["/api/*", "/trpc/*", "/.netlify/*"], (_req, res) => {
-    res.status(404).json({ error: { message: "API endpoint not found." } });
+  app2.use((req, res) => {
+    res.status(404).json({ error: { message: `Route not found: ${req.method} ${req.originalUrl || req.url}` } });
   });
   app2.use((err, _req, res, _next) => {
     console.error("[Express Error]", err);

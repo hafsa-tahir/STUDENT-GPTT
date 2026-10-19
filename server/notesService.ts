@@ -917,3 +917,17 @@ ${input.question}`;
     relevantSnippets
   };
 }
+
+export async function deleteStudyNote(userId: number, noteId: number) {
+  const db = database(await getDb());
+  const owned = await db
+    .select({ id: studyNotes.id })
+    .from(studyNotes)
+    .where(and(eq(studyNotes.id, noteId), eq(studyNotes.userId, userId)))
+    .limit(1);
+  if (!owned[0]) throw new Error("Study note not found.");
+  await db.delete(stickyNotes).where(and(eq(stickyNotes.studyNoteId, noteId), eq(stickyNotes.userId, userId)));
+  await db.delete(studyNotes).where(and(eq(studyNotes.id, noteId), eq(studyNotes.userId, userId)));
+  return { success: true };
+}
+

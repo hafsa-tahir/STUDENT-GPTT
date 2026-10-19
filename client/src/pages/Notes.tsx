@@ -20,7 +20,8 @@ import {
   StickyNote,
   AlertTriangle,
   Zap,
-  Binary
+  Binary,
+  Trash2
 } from "lucide-react";
 import { FormEvent, useEffect, useState, useMemo } from "react";
 import { useLocation, useSearch } from "wouter";
@@ -140,6 +141,15 @@ export default function Notes() {
     onSuccess: data => {
       utils.notes.list.invalidate();
       setSelectedNote(data.note.id);
+      setError(null);
+    },
+    onError: caught => setError(caught.message)
+  });
+
+  const deleteNote = trpc.notes.delete.useMutation({
+    onSuccess: () => {
+      utils.notes.list.invalidate();
+      setSelectedNote(null);
       setError(null);
     },
     onError: caught => setError(caught.message)
@@ -815,14 +825,30 @@ export default function Notes() {
                     {/* Note Content Card */}
                     <div className="rounded-[28px] border border-[#F8E7E7] bg-white p-6 shadow-sm sm:p-8">
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="rounded-full bg-[#F8E7E7] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#724060]">
-                          {active.scopeType} · {active.scopeLabel}
-                        </span>
-                        {active.documentId && (
-                          <span className="text-[12px] text-[#A070A1]">
-                            Source Document #{active.documentId}
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="rounded-full bg-[#F8E7E7] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#724060]">
+                            {active.scopeType} · {active.scopeLabel}
                           </span>
-                        )}
+                          {active.documentId && (
+                            <span className="text-[12px] text-[#A070A1]">
+                              Source Document #{active.documentId}
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm("Are you sure you want to delete this study note?")) {
+                              deleteNote.mutate({ noteId: active.id });
+                            }
+                          }}
+                          disabled={deleteNote.isPending}
+                          className="flex items-center gap-1.5 rounded-xl border border-[#F8E7E7] bg-white px-2.5 py-1 text-[11.5px] font-semibold text-[#724060]/75 hover:bg-[#FDF3F3] hover:text-[#724060] transition shadow-xs disabled:opacity-50"
+                          title="Delete this study note"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          <span>Delete</span>
+                        </button>
                       </div>
 
                       <h2 className="mt-3 text-[28px] font-bold tracking-tight text-[#724060] sm:text-[34px]">

@@ -6,7 +6,7 @@ import { generateFlashcards, generateQuiz, getQuiz, listFlashcardReviewHistory, 
 import { addResearchSource, createResearchBrief, createResearchBriefFromTopic, exportResearchBrief, getResearchBrief, getResearchExportDownload, listResearchBriefs, listResearchExports, summarizeSourceUrl, synthesizeResearchBrief } from "./researchService";
 import { searchResearchVideos } from "./youtubeService";
 import { searchCommunityPerspectives } from "./serpapiService";
-import { addStickyNote, askDocumentGrounded, generateRevisionGuide, generateStudyNotes, getStudyNote, listRevisionGuides, listStudyNotes } from "./notesService";
+import { addStickyNote, askDocumentGrounded, deleteStudyNote, generateRevisionGuide, generateStudyNotes, getStudyNote, listRevisionGuides, listStudyNotes } from "./notesService";
 import { COOKIE_NAME } from "../shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
@@ -131,6 +131,7 @@ export const appRouter = router({
     generate: protectedProcedure.input(z.object({ title: z.string().trim().min(3).max(260), topic: z.string().trim().max(6000).nullable().optional(), subjectId: z.number().int().positive().nullable().optional(), documentId: z.number().int().positive().nullable().optional(), scopeType: z.enum(["topic", "chapter", "section", "range", "document"]), scopeLabel: z.string().trim().min(2).max(300) })).mutation(async ({ ctx, input }) => { try { return await generateStudyNotes(ctx.user.id, input); } catch (error) { return toApiError(error); } }),
     addSticky: protectedProcedure.input(z.object({ studyNoteId: z.number().int().positive(), content: z.string().trim().min(1).max(3000), color: z.enum(["yellow", "mint", "lavender", "peach"]) })).mutation(async ({ ctx, input }) => { try { return await addStickyNote(ctx.user.id, input.studyNoteId, input); } catch (error) { return toApiError(error); } }),
     askDocument: protectedProcedure.input(z.object({ documentId: z.number().int().positive(), question: z.string().trim().min(2).max(2000), studyNoteId: z.number().int().positive().optional() })).mutation(async ({ ctx, input }) => { try { return await askDocumentGrounded(ctx.user.id, input); } catch (error) { return toApiError(error); } }),
+    delete: protectedProcedure.input(z.object({ noteId: z.number().int().positive() })).mutation(async ({ ctx, input }) => { try { return await deleteStudyNote(ctx.user.id, input.noteId); } catch (error) { return toApiError(error); } }),
   }),
   revision: router({
     list: protectedProcedure

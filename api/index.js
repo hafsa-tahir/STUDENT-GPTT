@@ -2109,25 +2109,70 @@ async function uploadPrivatePdf(userId, file) {
     let pageCount = null;
     try {
       const pdfModule = await import("pdf-parse");
-      const PDFParseClass = pdfModule.PDFParse || pdfModule.default;
-      if (PDFParseClass) {
-        const uint8Data = new Uint8Array(file.buffer);
-        const parser = new PDFParseClass({ data: uint8Data });
+      const PDFParseClass = pdfModule.PDFParse;
+      if (typeof PDFParseClass === "function") {
+        const parser = new PDFParseClass({ data: new Uint8Array(file.buffer) });
         const result = await parser.getText();
         await parser.destroy();
-        content2 = result.text?.trim() ?? "";
-        pageCount = result.total ?? null;
+        if (result && typeof result.text === "string" && result.text.trim().length > 10) {
+          content2 = result.text.trim();
+          pageCount = typeof result.total === "number" ? result.total : null;
+        }
+      }
+      if (!content2) {
+        const pdfFn = typeof pdfModule === "function" ? pdfModule : pdfModule.default;
+        if (typeof pdfFn === "function" && pdfFn !== PDFParseClass) {
+          const result = await pdfFn(file.buffer);
+          if (result && typeof result.text === "string" && result.text.trim().length > 10) {
+            content2 = result.text.trim();
+            pageCount = typeof result.numpages === "number" ? result.numpages : null;
+          }
+        }
       }
     } catch (parseErr) {
-      console.warn("[PDF Extraction Warning]:", parseErr);
-      content2 = file.buffer.toString("binary").replace(/[^\x20-\x7E\n\r\t]/g, " ").replace(/\s+/g, " ").trim();
+      console.warn("[PDF Parse Engine Notice]:", parseErr);
     }
-    if (!content2) content2 = safeName.replace(/[^a-zA-Z0-9 ]/g, " ");
+    if (!content2) {
+      try {
+        const raw = file.buffer.toString("latin1");
+        const matches = [];
+        const tjRegex = /\(([^)]+)\)\s*Tj/g;
+        let match;
+        while ((match = tjRegex.exec(raw)) !== null) {
+          if (match[1] && match[1].trim().length > 1) {
+            matches.push(match[1]);
+          }
+        }
+        if (matches.length > 5) {
+          content2 = matches.join(" ").replace(/\s+/g, " ").trim();
+        }
+      } catch (streamErr) {
+        console.warn("[PDF Stream Fallback Warning]:", streamErr);
+      }
+    }
+    content2 = (content2 || "").replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, " ").replace(/\s+/g, " ").trim();
+    const hasRawPdfArtifacts = content2.startsWith("%PDF-") || content2.includes("obj <<") && content2.includes("endobj");
+    const alphanumericCount = (content2.match(/[a-zA-Z0-9]/g) || []).length;
+    if (!content2 || alphanumericCount < 15 || hasRawPdfArtifacts) {
+      throw new Error("Could not extract readable text from this document. Please ensure the PDF contains selectable text (not scanned images).");
+    }
     const chunks = textChunks(content2);
     for (const [chunkIndex, chunk] of Array.from(chunks.entries())) {
-      await db.insert(documentChunks).values({ documentId, userId, chunkIndex, content: chunk, tokenCount: Math.ceil(chunk.length / 4), contentHash: crypto2.createHash("sha256").update(chunk).digest("hex") });
+      await db.insert(documentChunks).values({
+        documentId,
+        userId,
+        chunkIndex,
+        content: chunk,
+        tokenCount: Math.ceil(chunk.length / 4),
+        contentHash: crypto2.createHash("sha256").update(chunk).digest("hex")
+      });
     }
-    await db.update(documents).set({ status: "ready", extractedText: content2, pageCount: pageCount ?? 1, processedAt: /* @__PURE__ */ new Date() }).where(and3(eq3(documents.id, documentId), eq3(documents.userId, userId)));
+    await db.update(documents).set({
+      status: "ready",
+      extractedText: content2,
+      pageCount: pageCount ?? 1,
+      processedAt: /* @__PURE__ */ new Date()
+    }).where(and3(eq3(documents.id, documentId), eq3(documents.userId, userId)));
     await db.update(documentJobs).set({ status: "complete", completedAt: /* @__PURE__ */ new Date() }).where(eq3(documentJobs.id, jobId));
   } catch (error) {
     const reason = error instanceof Error ? error.message.slice(0, 1e3) : "Extraction failed.";
@@ -3543,6 +3588,14 @@ ${input.question}`;
     relevantSnippets
   };
 }
+async function deleteStudyNote(userId, noteId) {
+  const db = database2(await getDb());
+  const owned = await db.select({ id: studyNotes.id }).from(studyNotes).where(and6(eq6(studyNotes.id, noteId), eq6(studyNotes.userId, userId))).limit(1);
+  if (!owned[0]) throw new Error("Study note not found.");
+  await db.delete(stickyNotes).where(and6(eq6(stickyNotes.studyNoteId, noteId), eq6(stickyNotes.userId, userId)));
+  await db.delete(studyNotes).where(and6(eq6(studyNotes.id, noteId), eq6(studyNotes.userId, userId)));
+  return { success: true };
+}
 
 // server/_core/systemRouter.ts
 import { z } from "zod";
@@ -4137,6 +4190,13 @@ var appRouter = router({
     askDocument: protectedProcedure.input(z3.object({ documentId: z3.number().int().positive(), question: z3.string().trim().min(2).max(2e3), studyNoteId: z3.number().int().positive().optional() })).mutation(async ({ ctx, input }) => {
       try {
         return await askDocumentGrounded(ctx.user.id, input);
+      } catch (error) {
+        return toApiError(error);
+      }
+    }),
+    delete: protectedProcedure.input(z3.object({ noteId: z3.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      try {
+        return await deleteStudyNote(ctx.user.id, input.noteId);
       } catch (error) {
         return toApiError(error);
       }
