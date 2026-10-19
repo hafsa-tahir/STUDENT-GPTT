@@ -2108,29 +2108,62 @@ async function uploadPrivatePdf(userId, file) {
     let content2 = "";
     let pageCount = null;
     try {
-      const pdfModule = await import("pdf-parse");
-      const PDFParseClass = pdfModule.PDFParse;
-      if (typeof PDFParseClass === "function") {
-        const parser = new PDFParseClass({ data: new Uint8Array(file.buffer) });
-        const result = await parser.getText();
-        await parser.destroy();
-        if (result && typeof result.text === "string" && result.text.trim().length > 10) {
-          content2 = result.text.trim();
-          pageCount = typeof result.total === "number" ? result.total : null;
+      const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
+      const loadingTask = pdfjsLib.getDocument({
+        data: new Uint8Array(file.buffer),
+        useSystemFonts: true,
+        disableFontFace: true,
+        isEvalSupported: false
+      });
+      const pdfDocument = await loadingTask.promise;
+      pageCount = pdfDocument.numPages;
+      const pageTexts = [];
+      for (let i = 1; i <= pdfDocument.numPages; i++) {
+        const page = await pdfDocument.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageStrings = textContent.items.map((item) => item.str).filter(Boolean);
+        if (pageStrings.length > 0) {
+          pageTexts.push(pageStrings.join(" "));
         }
       }
-      if (!content2) {
+      const extracted = pageTexts.join("\n\n").trim();
+      if (extracted.length > 10) {
+        content2 = extracted;
+      }
+    } catch (pdfjsErr) {
+      console.warn("[PDF.js Extraction Notice]:", pdfjsErr);
+    }
+    if (!content2) {
+      try {
+        const pdfModule = await import("pdf-parse");
+        const PDFParseClass = pdfModule.PDFParse;
+        if (typeof PDFParseClass === "function") {
+          const parser = new PDFParseClass({ data: new Uint8Array(file.buffer) });
+          const result = await parser.getText();
+          await parser.destroy();
+          if (result && typeof result.text === "string" && result.text.trim().length > 10) {
+            content2 = result.text.trim();
+            pageCount = typeof result.total === "number" ? result.total : pageCount;
+          }
+        }
+      } catch (parseErr) {
+        console.warn("[PDF Parse v2 Notice]:", parseErr);
+      }
+    }
+    if (!content2) {
+      try {
+        const pdfModule = await import("pdf-parse");
         const pdfFn = typeof pdfModule === "function" ? pdfModule : pdfModule.default;
-        if (typeof pdfFn === "function" && pdfFn !== PDFParseClass) {
+        if (typeof pdfFn === "function") {
           const result = await pdfFn(file.buffer);
           if (result && typeof result.text === "string" && result.text.trim().length > 10) {
             content2 = result.text.trim();
-            pageCount = typeof result.numpages === "number" ? result.numpages : null;
+            pageCount = typeof result.numpages === "number" ? result.numpages : pageCount;
           }
         }
+      } catch (classicErr) {
+        console.warn("[PDF Parse Classic Notice]:", classicErr);
       }
-    } catch (parseErr) {
-      console.warn("[PDF Parse Engine Notice]:", parseErr);
     }
     if (!content2) {
       try {
@@ -4411,6 +4444,9 @@ function createExpressApp() {
       const originalName = typeof req.headers["x-file-name"] === "string" ? decodeURIComponent(req.headers["x-file-name"]) : "study-document.pdf";
       const subjectId = typeof req.headers["x-subject-id"] === "string" && req.headers["x-subject-id"] ? Number(req.headers["x-subject-id"]) : null;
       const document = await uploadPrivatePdf(user.id, { buffer: pdfBuffer, name: originalName, mimeType: "application/pdf", subjectId: Number.isInteger(subjectId) && subjectId > 0 ? subjectId : null });
+      if (document.status === "failed") {
+        return res.status(422).json({ error: document.failureReason || "Text extraction failed.", document });
+      }
       return res.status(201).json({ document });
     } catch (error) {
       return res.status(400).json({ error: error instanceof Error ? error.message : "Upload failed." });

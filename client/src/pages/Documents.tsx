@@ -224,18 +224,18 @@ export default function Documents() {
 
       const body = (await response.json()) as {
         error?: string;
-        document?: { id: number; status: string; originalName: string; subjectId?: number | null };
+        document?: { id: number; status: string; originalName: string; subjectId?: number | null; failureReason?: string | null };
       };
 
-      if (!response.ok) throw new Error(body.error || "Upload failed.");
+      if (!response.ok || body.error || !body.document || body.document.status === "failed") {
+        throw new Error(body.error || body.document?.failureReason || "Upload failed: unable to process document.");
+      }
 
       const assignedSubjectName = subjects.find((s) => s.id === pendingUploadSubjectId)?.name;
       const destinationText = assignedSubjectName ? ` assigned to "${assignedSubjectName}"` : "";
 
       setNotice(
-        body.document?.status === "ready"
-          ? `"${body.document.originalName}" is indexed and ready${destinationText}.`
-          : `"${body.document?.originalName || pendingUploadFile.name}" was uploaded${destinationText}.`
+        `"${body.document.originalName}" is indexed and ready${destinationText}.`
       );
 
       // If user uploaded to a specific subject, switch filter so they see it immediately

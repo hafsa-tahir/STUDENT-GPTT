@@ -44,6 +44,9 @@ export function createExpressApp() {
       const originalName = typeof req.headers["x-file-name"] === "string" ? decodeURIComponent(req.headers["x-file-name"]) : "study-document.pdf";
       const subjectId = typeof req.headers["x-subject-id"] === "string" && req.headers["x-subject-id"] ? Number(req.headers["x-subject-id"]) : null;
       const document = await uploadPrivatePdf(user.id, { buffer: pdfBuffer, name: originalName, mimeType: "application/pdf", subjectId: Number.isInteger(subjectId) && subjectId! > 0 ? subjectId : null });
+      if (document.status === "failed") {
+        return res.status(422).json({ error: document.failureReason || "Text extraction failed.", document });
+      }
       return res.status(201).json({ document });
     } catch (error) { return res.status(400).json({ error: error instanceof Error ? error.message : "Upload failed." }); }
   });

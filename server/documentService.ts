@@ -29,36 +29,73 @@ export async function uploadPrivatePdf(userId: number, file: { buffer: Buffer; n
     let content = "";
     let pageCount: number | null = null;
 
-    // Strategy 1: Modern pdf-parse v2 (PDFParse class)
+    // Strategy 1: Pure JavaScript pdfjs-dist (Standard, reliable, zero native binary dependencies)
     try {
-      const pdfModule = await import("pdf-parse") as any;
-      const PDFParseClass = pdfModule.PDFParse;
-      if (typeof PDFParseClass === "function") {
-        const parser = new PDFParseClass({ data: new Uint8Array(file.buffer) });
-        const result = await parser.getText();
-        await parser.destroy();
-        if (result && typeof result.text === "string" && result.text.trim().length > 10) {
-          content = result.text.trim();
-          pageCount = typeof result.total === "number" ? result.total : null;
+      const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
+      const loadingTask = pdfjsLib.getDocument({
+        data: new Uint8Array(file.buffer),
+        useSystemFonts: true,
+        disableFontFace: true,
+        isEvalSupported: false,
+      });
+      const pdfDocument = await loadingTask.promise;
+      pageCount = pdfDocument.numPages;
+      const pageTexts: string[] = [];
+      for (let i = 1; i <= pdfDocument.numPages; i++) {
+        const page = await pdfDocument.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageStrings = textContent.items
+          .map((item: any) => item.str)
+          .filter(Boolean);
+        if (pageStrings.length > 0) {
+          pageTexts.push(pageStrings.join(" "));
         }
       }
-      
-      // Strategy 2: Classic pdf-parse v1 function
-      if (!content) {
+      const extracted = pageTexts.join("\n\n").trim();
+      if (extracted.length > 10) {
+        content = extracted;
+      }
+    } catch (pdfjsErr) {
+      console.warn("[PDF.js Extraction Notice]:", pdfjsErr);
+    }
+
+    // Strategy 2: Modern pdf-parse v2 (PDFParse class)
+    if (!content) {
+      try {
+        const pdfModule = await import("pdf-parse") as any;
+        const PDFParseClass = pdfModule.PDFParse;
+        if (typeof PDFParseClass === "function") {
+          const parser = new PDFParseClass({ data: new Uint8Array(file.buffer) });
+          const result = await parser.getText();
+          await parser.destroy();
+          if (result && typeof result.text === "string" && result.text.trim().length > 10) {
+            content = result.text.trim();
+            pageCount = typeof result.total === "number" ? result.total : pageCount;
+          }
+        }
+      } catch (parseErr) {
+        console.warn("[PDF Parse v2 Notice]:", parseErr);
+      }
+    }
+
+    // Strategy 3: Classic pdf-parse v1 function
+    if (!content) {
+      try {
+        const pdfModule = await import("pdf-parse") as any;
         const pdfFn = typeof pdfModule === "function" ? pdfModule : pdfModule.default;
-        if (typeof pdfFn === "function" && pdfFn !== PDFParseClass) {
+        if (typeof pdfFn === "function") {
           const result = await pdfFn(file.buffer);
           if (result && typeof result.text === "string" && result.text.trim().length > 10) {
             content = result.text.trim();
-            pageCount = typeof result.numpages === "number" ? result.numpages : null;
+            pageCount = typeof result.numpages === "number" ? result.numpages : pageCount;
           }
         }
+      } catch (classicErr) {
+        console.warn("[PDF Parse Classic Notice]:", classicErr);
       }
-    } catch (parseErr) {
-      console.warn("[PDF Parse Engine Notice]:", parseErr);
     }
 
-    // Strategy 3: Uncompressed PDF stream text extractor (/BT ... /ET and Tj operators)
+    // Strategy 4: Uncompressed PDF stream text extractor (/BT ... /ET and Tj operators)
     if (!content) {
       try {
         const raw = file.buffer.toString("latin1");
