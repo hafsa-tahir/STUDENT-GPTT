@@ -21,14 +21,16 @@ export function createExpressApp() {
       req.headers?.["x-original-url"] ||
       req.headers?.["x-forwarded-url"];
 
-    if (rawPath && typeof rawPath === "string" && (req.url === "/api" || req.url === "/" || req.url.startsWith("/api?"))) {
+    if (rawPath && typeof rawPath === "string" && rawPath.startsWith("/api")) {
       const [pathPart, queryPart] = rawPath.split("?");
       const existingQuery = req.url && req.url.includes("?") ? req.url.split("?")[1] : null;
       const finalQuery = queryPart || existingQuery;
       req.url = finalQuery ? `${pathPart}?${finalQuery}` : pathPart;
+    } else if (req.url && (req.url.startsWith("/api/index.js") || req.url === "/api/index")) {
+      req.url = req.url.replace(/^\/api\/index(\.js)?/, "/api") || "/api";
     }
 
-    if (req.originalUrl && req.originalUrl.startsWith("/api") && req.url === "/api") {
+    if (req.originalUrl && req.originalUrl.startsWith("/api") && (req.url === "/api" || req.url === "/api/index.js")) {
       req.url = req.originalUrl;
     }
     if (req.url.startsWith("/.netlify/functions/api")) {
@@ -120,9 +122,16 @@ export function createExpressApp() {
     } catch (error) { if (!res.headersSent) res.status(500).json({ error: error instanceof Error ? error.message : "Stream unavailable." }); else res.end(); }
   });
 
+  const DEFAULT_SUPABASE_URL = "REDACTED";
+  const DEFAULT_SUPABASE_ANON_KEY = "REDACTED";
+
+  app.get(["/api", "/api/health"], (_req, res) => {
+    res.json({ status: "ok", service: "StudentGPT API", timestamp: new Date().toISOString() });
+  });
+
   app.get(["/api/auth/supabase-config", "/auth/supabase-config"], (_req, res) => {
-    const url = process.env.SUPABASE_URL;
-    const anonKey = process.env.SUPABASE_ANON_KEY;
+    const url = process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL;
+    const anonKey = process.env.SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY;
     if (!url || !anonKey) {
       return res.status(503).json({ error: "Authentication is not configured." });
     }

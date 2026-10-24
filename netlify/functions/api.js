@@ -131135,13 +131135,15 @@ function createExpressApp() {
   app2.set("trust proxy", true);
   app2.use((req, _res, next) => {
     const rawPath = req.headers?.["x-matched-path"] || req.headers?.["x-vercel-matched-path"] || req.headers?.["x-rewrite-url"] || req.headers?.["x-original-url"] || req.headers?.["x-forwarded-url"];
-    if (rawPath && typeof rawPath === "string" && (req.url === "/api" || req.url === "/" || req.url.startsWith("/api?"))) {
+    if (rawPath && typeof rawPath === "string" && rawPath.startsWith("/api")) {
       const [pathPart, queryPart] = rawPath.split("?");
       const existingQuery = req.url && req.url.includes("?") ? req.url.split("?")[1] : null;
       const finalQuery = queryPart || existingQuery;
       req.url = finalQuery ? `${pathPart}?${finalQuery}` : pathPart;
+    } else if (req.url && (req.url.startsWith("/api/index.js") || req.url === "/api/index")) {
+      req.url = req.url.replace(/^\/api\/index(\.js)?/, "/api") || "/api";
     }
-    if (req.originalUrl && req.originalUrl.startsWith("/api") && req.url === "/api") {
+    if (req.originalUrl && req.originalUrl.startsWith("/api") && (req.url === "/api" || req.url === "/api/index.js")) {
       req.url = req.originalUrl;
     }
     if (req.url.startsWith("/.netlify/functions/api")) {
@@ -131239,9 +131241,14 @@ function createExpressApp() {
       else res.end();
     }
   });
+  const DEFAULT_SUPABASE_URL3 = "REDACTED";
+  const DEFAULT_SUPABASE_ANON_KEY = "REDACTED";
+  app2.get(["/api", "/api/health"], (_req, res) => {
+    res.json({ status: "ok", service: "StudentGPT API", timestamp: (/* @__PURE__ */ new Date()).toISOString() });
+  });
   app2.get(["/api/auth/supabase-config", "/auth/supabase-config"], (_req, res) => {
-    const url3 = process.env.SUPABASE_URL;
-    const anonKey = process.env.SUPABASE_ANON_KEY;
+    const url3 = process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL3;
+    const anonKey = process.env.SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY;
     if (!url3 || !anonKey) {
       return res.status(503).json({ error: "Authentication is not configured." });
     }
