@@ -14,7 +14,21 @@ export function createExpressApp() {
   
   // Normalize Netlify / Vercel serverless function path prefixes
   app.use((req, _res, next) => {
-    if (req.originalUrl && req.originalUrl.startsWith("/api")) {
+    const rawPath =
+      req.headers?.["x-matched-path"] ||
+      req.headers?.["x-vercel-matched-path"] ||
+      req.headers?.["x-rewrite-url"] ||
+      req.headers?.["x-original-url"] ||
+      req.headers?.["x-forwarded-url"];
+
+    if (rawPath && typeof rawPath === "string" && (req.url === "/api" || req.url === "/" || req.url.startsWith("/api?"))) {
+      const [pathPart, queryPart] = rawPath.split("?");
+      const existingQuery = req.url && req.url.includes("?") ? req.url.split("?")[1] : null;
+      const finalQuery = queryPart || existingQuery;
+      req.url = finalQuery ? `${pathPart}?${finalQuery}` : pathPart;
+    }
+
+    if (req.originalUrl && req.originalUrl.startsWith("/api") && req.url === "/api") {
       req.url = req.originalUrl;
     }
     if (req.url.startsWith("/.netlify/functions/api")) {
@@ -38,6 +52,21 @@ export function createExpressApp() {
       } else if (typeof req.body === "string" && req.body.length > 0) {
         const isBase64 = (req as any).isBase64Encoded || /^[A-Za-z0-9+/=]+\s*$/.test(req.body.slice(0, 100));
         pdfBuffer = Buffer.from(req.body, isBase64 ? "base64" : "binary");
+      }
+
+      // Stream fallback if body parser did not consume the stream
+      if (!pdfBuffer || !pdfBuffer.length) {
+        try {
+          const chunks: Buffer[] = [];
+          for await (const chunk of req) {
+            chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+          }
+          if (chunks.length > 0) {
+            pdfBuffer = Buffer.concat(chunks);
+          }
+        } catch {
+          // ignore stream error
+        }
       }
       
       if (!pdfBuffer || !pdfBuffer.length) return res.status(400).json({ error: "PDF content is required." });

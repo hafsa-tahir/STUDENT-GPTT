@@ -23,9 +23,10 @@ export function getStorageSupabase() {
 }
 
 export function getLocalUploadsDir(): string {
-  // If running in AWS Lambda / Netlify serverless, process.cwd() (/var/task) is read-only.
+  // If running in AWS Lambda / Netlify / Vercel serverless, process.cwd() (/var/task) is read-only.
   // In serverless, os.tmpdir() is the only writable directory.
   const isServerless = Boolean(
+    process.env.VERCEL ||
     process.env.LAMBDA_TASK_ROOT ||
     process.env.NETLIFY ||
     (typeof process.cwd === "function" && process.cwd().startsWith("/var/task"))

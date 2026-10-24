@@ -155,8 +155,8 @@ export default function Documents() {
       return;
     }
 
-    if (file.size > 12 * 1024 * 1024) {
-      setError("PDF files must be 12 MB or smaller.");
+    if (file.size > 4.5 * 1024 * 1024) {
+      setError("PDF files on cloud hosting must be 4.5 MB or smaller. Please choose a smaller document.");
       return;
     }
 
@@ -196,6 +196,11 @@ export default function Documents() {
   async function handleConfirmUpload() {
     if (!pendingUploadFile) return;
 
+    if (pendingUploadFile.size > 4.5 * 1024 * 1024) {
+      setError("PDF files on cloud hosting must be 4.5 MB or smaller. Please choose a smaller document.");
+      return;
+    }
+
     const token = getSupabaseAccessToken();
     if (!token) {
       setError("Your session is not active. Please sign in again.");
@@ -222,10 +227,22 @@ export default function Documents() {
         body: pendingUploadFile
       });
 
-      const body = (await response.json()) as {
+      let body: {
         error?: string;
         document?: { id: number; status: string; originalName: string; subjectId?: number | null; failureReason?: string | null };
-      };
+      } = {};
+
+      try {
+        const text = await response.text();
+        body = JSON.parse(text);
+      } catch {
+        if (response.status === 413) {
+          throw new Error("File exceeds the cloud 4.5 MB upload limit. Please select a smaller PDF.");
+        }
+        if (!response.ok) {
+          throw new Error(`Upload server error (${response.status}: ${response.statusText || "Request failed"}).`);
+        }
+      }
 
       if (!response.ok || body.error || !body.document || body.document.status === "failed") {
         throw new Error(body.error || body.document?.failureReason || "Upload failed: unable to process document.");

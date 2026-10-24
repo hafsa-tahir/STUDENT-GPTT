@@ -101924,7 +101924,10 @@ async function getDb() {
         waitForConnections: true,
         connectionLimit: 10,
         enableKeepAlive: true,
-        keepAliveInitialDelay: 1e4
+        keepAliveInitialDelay: 1e4,
+        maxIdle: 2,
+        idleTimeout: 3e4,
+        queueLimit: 0
       });
       _db = drizzle(pool);
     } catch (error46) {
@@ -115259,7 +115262,7 @@ function getStorageSupabase() {
 }
 function getLocalUploadsDir() {
   const isServerless = Boolean(
-    process.env.LAMBDA_TASK_ROOT || process.env.NETLIFY || typeof process.cwd === "function" && process.cwd().startsWith("/var/task")
+    process.env.VERCEL || process.env.LAMBDA_TASK_ROOT || process.env.NETLIFY || typeof process.cwd === "function" && process.cwd().startsWith("/var/task")
   );
   if (isServerless) {
     return import_node_path.default.join(import_node_os.default.tmpdir(), "studentgpt-uploads");
@@ -131100,6 +131103,13 @@ async function authenticateSupabaseRequest(req, failureHolder) {
   } catch (err) {
     console.error("[Auth] User lookup failed:", err);
   }
+  try {
+    await new Promise((r) => setTimeout(r, 600));
+    const retryUser = await getUserByOpenId(externalId);
+    if (retryUser) return retryUser;
+  } catch (err) {
+    console.error("[Auth] User lookup retry failed:", err);
+  }
   if (failureHolder) failureHolder.reason = "User profile could not be synchronized with database";
   return null;
 }
@@ -131124,7 +131134,14 @@ function createExpressApp() {
   const app2 = (0, import_express.default)();
   app2.set("trust proxy", true);
   app2.use((req, _res, next) => {
-    if (req.originalUrl && req.originalUrl.startsWith("/api")) {
+    const rawPath = req.headers?.["x-matched-path"] || req.headers?.["x-vercel-matched-path"] || req.headers?.["x-rewrite-url"] || req.headers?.["x-original-url"] || req.headers?.["x-forwarded-url"];
+    if (rawPath && typeof rawPath === "string" && (req.url === "/api" || req.url === "/" || req.url.startsWith("/api?"))) {
+      const [pathPart, queryPart] = rawPath.split("?");
+      const existingQuery = req.url && req.url.includes("?") ? req.url.split("?")[1] : null;
+      const finalQuery = queryPart || existingQuery;
+      req.url = finalQuery ? `${pathPart}?${finalQuery}` : pathPart;
+    }
+    if (req.originalUrl && req.originalUrl.startsWith("/api") && req.url === "/api") {
       req.url = req.originalUrl;
     }
     if (req.url.startsWith("/.netlify/functions/api")) {
@@ -131144,6 +131161,18 @@ function createExpressApp() {
       } else if (typeof req.body === "string" && req.body.length > 0) {
         const isBase64 = req.isBase64Encoded || /^[A-Za-z0-9+/=]+\s*$/.test(req.body.slice(0, 100));
         pdfBuffer = Buffer.from(req.body, isBase64 ? "base64" : "binary");
+      }
+      if (!pdfBuffer || !pdfBuffer.length) {
+        try {
+          const chunks = [];
+          for await (const chunk of req) {
+            chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+          }
+          if (chunks.length > 0) {
+            pdfBuffer = Buffer.concat(chunks);
+          }
+        } catch {
+        }
       }
       if (!pdfBuffer || !pdfBuffer.length) return res.status(400).json({ error: "PDF content is required." });
       const originalName = typeof req.headers["x-file-name"] === "string" ? decodeURIComponent(req.headers["x-file-name"]) : "study-document.pdf";

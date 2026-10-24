@@ -66,5 +66,19 @@ import { createExpressApp } from "./app";
 const app = createExpressApp();
 
 export default function handler(req: any, res: any) {
+  // If Vercel edge rewrote the path to /api or if matched-path header exists, recover full client path
+  const rawPath =
+    req.headers?.["x-matched-path"] ||
+    req.headers?.["x-vercel-matched-path"] ||
+    req.headers?.["x-rewrite-url"] ||
+    req.headers?.["x-original-url"] ||
+    req.headers?.["x-forwarded-url"];
+
+  if (rawPath && typeof rawPath === "string" && (req.url === "/api" || req.url === "/" || req.url.startsWith("/api?"))) {
+    const [pathPart, queryPart] = rawPath.split("?");
+    const existingQuery = req.url && req.url.includes("?") ? req.url.split("?")[1] : null;
+    const finalQuery = queryPart || existingQuery;
+    req.url = finalQuery ? `${pathPart}?${finalQuery}` : pathPart;
+  }
   return app(req, res);
 }

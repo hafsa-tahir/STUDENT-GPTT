@@ -87,8 +87,8 @@ export function SubjectActivityModal({
       return;
     }
 
-    if (file.size > 12 * 1024 * 1024) {
-      setDocUploadError("PDF files must be 12 MB or smaller.");
+    if (file.size > 4.5 * 1024 * 1024) {
+      setDocUploadError("PDF files on cloud hosting must be 4.5 MB or smaller. Please choose a smaller document.");
       return;
     }
 
@@ -112,7 +112,19 @@ export function SubjectActivityModal({
         body: file
       });
 
-      const body = (await response.json()) as { error?: string; document?: { originalName: string } };
+      let body: { error?: string; document?: { originalName: string } } = {};
+      try {
+        const text = await response.text();
+        body = JSON.parse(text);
+      } catch {
+        if (response.status === 413) {
+          throw new Error("File exceeds cloud 4.5 MB serverless upload limit. Please select a smaller PDF.");
+        }
+        if (!response.ok) {
+          throw new Error(`Upload server error (${response.status}: ${response.statusText || "Request failed"}).`);
+        }
+      }
+
       if (!response.ok) throw new Error(body.error || "Upload failed.");
 
       setDocUploadNotice(`"${body.document?.originalName || file.name}" added to ${subject.name}!`);

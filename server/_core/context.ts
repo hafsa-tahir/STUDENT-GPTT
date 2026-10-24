@@ -129,6 +129,15 @@ export async function authenticateSupabaseRequest(
     console.error("[Auth] User lookup failed:", err);
   }
 
+  // Brief retry after 600ms in case database pool connection was warming up
+  try {
+    await new Promise(r => setTimeout(r, 600));
+    const retryUser = await getUserByOpenId(externalId);
+    if (retryUser) return retryUser;
+  } catch (err) {
+    console.error("[Auth] User lookup retry failed:", err);
+  }
+
   if (failureHolder) failureHolder.reason = "User profile could not be synchronized with database";
   return null;
 }

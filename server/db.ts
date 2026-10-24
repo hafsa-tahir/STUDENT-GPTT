@@ -31,6 +31,9 @@ export async function getDb() {
         connectionLimit: 10,
         enableKeepAlive: true,
         keepAliveInitialDelay: 10000,
+        maxIdle: 2,
+        idleTimeout: 30000,
+        queueLimit: 0,
       });
       _db = drizzle(pool);
     } catch (error) {
