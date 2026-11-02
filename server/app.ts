@@ -8,6 +8,7 @@ import { getPrivateDocumentDownload, uploadPrivatePdf } from "./documentService"
 import { getResearchExportFile } from "./researchService";
 import { streamLLM } from "./_core/llm";
 import { resolveApiUrl } from "./_core/urlResolver";
+import { getSupabaseAdminClient } from "./_core/supabaseAdmin";
 
 export function createExpressApp() {
   const app = express();
@@ -131,6 +132,63 @@ export function createExpressApp() {
       return res.status(503).json({ error: "Authentication is not configured." });
     }
     return res.json({ url, anonKey });
+  });
+
+  app.post(["/api/auth/auto-confirm", "/auth/auto-confirm"], async (req, res) => {
+    try {
+      const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+      if (!email || !email.includes("@")) {
+        return res.status(400).json({ error: "A valid email address is required." });
+      }
+      const admin = getSupabaseAdminClient();
+      if (!admin) {
+        return res.status(503).json({ error: "Supabase admin client is not configured." });
+      }
+      const { data, error: listErr } = await admin.auth.admin.listUsers();
+      if (listErr) throw listErr;
+      const targetUser = data.users.find(u => u.email?.toLowerCase() === email);
+      if (!targetUser) {
+        return res.status(404).json({ error: "No user found with this email." });
+      }
+      const { error: updateErr } = await admin.auth.admin.updateUserById(targetUser.id, {
+        email_confirm: true,
+      });
+      if (updateErr) throw updateErr;
+      return res.json({ success: true, message: "User account confirmed successfully." });
+    } catch (err: any) {
+      return res.status(500).json({ error: err?.message || "Failed to confirm user account." });
+    }
+  });
+
+  app.post(["/api/auth/direct-reset", "/auth/direct-reset"], async (req, res) => {
+    try {
+      const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+      const newPassword = typeof req.body?.newPassword === "string" ? req.body.newPassword : "";
+      if (!email || !email.includes("@")) {
+        return res.status(400).json({ error: "A valid email address is required." });
+      }
+      if (!newPassword || newPassword.length < 8) {
+        return res.status(400).json({ error: "Password must be at least 8 characters." });
+      }
+      const admin = getSupabaseAdminClient();
+      if (!admin) {
+        return res.status(503).json({ error: "Supabase admin client is not configured." });
+      }
+      const { data, error: listErr } = await admin.auth.admin.listUsers();
+      if (listErr) throw listErr;
+      const targetUser = data.users.find(u => u.email?.toLowerCase() === email);
+      if (!targetUser) {
+        return res.status(404).json({ error: "No account found with this email address. Please sign up first." });
+      }
+      const { error: updateErr } = await admin.auth.admin.updateUserById(targetUser.id, {
+        password: newPassword,
+        email_confirm: true,
+      });
+      if (updateErr) throw updateErr;
+      return res.json({ success: true, message: "Password updated successfully. You can now sign in." });
+    } catch (err: any) {
+      return res.status(500).json({ error: err?.message || "Failed to update password." });
+    }
   });
 
   registerStorageProxy(app);

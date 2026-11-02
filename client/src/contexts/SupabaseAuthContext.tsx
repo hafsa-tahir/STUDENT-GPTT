@@ -10,6 +10,7 @@ type AuthContextValue = {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ emailConfirmationRequired: boolean }>;
   requestPasswordReset: (email: string) => Promise<void>;
+  directPasswordReset: (email: string, newPassword: string) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -96,8 +97,46 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
     },
     signUp: async (email, password, fullName) => {
       const client = await getSupabaseBrowserClient();
-      const { data, error } = await client.auth.signUp({ email, password, options: { data: { full_name: fullName }, emailRedirectTo: `${window.location.origin}/login` } });
+      const { data, error } = await client.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { full_name: fullName },
+          emailRedirectTo: `${window.location.origin}/login`,
+        },
+      });
       if (error) throw new Error(error.message);
+
+      // Detect if account already exists (identities is empty on duplicate sign up)
+      if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+        throw new Error("An account with this email address already exists. Please sign in or use 'Forgot password' below to reset your password.");
+      }
+
+      // Auto-confirm newly registered user via backend so they can sign in immediately
+      if (data?.user && !data.session) {
+        try {
+          const autoRes = await fetch("/api/auth/auto-confirm", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email }),
+          });
+          if (autoRes.ok) {
+            const loginRes = await client.auth.signInWithPassword({ email, password });
+            if (loginRes.data?.session) {
+              setSession(loginRes.data.session);
+              const token = loginRes.data.session.access_token ?? null;
+              setSupabaseAccessToken(token);
+              if (token && typeof window !== "undefined") {
+                window.dispatchEvent(new CustomEvent("supabase-token-ready", { detail: token }));
+              }
+              return { emailConfirmationRequired: false };
+            }
+          }
+        } catch {
+          // Fall back to standard confirmation email
+        }
+      }
+
       if (data?.session) {
         setSession(data.session);
         const token = data.session.access_token ?? null;
@@ -112,6 +151,17 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
       const client = await getSupabaseBrowserClient();
       const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/login?reset=1` });
       if (error) throw new Error(error.message);
+    },
+    directPasswordReset: async (email, newPassword) => {
+      const res = await fetch("/api/auth/direct-reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, newPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to reset password.");
+      }
     },
     updatePassword: async password => {
       const client = await getSupabaseBrowserClient();
