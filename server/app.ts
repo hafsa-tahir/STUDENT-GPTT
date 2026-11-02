@@ -7,32 +7,27 @@ import { createContext, authenticateSupabaseRequest } from "./_core/context";
 import { getPrivateDocumentDownload, uploadPrivatePdf } from "./documentService";
 import { getResearchExportFile } from "./researchService";
 import { streamLLM } from "./_core/llm";
+import { resolveApiUrl } from "./_core/urlResolver";
 
 export function createExpressApp() {
   const app = express();
   app.set("trust proxy", true);
   
+  // CORS & Preflight handling
+  app.use((req, res, next) => {
+    res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, x-file-name, x-subject-id, trpc-accept");
+    res.header("Access-Control-Allow-Credentials", "true");
+    if (req.method === "OPTIONS") {
+      return res.sendStatus(204);
+    }
+    next();
+  });
+
   // Normalize Netlify / Vercel serverless function path prefixes
   app.use((req, _res, next) => {
-    const rawPath =
-      req.headers?.["x-matched-path"] ||
-      req.headers?.["x-vercel-matched-path"] ||
-      req.headers?.["x-rewrite-url"] ||
-      req.headers?.["x-original-url"] ||
-      req.headers?.["x-forwarded-url"];
-
-    if (rawPath && typeof rawPath === "string" && rawPath.startsWith("/api")) {
-      const [pathPart, queryPart] = rawPath.split("?");
-      const existingQuery = req.url && req.url.includes("?") ? req.url.split("?")[1] : null;
-      const finalQuery = queryPart || existingQuery;
-      req.url = finalQuery ? `${pathPart}?${finalQuery}` : pathPart;
-    } else if (req.url && (req.url.startsWith("/api/index.js") || req.url === "/api/index")) {
-      req.url = req.url.replace(/^\/api\/index(\.js)?/, "/api") || "/api";
-    }
-
-    if (req.originalUrl && req.originalUrl.startsWith("/api") && (req.url === "/api" || req.url === "/api/index.js")) {
-      req.url = req.originalUrl;
-    }
+    req.url = resolveApiUrl(req);
     if (req.url.startsWith("/.netlify/functions/api")) {
       req.url = req.url.replace("/.netlify/functions/api", "/api");
     }
@@ -125,7 +120,7 @@ export function createExpressApp() {
   const DEFAULT_SUPABASE_URL = "REDACTED";
   const DEFAULT_SUPABASE_ANON_KEY = "REDACTED";
 
-  app.get(["/api", "/api/health"], (_req, res) => {
+  app.get(["/", "/health", "/api", "/api/health"], (_req, res) => {
     res.json({ status: "ok", service: "StudentGPT API", timestamp: new Date().toISOString() });
   });
 

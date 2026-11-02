@@ -131129,23 +131129,64 @@ async function createContext(opts) {
   };
 }
 
+// server/_core/urlResolver.ts
+function resolveApiUrl2(req) {
+  let urlStr = req.url || "/api";
+  if (urlStr.includes("__path=")) {
+    try {
+      const parsed = new URL(urlStr, "http://localhost");
+      const pathParam = parsed.searchParams.get("__path");
+      parsed.searchParams.delete("__path");
+      const remainingSearch = parsed.search ? parsed.search : "";
+      if (pathParam !== null && pathParam !== void 0) {
+        const cleanSub = pathParam.startsWith("/") ? pathParam.slice(1) : pathParam;
+        return cleanSub ? `/api/${cleanSub}${remainingSearch}` : `/api${remainingSearch}`;
+      }
+    } catch {
+    }
+  }
+  const headers = req.headers || {};
+  const rawPath = headers["x-matched-path"] || headers["x-vercel-matched-path"] || headers["x-rewrite-url"] || headers["x-original-url"] || headers["x-forwarded-url"];
+  if (rawPath && typeof rawPath === "string") {
+    let candidate = rawPath;
+    if (candidate.startsWith("http://") || candidate.startsWith("https://")) {
+      try {
+        const u = new URL(candidate);
+        candidate = u.pathname + (u.search || "");
+      } catch {
+      }
+    }
+    const pathnameOnly = candidate.split("?")[0];
+    if (pathnameOnly.startsWith("/api") && pathnameOnly !== "/api/index" && pathnameOnly !== "/api/index.js") {
+      const [pathPart, queryPart] = candidate.split("?");
+      const existingQuery = urlStr.includes("?") ? urlStr.split("?")[1] : null;
+      const finalQuery = queryPart || existingQuery;
+      return finalQuery ? `${pathPart}?${finalQuery}` : pathPart;
+    }
+  }
+  urlStr = urlStr.replace(/^\/api\/index(\.js)?/, "/api");
+  if (urlStr === "" || urlStr.startsWith("?")) {
+    urlStr = `/api${urlStr}`;
+  }
+  return urlStr;
+}
+
 // server/app.ts
 function createExpressApp() {
   const app2 = (0, import_express.default)();
   app2.set("trust proxy", true);
+  app2.use((req, res, next) => {
+    res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, x-file-name, x-subject-id, trpc-accept");
+    res.header("Access-Control-Allow-Credentials", "true");
+    if (req.method === "OPTIONS") {
+      return res.sendStatus(204);
+    }
+    next();
+  });
   app2.use((req, _res, next) => {
-    const rawPath = req.headers?.["x-matched-path"] || req.headers?.["x-vercel-matched-path"] || req.headers?.["x-rewrite-url"] || req.headers?.["x-original-url"] || req.headers?.["x-forwarded-url"];
-    if (rawPath && typeof rawPath === "string" && rawPath.startsWith("/api")) {
-      const [pathPart, queryPart] = rawPath.split("?");
-      const existingQuery = req.url && req.url.includes("?") ? req.url.split("?")[1] : null;
-      const finalQuery = queryPart || existingQuery;
-      req.url = finalQuery ? `${pathPart}?${finalQuery}` : pathPart;
-    } else if (req.url && (req.url.startsWith("/api/index.js") || req.url === "/api/index")) {
-      req.url = req.url.replace(/^\/api\/index(\.js)?/, "/api") || "/api";
-    }
-    if (req.originalUrl && req.originalUrl.startsWith("/api") && (req.url === "/api" || req.url === "/api/index.js")) {
-      req.url = req.originalUrl;
-    }
+    req.url = resolveApiUrl2(req);
     if (req.url.startsWith("/.netlify/functions/api")) {
       req.url = req.url.replace("/.netlify/functions/api", "/api");
     }
@@ -131243,7 +131284,7 @@ function createExpressApp() {
   });
   const DEFAULT_SUPABASE_URL3 = "REDACTED";
   const DEFAULT_SUPABASE_ANON_KEY = "REDACTED";
-  app2.get(["/api", "/api/health"], (_req, res) => {
+  app2.get(["/", "/health", "/api", "/api/health"], (_req, res) => {
     res.json({ status: "ok", service: "StudentGPT API", timestamp: (/* @__PURE__ */ new Date()).toISOString() });
   });
   app2.get(["/api/auth/supabase-config", "/auth/supabase-config"], (_req, res) => {

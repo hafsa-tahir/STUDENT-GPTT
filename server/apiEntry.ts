@@ -62,25 +62,12 @@ if (typeof globalThis.WebSocket === "undefined") {
 }
 
 import { createExpressApp } from "./app";
+import { resolveApiUrl } from "./_core/urlResolver";
 
 const app = createExpressApp();
 
 export default function handler(req: any, res: any) {
-  // If Vercel edge rewrote the path to /api or /api/index.js, recover full client path from headers
-  const rawPath =
-    req.headers?.["x-matched-path"] ||
-    req.headers?.["x-vercel-matched-path"] ||
-    req.headers?.["x-rewrite-url"] ||
-    req.headers?.["x-original-url"] ||
-    req.headers?.["x-forwarded-url"];
-
-  if (rawPath && typeof rawPath === "string" && rawPath.startsWith("/api")) {
-    const [pathPart, queryPart] = rawPath.split("?");
-    const existingQuery = req.url && req.url.includes("?") ? req.url.split("?")[1] : null;
-    const finalQuery = queryPart || existingQuery;
-    req.url = finalQuery ? `${pathPart}?${finalQuery}` : pathPart;
-  } else if (req.url && (req.url.startsWith("/api/index.js") || req.url === "/api/index")) {
-    req.url = req.url.replace(/^\/api\/index(\.js)?/, "/api") || "/api";
-  }
+  req.url = resolveApiUrl(req);
   return app(req, res);
 }
+
