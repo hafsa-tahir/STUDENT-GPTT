@@ -4440,6 +4440,10 @@ function resolveApiUrl2(req) {
     } catch {
     }
   }
+  const currentPath = urlStr.split("?")[0];
+  if (currentPath.startsWith("/api/") && currentPath !== "/api/index" && currentPath !== "/api/index.js" && !currentPath.includes("[")) {
+    return urlStr;
+  }
   const headers = req.headers || {};
   const rawPath = headers["x-matched-path"] || headers["x-vercel-matched-path"] || headers["x-rewrite-url"] || headers["x-original-url"] || headers["x-forwarded-url"];
   if (rawPath && typeof rawPath === "string") {
@@ -4452,7 +4456,7 @@ function resolveApiUrl2(req) {
       }
     }
     const pathnameOnly = candidate.split("?")[0];
-    if (pathnameOnly.startsWith("/api") && pathnameOnly !== "/api/index" && pathnameOnly !== "/api/index.js") {
+    if (pathnameOnly.startsWith("/api") && pathnameOnly !== "/api/index" && pathnameOnly !== "/api/index.js" && !pathnameOnly.includes("[") && !pathnameOnly.includes("]")) {
       const [pathPart, queryPart] = candidate.split("?");
       const existingQuery = urlStr.includes("?") ? urlStr.split("?")[1] : null;
       const finalQuery = queryPart || existingQuery;

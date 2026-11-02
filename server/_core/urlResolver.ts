@@ -4,7 +4,7 @@ export function resolveApiUrl(req: {
 }): string {
   let urlStr = req.url || "/api";
 
-  // 1. Check if __path query param was passed (e.g. from Vercel rewrite /api/:match* -> /api/index?__path=:match*)
+  // 1. If __path query param was passed (e.g. from Vercel rewrite /api/:match* -> /api/index?__path=:match*)
   if (urlStr.includes("__path=")) {
     try {
       const parsed = new URL(urlStr, "http://localhost");
@@ -18,6 +18,17 @@ export function resolveApiUrl(req: {
     } catch {
       // Fall through on parse error
     }
+  }
+
+  // If urlStr is already a specific /api/... path (not /api/index), preserve it!
+  const currentPath = urlStr.split("?")[0];
+  if (
+    currentPath.startsWith("/api/") &&
+    currentPath !== "/api/index" &&
+    currentPath !== "/api/index.js" &&
+    !currentPath.includes("[")
+  ) {
+    return urlStr;
   }
 
   // 2. Check matched path headers from Vercel / Netlify / reverse proxy
@@ -41,10 +52,13 @@ export function resolveApiUrl(req: {
     }
 
     const pathnameOnly = candidate.split("?")[0];
+    // Ignore internal filesystem dynamic route tokens like [...slug]
     if (
       pathnameOnly.startsWith("/api") &&
       pathnameOnly !== "/api/index" &&
-      pathnameOnly !== "/api/index.js"
+      pathnameOnly !== "/api/index.js" &&
+      !pathnameOnly.includes("[") &&
+      !pathnameOnly.includes("]")
     ) {
       const [pathPart, queryPart] = candidate.split("?");
       const existingQuery = urlStr.includes("?") ? urlStr.split("?")[1] : null;
@@ -61,3 +75,4 @@ export function resolveApiUrl(req: {
 
   return urlStr;
 }
+
