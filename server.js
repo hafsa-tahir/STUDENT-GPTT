@@ -4571,23 +4571,6 @@ function resolveApiUrl2(req) {
   return urlStr;
 }
 
-// server/_core/supabaseAdmin.ts
-import { createClient as createClient3 } from "@supabase/supabase-js";
-var DEFAULT_SUPABASE_URL3 = "";
-var DEFAULT_SUPABASE_SERVICE_ROLE_KEY3 = "";
-var adminClient = null;
-function getSupabaseAdminClient() {
-  if (!adminClient) {
-    const url = process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL3;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || DEFAULT_SUPABASE_SERVICE_ROLE_KEY3;
-    if (!url || !serviceKey) return null;
-    adminClient = createClient3(url, serviceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
-  }
-  return adminClient;
-}
-
 // server/app.ts
 function createExpressApp() {
   const app2 = express2();
@@ -4699,73 +4682,18 @@ function createExpressApp() {
       else res.end();
     }
   });
-  const DEFAULT_SUPABASE_URL4 = "";
+  const DEFAULT_SUPABASE_URL3 = "";
   const DEFAULT_SUPABASE_ANON_KEY = "";
   app2.get(["/", "/health", "/api", "/api/health"], (_req, res) => {
     res.json({ status: "ok", service: "StudentGPT API", timestamp: (/* @__PURE__ */ new Date()).toISOString() });
   });
   app2.get(["/api/auth/supabase-config", "/auth/supabase-config"], (_req, res) => {
-    const url = process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL4;
+    const url = process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL3;
     const anonKey = process.env.SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY;
     if (!url || !anonKey) {
       return res.status(503).json({ error: "Authentication is not configured." });
     }
     return res.json({ url, anonKey });
-  });
-  app2.post(["/api/auth/auto-confirm", "/auth/auto-confirm"], async (req, res) => {
-    try {
-      const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
-      if (!email || !email.includes("@")) {
-        return res.status(400).json({ error: "A valid email address is required." });
-      }
-      const admin = getSupabaseAdminClient();
-      if (!admin) {
-        return res.status(503).json({ error: "Supabase admin client is not configured." });
-      }
-      const { data, error: listErr } = await admin.auth.admin.listUsers();
-      if (listErr) throw listErr;
-      const targetUser = data.users.find((u) => u.email?.toLowerCase() === email);
-      if (!targetUser) {
-        return res.status(404).json({ error: "No user found with this email." });
-      }
-      const { error: updateErr } = await admin.auth.admin.updateUserById(targetUser.id, {
-        email_confirm: true
-      });
-      if (updateErr) throw updateErr;
-      return res.json({ success: true, message: "User account confirmed successfully." });
-    } catch (err) {
-      return res.status(500).json({ error: err?.message || "Failed to confirm user account." });
-    }
-  });
-  app2.post(["/api/auth/direct-reset", "/auth/direct-reset"], async (req, res) => {
-    try {
-      const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
-      const newPassword = typeof req.body?.newPassword === "string" ? req.body.newPassword : "";
-      if (!email || !email.includes("@")) {
-        return res.status(400).json({ error: "A valid email address is required." });
-      }
-      if (!newPassword || newPassword.length < 8) {
-        return res.status(400).json({ error: "Password must be at least 8 characters." });
-      }
-      const admin = getSupabaseAdminClient();
-      if (!admin) {
-        return res.status(503).json({ error: "Supabase admin client is not configured." });
-      }
-      const { data, error: listErr } = await admin.auth.admin.listUsers();
-      if (listErr) throw listErr;
-      const targetUser = data.users.find((u) => u.email?.toLowerCase() === email);
-      if (!targetUser) {
-        return res.status(404).json({ error: "No account found with this email address. Please sign up first." });
-      }
-      const { error: updateErr } = await admin.auth.admin.updateUserById(targetUser.id, {
-        password: newPassword,
-        email_confirm: true
-      });
-      if (updateErr) throw updateErr;
-      return res.json({ success: true, message: "Password updated successfully. You can now sign in." });
-    } catch (err) {
-      return res.status(500).json({ error: err?.message || "Failed to update password." });
-    }
   });
   registerStorageProxy(app2);
   registerOAuthRoutes(app2);

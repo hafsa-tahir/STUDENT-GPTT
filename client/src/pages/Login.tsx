@@ -12,7 +12,7 @@ import { useLocation, useSearch } from "wouter";
 type View = "signIn" | "signUp" | "forgot" | "reset";
 
 export default function Login() {
-  const { user, loading, authError, signIn, signUp, directPasswordReset, updatePassword } = useSupabaseAuth();
+  const { user, loading, authError, signIn, signUp, requestPasswordReset, updatePassword } = useSupabaseAuth();
   const [, setLocation] = useLocation(); const search = useSearch();
   const [view, setView] = useState<View>(search.includes("reset=1") ? "reset" : "signIn");
   const [email, setEmail] = useState(""); const [password, setPassword] = useState(""); const [confirmPassword, setConfirmPassword] = useState(""); const [fullName, setFullName] = useState("");
@@ -42,14 +42,9 @@ export default function Login() {
           setLocation("/"); 
         }
       }
-      else if (view === "forgot") { 
-        if (!password || password.length < 8) {
-          throw new Error("Please enter a new password of at least 8 characters.");
-        }
-        await directPasswordReset(cleanEmail, password); 
-        setNotice("Password updated successfully! You can now sign in with your new password."); 
-        setPassword("");
-        setView("signIn");
+      else if (view === "forgot") {
+        await requestPasswordReset(cleanEmail);
+        setNotice("If an account exists for this email, a password reset link has been sent. Check your inbox.");
       }
       else { 
         await updatePassword(password); 
@@ -59,7 +54,7 @@ export default function Login() {
     } catch (caught) { 
       const message = caught instanceof Error ? caught.message : "We could not complete that request."; 
       if (message.toLowerCase().includes("invalid login credentials")) {
-        setError("Invalid email or password. Please verify your email address. If you forgot your password, click 'Forgot password?' below to reset it instantly.");
+        setError("Invalid email or password. Please verify your email address. If you forgot your password, click 'Forgot password?' below to reset it.");
       } else if (isEmailConfirmationError(message)) { 
         setNeedsConfirmation(true); 
         setError("Please confirm your email before signing in. A confirmation link was sent when you created the account."); 
@@ -87,9 +82,9 @@ export default function Login() {
   }
 
   const heading = view === "signIn" ? "Welcome back" : view === "signUp" ? "Create your study space" : view === "forgot" ? "Reset your password" : "Choose a new password";
-  const subheading = view === "signIn" ? "Continue with the workspace you’ve made yours." : view === "signUp" ? "Start with a secure, private workspace for your learning." : view === "forgot" ? "Enter your email and choose a new password to get back in immediately." : "We’ll help you get back into your account safely.";
+  const subheading = view === "signIn" ? "Continue with the workspace you’ve made yours." : view === "signUp" ? "Start with a secure, private workspace for your learning." : view === "forgot" ? "Enter your email and we'll send you a secure reset link." : "We’ll help you get back into your account safely.";
 
-  const primaryLabel = view === "signIn" ? "Sign in" : view === "signUp" ? "Sign up" : view === "forgot" ? "Reset password instantly" : "Update password";
+  const primaryLabel = view === "signIn" ? "Sign in" : view === "signUp" ? "Sign up" : view === "forgot" ? "Send reset link" : "Update password";
   const formTitle = view === "signUp" ? "Sign up" : view === "signIn" ? "Welcome back" : heading;
   return <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#F8E7E7] px-4 py-8 text-[#724060] sm:p-8" style={{ backgroundImage: "radial-gradient(circle at 16% 8%, #FDF3F3 0, transparent 30%), radial-gradient(circle at 90% 88%, #A070A1 0, transparent 32%), linear-gradient(135deg, #FDF3F3 0%, #F8E7E7 46%, #A070A1 100%)" }}>
     <div className="pointer-events-none absolute -left-8 bottom-12 h-28 w-28 rotate-[-24deg] rounded-[42%] border-[18px] border-[#A070A1] shadow-[0_22px_36px_rgba(114,64,96,.24)]" /><div className="pointer-events-none absolute right-[9%] top-[9%] h-28 w-28 rotate-[20deg] rounded-[28px] bg-[#A070A1] shadow-[inset_-15px_-18px_24px_rgba(114,64,96,.28),20px_24px_30px_rgba(114,64,96,.24)]" /><div className="pointer-events-none absolute right-[2%] bottom-[14%] h-20 w-20 rounded-full bg-[#724060] shadow-[0_18px_35px_rgba(114,64,96,.32)]" /><div className="pointer-events-none absolute right-[13%] bottom-[4%] h-12 w-48 rotate-[32deg] rounded-full bg-[#A070A1] blur-[2px]" />
@@ -99,7 +94,7 @@ export default function Login() {
         <form onSubmit={handleSubmit} className="mt-8 space-y-3.5">
           {view === "signUp" && <div><Label className="sr-only" htmlFor="fullName">Full name</Label><Input id="fullName" value={fullName} onChange={e => setFullName(e.target.value)} autoComplete="name" placeholder="Full name" className="h-12 rounded-full border-0 bg-[#FDF3F3] px-5 text-[#724060] shadow-[inset_0_1px_1px_#FDF3F3,0_5px_12px_rgba(114,64,96,.12)] placeholder:text-[#A070A1] focus-visible:ring-2 focus-visible:ring-[#724060]" required /></div>}
           {view !== "reset" && <div><Label className="sr-only" htmlFor="email">Email address</Label><Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" placeholder="Email address (e.g. name@gmail.com)" className="h-12 rounded-full border-0 bg-[#FDF3F3] px-5 text-[#724060] shadow-[inset_0_1px_1px_#FDF3F3,0_5px_12px_rgba(114,64,96,.12)] placeholder:text-[#A070A1] focus-visible:ring-2 focus-visible:ring-[#724060]" required /></div>}
-          <div><Label className="sr-only" htmlFor="password">{view === "reset" ? "New password" : view === "forgot" ? "New password" : "Password"}</Label><Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} autoComplete={view === "reset" || view === "forgot" ? "new-password" : view === "signUp" ? "new-password" : "current-password"} placeholder={view === "reset" || view === "forgot" ? "New password (min. 8 characters)" : "Password"} className="h-12 rounded-full border-0 bg-[#FDF3F3] px-5 text-[#724060] shadow-[inset_0_1px_1px_#FDF3F3,0_5px_12px_rgba(114,64,96,.12)] placeholder:text-[#A070A1] focus-visible:ring-2 focus-visible:ring-[#724060]" minLength={8} required /></div>
+          {view !== "forgot" && <div><Label className="sr-only" htmlFor="password">{view === "reset" ? "New password" : "Password"}</Label><Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} autoComplete={view === "reset" ? "new-password" : view === "signUp" ? "new-password" : "current-password"} placeholder={view === "reset" ? "New password (min. 8 characters)" : "Password"} className="h-12 rounded-full border-0 bg-[#FDF3F3] px-5 text-[#724060] shadow-[inset_0_1px_1px_#FDF3F3,0_5px_12px_rgba(114,64,96,.12)] placeholder:text-[#A070A1] focus-visible:ring-2 focus-visible:ring-[#724060]" minLength={8} required /></div>}
           {view === "signUp" && <div><Label className="sr-only" htmlFor="confirmPassword">Confirm password</Label><Input id="confirmPassword" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} autoComplete="new-password" placeholder="Confirm password" className="h-12 rounded-full border-0 bg-[#FDF3F3] px-5 text-[#724060] shadow-[inset_0_1px_1px_#FDF3F3,0_5px_12px_rgba(114,64,96,.12)] placeholder:text-[#A070A1] focus-visible:ring-2 focus-visible:ring-[#724060]" minLength={8} required /></div>}
           {view === "signIn" && <button type="button" onClick={() => { setView("forgot"); setError(null); setNotice(null); setPassword(""); }} className="ml-2 text-left text-xs font-semibold text-[#724060] hover:underline">Forgot password?</button>}
           <Button type="submit" disabled={submitting} className="group h-12 w-full rounded-full bg-[#724060] text-sm font-semibold text-[#FDF3F3] shadow-[0_12px_22px_rgba(114,64,96,.24)] hover:bg-[#A070A1]">{submitting ? "Please wait…" : <span className="flex items-center justify-center gap-2">{primaryLabel}<ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" /></span>}</Button>
