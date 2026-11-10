@@ -101875,30 +101875,23 @@ var aiRequests = mysqlTable("aiRequests", {
 })();
 
 // server/_core/env.ts
-var decodeSecret = (b64) => {
-  try {
-    return Buffer.from(b64, "base64").toString("utf-8");
-  } catch {
-    return "";
-  }
-};
 var ENV = {
   appId: process.env.VITE_APP_ID ?? "",
   cookieSecret: process.env.JWT_SECRET ?? "",
-  databaseUrl: process.env.DATABASE_URL ?? "REDACTED",
+  databaseUrl: process.env.DATABASE_URL ?? "",
   oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",
   ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
   isProduction: process.env.NODE_ENV === "production",
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
   openrouterApiUrl: process.env.OPENROUTER_API_URL ?? "https://openrouter.ai/api/v1",
-  openrouterApiKey: process.env.OPENROUTER_API_KEY ?? decodeSecret("REDACTED"),
+  openrouterApiKey: process.env.OPENROUTER_API_KEY ?? "",
   openrouterModel: process.env.OPENROUTER_MODEL ?? "openrouter/free",
   openrouterFallbackModels: (process.env.OPENROUTER_FALLBACK_MODELS ?? "nvidia/nemotron-3.5-lightning:free,liquid/lfm-2.5-2.6b:free,google/gemma-4-26b-a4b-it:free").split(",").map((model) => model.trim()).filter(Boolean),
-  groqApiKeys: (process.env.GROQ_API_KEYS ?? process.env.GROQ_API_KEY ?? decodeSecret("REDACTED")).split(",").map((k) => k.trim()).filter(Boolean),
+  groqApiKeys: (process.env.GROQ_API_KEYS ?? process.env.GROQ_API_KEY ?? "").split(",").map((k) => k.trim()).filter(Boolean),
   geminiApiKeys: (process.env.GEMINI_API_KEYS ?? process.env.GEMINI_API_KEY ?? "").split(",").map((k) => k.trim()).filter((k) => k.length > 10 && (k.startsWith("AIzaSy") || k.startsWith("AQ."))),
-  serpApiKey: process.env.SERPAPI_KEY ?? decodeSecret("REDACTED"),
-  youtubeApiKey: process.env.YOUTUBE_DATA_API_KEY ?? decodeSecret("REDACTED")
+  serpApiKey: process.env.SERPAPI_KEY ?? "",
+  youtubeApiKey: process.env.YOUTUBE_DATA_API_KEY ?? ""
 };
 
 // server/db.ts
@@ -101909,7 +101902,7 @@ try {
 } catch {
 }
 var _db = null;
-var DEFAULT_DATABASE_URL = "REDACTED";
+var DEFAULT_DATABASE_URL = "";
 async function getDb() {
   if (!_db) {
     try {
@@ -115245,8 +115238,8 @@ if (shouldShowDeprecationWarning()) console.warn("\u26A0\uFE0F  Node.js 20 and b
 
 // server/storage.ts
 var SUPABASE_STORAGE_BUCKET = "studentgpt-storage";
-var DEFAULT_SUPABASE_URL = "REDACTED";
-var DEFAULT_SUPABASE_SERVICE_ROLE_KEY = "REDACTED";
+var DEFAULT_SUPABASE_URL = "";
+var DEFAULT_SUPABASE_SERVICE_ROLE_KEY = "";
 var supabaseStorageClient = null;
 function getStorageSupabase() {
   if (!supabaseStorageClient) {
@@ -131047,8 +131040,8 @@ if (typeof globalThis.WebSocket === "undefined") {
   globalThis.WebSocket = NodeWebSocketStub;
 }
 var supabaseAdmin = null;
-var DEFAULT_SUPABASE_URL2 = "REDACTED";
-var DEFAULT_SUPABASE_SERVICE_ROLE_KEY2 = "REDACTED";
+var DEFAULT_SUPABASE_URL2 = "";
+var DEFAULT_SUPABASE_SERVICE_ROLE_KEY2 = "";
 function getSupabaseAdmin() {
   const url3 = process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL2;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || DEFAULT_SUPABASE_SERVICE_ROLE_KEY2;
@@ -131176,8 +131169,8 @@ function resolveApiUrl2(req) {
 }
 
 // server/_core/supabaseAdmin.ts
-var DEFAULT_SUPABASE_URL3 = "REDACTED";
-var DEFAULT_SUPABASE_SERVICE_ROLE_KEY3 = "REDACTED";
+var DEFAULT_SUPABASE_URL3 = "";
+var DEFAULT_SUPABASE_SERVICE_ROLE_KEY3 = "";
 var adminClient = null;
 function getSupabaseAdminClient() {
   if (!adminClient) {
@@ -131302,8 +131295,8 @@ function createExpressApp() {
       else res.end();
     }
   });
-  const DEFAULT_SUPABASE_URL4 = "REDACTED";
-  const DEFAULT_SUPABASE_ANON_KEY = "REDACTED";
+  const DEFAULT_SUPABASE_URL4 = "";
+  const DEFAULT_SUPABASE_ANON_KEY = "";
   app2.get(["/", "/health", "/api", "/api/health"], (_req, res) => {
     res.json({ status: "ok", service: "StudentGPT API", timestamp: (/* @__PURE__ */ new Date()).toISOString() });
   });

@@ -1,7 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-const DEFAULT_SUPABASE_URL = "REDACTED";
-const DEFAULT_SUPABASE_SERVICE_ROLE_KEY = "REDACTED";
+const DEFAULT_SUPABASE_URL = "";
+const DEFAULT_SUPABASE_SERVICE_ROLE_KEY = "";
 
 let adminClient: SupabaseClient | null = null;
 

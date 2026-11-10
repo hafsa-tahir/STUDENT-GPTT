@@ -30,9 +30,9 @@ export type TrpcContext = {
 
 let supabaseAdmin: ReturnType<typeof createClient> | null = null;
 
-const DEFAULT_SUPABASE_URL = "REDACTED";
-const DEFAULT_SUPABASE_ANON_KEY = "REDACTED";
-const DEFAULT_SUPABASE_SERVICE_ROLE_KEY = "REDACTED";
+const DEFAULT_SUPABASE_URL = "";
+const DEFAULT_SUPABASE_ANON_KEY = "";
+const DEFAULT_SUPABASE_SERVICE_ROLE_KEY = "";
 
 function getSupabaseAdmin() {
   const url = process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL;

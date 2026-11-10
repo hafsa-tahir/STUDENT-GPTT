@@ -3,8 +3,8 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 let clientPromise: Promise<SupabaseClient> | null = null;
 let accessToken: string | null = null;
 
-const DEFAULT_SUPABASE_URL = "REDACTED";
-const DEFAULT_SUPABASE_ANON_KEY = "REDACTED";
+const DEFAULT_SUPABASE_URL = "";
+const DEFAULT_SUPABASE_ANON_KEY = "";
 
 export function setSupabaseAccessToken(token: string | null) {
   accessToken = token;

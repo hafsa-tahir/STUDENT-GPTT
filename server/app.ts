@@ -118,8 +118,8 @@ export function createExpressApp() {
     } catch (error) { if (!res.headersSent) res.status(500).json({ error: error instanceof Error ? error.message : "Stream unavailable." }); else res.end(); }
   });
 
-  const DEFAULT_SUPABASE_URL = "REDACTED";
-  const DEFAULT_SUPABASE_ANON_KEY = "REDACTED";
+  const DEFAULT_SUPABASE_URL = "";
+  const DEFAULT_SUPABASE_ANON_KEY = "";
 
   app.get(["/", "/health", "/api", "/api/health"], (_req, res) => {
     res.json({ status: "ok", service: "StudentGPT API", timestamp: new Date().toISOString() });

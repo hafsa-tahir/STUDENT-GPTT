@@ -5,8 +5,8 @@ import { createClient } from "@supabase/supabase-js";
 import { ENV } from "./_core/env";
 
 export const SUPABASE_STORAGE_BUCKET = "studentgpt-storage";
-const DEFAULT_SUPABASE_URL = "REDACTED";
-const DEFAULT_SUPABASE_SERVICE_ROLE_KEY = "REDACTED";
+const DEFAULT_SUPABASE_URL = "";
+const DEFAULT_SUPABASE_SERVICE_ROLE_KEY = "";
 
 let supabaseStorageClient: ReturnType<typeof createClient> | null = null;
 export function getStorageSupabase() {

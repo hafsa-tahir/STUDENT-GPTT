@@ -14,7 +14,7 @@ try {
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
-const DEFAULT_DATABASE_URL = "REDACTED";
+const DEFAULT_DATABASE_URL = "";
 
 export async function getDb() {
   if (!_db) {
