@@ -1,0 +1,11 @@
+node_modules
+android
+.tools
+.manus-logs
+uploads
+.github
+scripts
+*.bundle
+.env
+.env.local
+
