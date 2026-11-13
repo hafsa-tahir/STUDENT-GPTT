@@ -8,23 +8,6 @@ StudentGPT is an authenticated, full-stack academic workspace and AI study platf
 
 StudentGPT is engineered as an end-to-end TypeScript application combining a React SPA frontend with an Express and tRPC backend, backed by MySQL/TiDB via Drizzle ORM and Supabase Cloud Storage and Authentication.
 
-```
-+-----------------------------------------------------------------------+
-|                           Client Layer                                |
-|  React 19 · TypeScript · Vite · Tailwind CSS · Radix UI · KaTeX      |
-+-----------------------------------------------------------------------+
-                                  │
-                       tRPC / Type-Safe RPC & REST
-                                  │
-+-----------------------------------------------------------------------+
-|                           Server Layer                                |
-|    Node.js · Express · tRPC v11 · Serverless (Vercel & Netlify)       |
-|    Multi-Provider AI Fallback (Groq, Gemini, OpenRouter)              |
-+-----------------------------------------------------------------------+
-                  │                                   │
-      MySQL / TiDB (Drizzle ORM)             Supabase Storage & Auth
-   (Normalized Workspace Data)            (Private Encrypted Cloud CDN)
-```
 
 ---
 
