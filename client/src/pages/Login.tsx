@@ -14,10 +14,12 @@ type View = "signIn" | "signUp" | "forgot" | "reset";
 export default function Login() {
   const { user, loading, authError, signIn, signUp, requestPasswordReset, updatePassword } = useSupabaseAuth();
   const [, setLocation] = useLocation(); const search = useSearch();
-  const [view, setView] = useState<View>(search.includes("reset=1") ? "reset" : "signIn");
+  const isRecoveryLink = typeof window !== "undefined" && (search.includes("reset=1") || window.location.hash.includes("type=recovery") || sessionStorage.getItem("sg-recovery") === "1");
+  if (isRecoveryLink && typeof window !== "undefined") sessionStorage.setItem("sg-recovery", "1");
+  const [view, setView] = useState<View>(isRecoveryLink ? "reset" : "signIn");
   const [email, setEmail] = useState(""); const [password, setPassword] = useState(""); const [confirmPassword, setConfirmPassword] = useState(""); const [fullName, setFullName] = useState("");
   const [error, setError] = useState<string | null>(null); const [notice, setNotice] = useState<string | null>(null); const [submitting, setSubmitting] = useState(false); const [needsConfirmation, setNeedsConfirmation] = useState(false);
-  useEffect(() => { if (user) setLocation("/"); }, [setLocation, user]);
+  useEffect(() => { if (user && view !== "reset") setLocation("/"); }, [setLocation, user, view]);
   if (loading) return <AppLoading />;
 
   async function handleSubmit(event: FormEvent) {
@@ -47,7 +49,7 @@ export default function Login() {
         setNotice("If an account exists for this email, a password reset link has been sent. Check your inbox.");
       }
       else { 
-        await updatePassword(password); 
+        await updatePassword(password); sessionStorage.removeItem("sg-recovery"); 
         setNotice("Your password is updated. You can continue securely."); 
         setView("signIn"); 
       }
