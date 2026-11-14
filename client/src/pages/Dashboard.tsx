@@ -6,8 +6,6 @@ import { trpc } from "@/lib/trpc";
 import { motion } from "framer-motion";
 import {
   ArrowRight,
-  BookOpen,
-  CalendarDays,
   Check,
   Compass,
   FileText,
@@ -15,7 +13,6 @@ import {
   Loader2,
   MessageCircle,
   NotebookPen,
-  Play,
   Plus,
   Sparkles,
   UploadCloud,
@@ -24,26 +21,9 @@ import {
 import { ChangeEvent, DragEvent, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 
-const SAMPLE_CARDS = [
-  {
-    q: "What is Gauss's Law in integral form?",
-    a: "∮ E · dA = Q_enc / ε₀ — electric flux through a closed surface.",
-  },
-  {
-    q: "How does spaced repetition boost retention?",
-    a: "Rating cards Easy / Good / Again schedules reviews right before forgetting.",
-  },
-  {
-    q: "Scoped AI Assessment Quizzes",
-    a: "Generates Easy, Medium, or Hard MCQs strictly from your uploaded PDF.",
-  },
-];
-
 const DEMO_TASKS = [
   { id: -1, title: "Upload & synthesize lecture PDF", done: true },
-  { id: -2, title: "Review 3D flashcards & take quiz", done: true },
-  { id: -3, title: "Generate publication research brief", done: false },
-  { id: -4, title: "Ask AI Socratic Tutor on weak topic", done: false },
+  { id: -2, title: "Review 3D flashcards & take quiz", done: false },
 ];
 
 export default function Dashboard() {
@@ -53,15 +33,10 @@ export default function Dashboard() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [hoveredCard, setHoveredCard] = useState<number | null>(null);
-  const [cardIndex, setCardIndex] = useState(0);
-  const [cardFlipped, setCardFlipped] = useState(false);
   const [demoTaskState, setDemoTaskState] = useState<Record<number, boolean>>({
     [-1]: true,
-    [-2]: true,
-    [-3]: false,
-    [-4]: false,
+    [-2]: false,
   });
-  const [selectedQuizDemo, setSelectedQuizDemo] = useState<"A" | "B" | "C">("B");
   const [isDraggingPdf, setIsDraggingPdf] = useState(false);
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [uploadNotice, setUploadNotice] = useState<string | null>(null);
@@ -71,10 +46,6 @@ export default function Dashboard() {
     retry: 1,
     refetchInterval: 30000,
     refetchOnWindowFocus: false,
-  });
-
-  const flashcardsQuery = trpc.flashcards.list.useQuery(undefined, {
-    enabled: Boolean(user),
   });
 
   const notesQuery = trpc.notes.list.useQuery(undefined, {
@@ -175,20 +146,7 @@ export default function Dashboard() {
     ? "/research"
     : "/documents";
 
-  // Live Flashcard deck for Bencho 3D Card Stack
-  const realCards = (flashcardsQuery.data ?? []).slice(0, 6).map(c => ({
-    q: c.front,
-    a: c.back,
-  }));
-  const deck = realCards.length > 0 ? realCards : SAMPLE_CARDS;
-  const activeCard = deck[cardIndex % deck.length];
-
-  function cycleFlashcard() {
-    setCardFlipped(false);
-    setCardIndex(prev => (prev + 1) % deck.length);
-  }
-
-  // Direct PDF Upload handler for the 3D Uiverse Dropzone card
+  // Direct PDF Upload handler for the 3D Dropzone card
   async function handlePdfUpload(file: File | undefined) {
     if (!file) return;
     if (!file.name.toLowerCase().endsWith(".pdf")) {
@@ -285,7 +243,7 @@ export default function Dashboard() {
                 Welcome back, {name}
               </h1>
               <p className="mt-0.5 text-[13.5px] text-[#724060]/80">
-                Every tool below shows a live visual preview — click any card to jump straight in.
+                Pick any study studio below or drop a lecture PDF to synthesize notes.
               </p>
             </div>
 
@@ -309,9 +267,9 @@ export default function Dashboard() {
             </div>
           </section>
 
-          {/* TOP HERO BENTO ROW: MicroKit Progress Ring Card (8 cols) + Uiverse 3D Folder Dropzone (4 cols) */}
+          {/* TOP HERO BENTO ROW: MicroKit Progress Ring Card (8 cols) + 3D PDF Folder Dropzone (4 cols) */}
           <section className="grid grid-cols-12 gap-4">
-            {/* Hero Left: Glassmorphic Plum Resume Card + MicroKit Animated Progress Ring + 3D Glass Book Visual */}
+            {/* Hero Left: Glassmorphic Plum Resume Card + MicroKit Animated Progress Ring */}
             <div className="col-span-12 lg:col-span-8 relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#522943] via-[#724060] to-[#8C5378] p-6 sm:p-7 text-white shadow-[0_20px_45px_rgba(114,64,96,0.24)] flex flex-col sm:flex-row items-center justify-between gap-6">
               <div className="pointer-events-none absolute -right-12 -top-12 h-56 w-56 rounded-full bg-[#F8E7E7]/10 blur-2xl" />
               <div className="pointer-events-none absolute right-24 -bottom-16 h-44 w-44 rounded-full bg-[#A070A1]/25 blur-xl" />
@@ -392,39 +350,9 @@ export default function Dashboard() {
                   </div>
                 </div>
               </div>
-
-              {/* Right Decorative 3D Glass Open Book Visual Illustration */}
-              <div className="hidden xl:flex relative h-32 w-40 shrink-0 items-center justify-center select-none pointer-events-none">
-                <div className="relative flex items-center justify-center -rotate-6">
-                  {/* Left book page */}
-                  <div className="h-24 w-16 rounded-l-xl rounded-r-xs border border-white/30 bg-gradient-to-br from-white/25 to-white/10 p-2.5 backdrop-blur-md shadow-lg -skew-y-6">
-                    <div className="h-1.5 w-8 rounded-full bg-white/60 mb-2" />
-                    <div className="space-y-1.5">
-                      <div className="h-1 w-full rounded-full bg-white/35" />
-                      <div className="h-1 w-5/6 rounded-full bg-white/35" />
-                      <div className="h-1 w-4/6 rounded-full bg-white/35" />
-                    </div>
-                    <div className="mt-3 rounded bg-white/20 px-1.5 py-1 text-[8px] font-serif text-white/90">
-                      {"∫ f(x)dx"}
-                    </div>
-                  </div>
-                  {/* Right book page */}
-                  <div className="h-24 w-16 rounded-r-xl rounded-l-xs border border-white/30 bg-gradient-to-bl from-white/30 to-white/12 p-2.5 backdrop-blur-md shadow-lg skew-y-6">
-                    <div className="h-1.5 w-9 rounded-full bg-[#F8E7E7]/80 mb-2" />
-                    <div className="space-y-1.5">
-                      <div className="h-1 w-full rounded-full bg-white/40" />
-                      <div className="h-1 w-3/4 rounded-full bg-white/40" />
-                    </div>
-                    <div className="mt-3 flex items-center gap-1 rounded bg-[#F8E7E7]/25 px-1.5 py-1">
-                      <Sparkles className="h-2.5 w-2.5 text-[#F8E7E7]" />
-                      <span className="text-[7.5px] font-bold text-white">AI Notes</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
 
-            {/* Hero Right: Uiverse 3D Animated Folder PDF Dropzone (Documents Vault Visual) */}
+            {/* Hero Right: 3D Folder Illustration Image PDF Dropzone */}
             <div
               onDragOver={e => {
                 e.preventDefault();
@@ -433,7 +361,7 @@ export default function Dashboard() {
               onDragLeave={() => setIsDraggingPdf(false)}
               onDrop={onDropPdf}
               onClick={() => fileInputRef.current?.click()}
-              className={`group col-span-12 lg:col-span-4 relative cursor-pointer overflow-hidden rounded-[28px] border-2 border-dashed p-6 transition-all duration-300 flex flex-col items-center justify-center text-center shadow-[0_12px_30px_rgba(114,64,96,0.07)] ${
+              className={`group col-span-12 lg:col-span-4 relative cursor-pointer overflow-hidden rounded-[28px] border-2 border-dashed p-4 transition-all duration-300 flex flex-col items-center justify-center text-center shadow-[0_12px_30px_rgba(114,64,96,0.07)] ${
                 isDraggingPdf
                   ? "border-[#724060] bg-[#F8E7E7] scale-[1.01]"
                   : "border-[#724060]/25 bg-white hover:border-[#724060] hover:bg-[#FDF3F3]/60"
@@ -447,40 +375,15 @@ export default function Dashboard() {
                 className="hidden"
               />
 
-              {/* Custom 3D CSS Folder Illustration with 2 Pop-Out PDF Pages */}
-              <div className="relative mb-3 flex h-24 w-32 items-center justify-center">
-                <div className="relative h-16 w-26 rounded-2xl bg-gradient-to-br from-[#522943] to-[#724060] shadow-md">
-                  <div className="absolute -top-2.5 left-3 h-4 w-11 rounded-t-lg bg-[#522943]" />
-                  {/* Left floating PDF sheet */}
-                  <div className="absolute -top-5 left-3 h-15 w-12 -rotate-8 rounded-lg border border-[#724060]/20 bg-[#FDF3F3] p-1.5 shadow-sm transition-transform duration-300 group-hover:-translate-y-3 group-hover:-rotate-14">
-                    <span className="block rounded bg-[#724060] px-1 py-0.5 text-[7px] font-bold text-white">
-                      PDF
-                    </span>
-                    <div className="mt-1.5 space-y-1">
-                      <div className="h-0.5 w-full rounded bg-[#A070A1]/60" />
-                      <div className="h-0.5 w-4/5 rounded bg-[#A070A1]/60" />
-                      <div className="h-0.5 w-3/5 rounded bg-[#A070A1]/60" />
-                    </div>
-                  </div>
-                  {/* Right floating PDF sheet */}
-                  <div className="absolute -top-6 right-3 h-15 w-12 rotate-8 rounded-lg border border-[#724060]/20 bg-white p-1.5 shadow-md transition-transform duration-300 group-hover:-translate-y-4 group-hover:rotate-14">
-                    <span className="block rounded bg-[#A070A1] px-1 py-0.5 text-[7px] font-bold text-white">
-                      PDF
-                    </span>
-                    <div className="mt-1.5 space-y-1">
-                      <div className="h-0.5 w-full rounded bg-[#724060]/45" />
-                      <div className="h-0.5 w-3/4 rounded bg-[#724060]/45" />
-                      <div className="h-0.5 w-4/5 rounded bg-[#724060]/45" />
-                    </div>
-                  </div>
-                  {/* Front Folder Flap */}
-                  <div className="absolute inset-x-0 bottom-0 h-11 origin-bottom rounded-2xl bg-gradient-to-br from-[#8C5378] to-[#724060] shadow-inner transition-transform duration-300 group-hover:scale-y-90 flex items-center justify-center">
-                    <div className="h-3.5 w-3.5 rounded-full bg-[#F8E7E7]/85 shadow-xs" />
-                  </div>
-                </div>
+              <div className="overflow-hidden rounded-2xl bg-[#FDF3F3] mb-2.5">
+                <img
+                  src="/illustrations/pdf-folder-3d.jpg"
+                  alt="Drop Lecture PDF 3D Folder"
+                  className="h-28 w-48 object-cover transition-transform duration-500 group-hover:scale-105"
+                />
               </div>
 
-              <h3 className="text-[17px] font-bold text-[#2D1826] flex items-center gap-1.5">
+              <h3 className="text-[16px] font-bold text-[#2D1826] flex items-center gap-1.5">
                 {uploadingPdf ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin text-[#724060]" />
@@ -493,15 +396,15 @@ export default function Dashboard() {
                   </>
                 )}
               </h3>
-              <p className="mt-1 text-[12px] text-[#724060]/75">
-                {uploadNotice || "Drag & drop syllabus or slides → auto-indexes into Notes & Quiz"}
+              <p className="mt-0.5 text-[11.5px] text-[#724060]/75">
+                {uploadNotice || "Click or drag a course PDF to generate notes & quizzes"}
               </p>
             </div>
           </section>
 
-          {/* FEATURE SHOWCASE ROW 1: 4 Visual Feature Representations */}
+          {/* FEATURE SHOWCASE ROW 1: 4 Real 3D Visual Feature Cards */}
           <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {/* FEATURE 1: AI Note Maker & Revision Bot (Visual PDF -> Formula Notes + Curled Sticky Note Diagram) */}
+            {/* FEATURE 1: AI Note Maker (3D Diagram Image: Lecture PDF -> Formula Study Note + Sticky Note) */}
             <div
               onMouseEnter={() => setHoveredCard(0)}
               onMouseLeave={() => setHoveredCard(null)}
@@ -529,71 +432,32 @@ export default function Dashboard() {
                   </span>
                 </div>
 
-                {/* Visual Diagram: Mini Lecture PDF -> Arrow -> Rendered LaTeX Notes + 3D Sticky Note */}
-                <div className="relative mt-4 rounded-2xl border border-[#724060]/12 bg-[#FDF3F3]/90 p-3">
-                  <div className="flex items-center gap-2">
-                    {/* Mini Source PDF Sheet */}
-                    <div className="w-[74px] shrink-0 rounded-xl border border-[#724060]/15 bg-white p-2 shadow-2xs">
-                      <span className="inline-block rounded bg-[#724060] px-1.5 py-0.5 text-[8px] font-bold text-white">
-                        Lecture PDF
-                      </span>
-                      <div className="mt-2 space-y-1.5">
-                        <div className="h-1 w-full rounded-full bg-[#724060]/30" />
-                        <div className="h-1 w-4/5 rounded-full bg-[#724060]/25" />
-                        <div className="h-1 w-full rounded-full bg-[#724060]/25" />
-                        <div className="h-1 w-3/5 rounded-full bg-[#724060]/20" />
-                      </div>
-                    </div>
-
-                    {/* Animated Transformation Arrow */}
-                    <div className="flex flex-col items-center text-[#724060]">
-                      <Sparkles className="h-3 w-3 text-[#A070A1]" />
-                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-                    </div>
-
-                    {/* Mini Synthesized Math & Notes Sheet */}
-                    <div className="min-w-0 flex-1 rounded-xl border border-[#724060]/15 bg-white p-2.5 shadow-xs">
-                      <p className="text-[8.5px] font-bold uppercase tracking-wider text-[#A070A1]">
-                        Rendered LaTeX Form
-                      </p>
-                      <div className="mt-1 font-serif text-[12px] font-semibold text-[#2D1826]">
-                        {"∮ E · dA = Q / ε₀"}
-                      </div>
-                      <div className="mt-1 font-serif text-[10.5px] text-[#724060]">
-                        {"f(x) = ∫ a²ψ(x) dx"}
-                      </div>
-                      <div className="mt-1.5 space-y-1">
-                        <div className="h-1 w-4/5 rounded-full bg-[#A070A1]/40" />
-                        <div className="h-1 w-3/5 rounded-full bg-[#A070A1]/30" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Realistic 3D Curled Sticky Note */}
-                  <div className="absolute -bottom-2.5 right-2.5 rotate-[-5deg] rounded-xl bg-gradient-to-br from-[#A070A1] to-[#724060] px-2.5 py-1.5 text-[10px] font-bold text-white shadow-[0_6px_14px_rgba(114,64,96,0.28)] transition-transform duration-300 group-hover:rotate-0 group-hover:scale-105">
-                    <span>Sticky note</span>
-                    <span className="block text-[8px] font-normal text-[#F8E7E7]">
-                      Exam trap inside
-                    </span>
-                  </div>
+                {/* 3D Visual Illustration Image */}
+                <div className="mt-3.5 overflow-hidden rounded-2xl border border-[#724060]/12 bg-[#FDF3F3]">
+                  <img
+                    src="/illustrations/ai-notes-diagram.jpg"
+                    alt="AI Note Maker: Lecture PDF to Formula Study Notes"
+                    className="h-40 w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
                 </div>
               </div>
 
-              <div className="mt-5 flex items-center justify-between text-[12.5px] font-bold text-[#724060]">
+              <div className="mt-4 flex items-center justify-between text-[12.5px] font-bold text-[#724060]">
                 <span>
                   {notesQuery.data?.length
                     ? `${notesQuery.data.length} saved notes · Open Studio`
-                    : "Open Notes & Revision Bot"}
+                    : "Synthesize PDF or Topic"}
                 </span>
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </div>
             </div>
 
-            {/* FEATURE 2: 3D Flashcards & Quiz Studio (Visual 3D Layered Deck + Interactive A/B/C Quiz Tiles) */}
+            {/* FEATURE 2: 3D Flashcards & Quiz Studio (3D Fanned Card Deck + Quiz Image) */}
             <div
               onMouseEnter={() => setHoveredCard(1)}
               onMouseLeave={() => setHoveredCard(null)}
-              className="group relative rounded-[26px] border border-[#724060]/12 bg-white p-5 shadow-[0_12px_28px_rgba(114,64,96,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_38px_rgba(114,64,96,0.13)] flex flex-col justify-between"
+              onClick={() => setLocation("/practice")}
+              className="group relative cursor-pointer rounded-[26px] border border-[#724060]/12 bg-white p-5 shadow-[0_12px_28px_rgba(114,64,96,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_38px_rgba(114,64,96,0.13)] flex flex-col justify-between"
             >
               {hoveredCard === 1 && (
                 <motion.div
@@ -605,90 +469,49 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-[17px] font-bold text-[#2D1826]">
-                      Practice & 3D Cards
+                      3D Flashcard Stack
                     </h3>
                     <p className="text-[11.5px] text-[#724060]/70">
-                      Active Recall Deck + A/B/C Quizzes
+                      Active Recall Deck & A/B/C Quizzes
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setLocation("/practice")}
-                    className="rounded-full bg-[#2D1826] px-2.5 py-1 text-[10.5px] font-bold text-white transition hover:bg-[#724060] cursor-pointer"
-                  >
-                    Quiz + Deck →
-                  </button>
+                  <span className="rounded-full bg-[#2D1826] px-2.5 py-1 text-[10.5px] font-bold text-white">
+                    Practice →
+                  </span>
                 </div>
 
-                {/* Visual 3D Perspective Layered Deck + Interactive A/B/C Quiz Option Tiles */}
-                <div
-                  onClick={() => setCardFlipped(prev => !prev)}
-                  className="relative mt-4 h-31 cursor-pointer select-none pt-1"
-                  title="Click card to flip answer"
-                >
-                  {/* 3D Back Cards Tilted in Perspective */}
-                  <div className="absolute inset-x-6 top-3 h-23 rotate-6 rounded-2xl bg-[#2D1826] shadow-md transition-transform duration-300 group-hover:rotate-9 group-hover:translate-x-1" />
-                  <div className="absolute inset-x-4 top-2 h-23 rotate-3 rounded-2xl bg-[#724060] shadow-md transition-transform duration-300 group-hover:rotate-5" />
-                  <div className="absolute inset-x-2 top-1 h-23 -rotate-2 rounded-2xl bg-[#A070A1] shadow-sm transition-transform duration-300 group-hover:-rotate-3" />
-
-                  {/* Front Interactive Card */}
-                  <motion.div
-                    key={`${cardIndex}-${cardFlipped}`}
-                    initial={{ rotateX: 40, opacity: 0.75, scale: 0.96 }}
-                    animate={{ rotateX: 0, opacity: 1, scale: 1 }}
-                    transition={{ type: "spring", stiffness: 360, damping: 26 }}
-                    className="relative flex h-24 w-full flex-col justify-between rounded-2xl border border-[#724060]/20 bg-[#FDF3F3] p-3 shadow-md"
-                  >
-                    <div className="flex items-center justify-between text-[10px] font-bold text-[#724060]">
-                      <span className="uppercase tracking-wider">
-                        {cardFlipped ? "✓ Answer" : "Question · Tap to Flip"}
-                      </span>
-                      <div
-                        className="flex items-center gap-1"
-                        onClick={e => e.stopPropagation()}
-                      >
-                        {(["A", "B", "C"] as const).map(opt => (
-                          <button
-                            key={opt}
-                            type="button"
-                            onClick={() => setSelectedQuizDemo(opt)}
-                            className={`h-4.5 w-4.5 rounded-md text-[9.5px] font-bold transition cursor-pointer ${
-                              selectedQuizDemo === opt
-                                ? "bg-[#724060] text-white shadow-2xs"
-                                : "bg-white text-[#724060] border border-[#724060]/20"
-                            }`}
-                          >
-                            {opt}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <p className="line-clamp-2 text-[12.5px] font-bold text-[#2D1826]">
-                      {cardFlipped ? activeCard.a : activeCard.q}
-                    </p>
-                  </motion.div>
+                {/* 3D Visual Illustration Image */}
+                <div className="mt-3.5 overflow-hidden rounded-2xl border border-[#724060]/12 bg-[#FDF3F3]">
+                  <img
+                    src="/illustrations/flashcards-quiz-3d.jpg"
+                    alt="3D Flashcard Stack and Multiple Choice Quiz"
+                    className="h-40 w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
                 </div>
               </div>
 
               {/* Spaced Repetition Rating Pills */}
-              <div className="mt-3 flex items-center gap-1.5">
+              <div
+                className="mt-4 flex items-center gap-1.5"
+                onClick={e => {
+                  e.stopPropagation();
+                  setLocation("/practice");
+                }}
+              >
                 <button
                   type="button"
-                  onClick={cycleFlashcard}
                   className="flex-1 rounded-full bg-[#2D1826] py-1.5 text-[11.5px] font-bold text-white transition hover:bg-[#724060] cursor-pointer"
                 >
                   Easy
                 </button>
                 <button
                   type="button"
-                  onClick={cycleFlashcard}
                   className="flex-1 rounded-full border border-[#724060]/20 bg-[#FDF3F3] py-1.5 text-[11.5px] font-bold text-[#2D1826] transition hover:bg-[#F8E7E7] cursor-pointer"
                 >
                   Good
                 </button>
                 <button
                   type="button"
-                  onClick={cycleFlashcard}
                   className="flex-1 rounded-full border border-[#724060]/20 bg-white py-1.5 text-[11.5px] font-bold text-[#724060] transition hover:bg-[#FDF3F3] cursor-pointer"
                 >
                   Again
@@ -696,7 +519,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* FEATURE 3: Research Studio (Visual Scholarly Paper + Branching Citation Mind-Map Graphic) */}
+            {/* FEATURE 3: Research Studio (3D Mind-Map Paper, Citation & Videos Image) */}
             <div
               onMouseEnter={() => setHoveredCard(2)}
               onMouseLeave={() => setHoveredCard(null)}
@@ -724,56 +547,13 @@ export default function Dashboard() {
                   </span>
                 </div>
 
-                {/* Visual Mind-Map + Miniature Multi-Column Academic Paper Illustration */}
-                <div className="relative mt-4 rounded-2xl border border-[#724060]/12 bg-[#FDF3F3]/90 p-3">
-                  <div className="flex items-center justify-between gap-1.5">
-                    {/* Left Branching Nodes */}
-                    <div className="flex flex-col gap-2">
-                      <span className="inline-flex items-center gap-1 rounded-lg border border-[#724060]/20 bg-white px-2 py-1 text-[9px] font-bold text-[#724060] shadow-2xs">
-                        <span className="h-1.5 w-1.5 rounded-full bg-[#724060]" />
-                        Citation
-                      </span>
-                      <span className="inline-flex items-center gap-1 rounded-lg border border-[#724060]/20 bg-white px-2 py-1 text-[9px] font-bold text-[#724060] shadow-2xs">
-                        <span className="h-1.5 w-1.5 rounded-full bg-[#A070A1]" />
-                        Sources
-                      </span>
-                    </div>
-
-                    {/* Central Miniature Publication Paper Sheet */}
-                    <div className="min-w-0 flex-1 rounded-xl border border-[#724060]/15 bg-white p-2.5 shadow-xs text-center">
-                      <p className="truncate text-[9.5px] font-bold text-[#2D1826]">
-                        {latestResearch
-                          ? latestResearch.title
-                          : "Academic Research Paper"}
-                      </p>
-                      <p className="text-[7.5px] font-semibold uppercase tracking-wider text-[#A070A1]">
-                        Abstract & Literature Review
-                      </p>
-                      <div className="mt-1.5 grid grid-cols-2 gap-1.5 text-left">
-                        <div className="space-y-1">
-                          <div className="h-1 w-full rounded-full bg-[#2D1826]/30" />
-                          <div className="h-1 w-4/5 rounded-full bg-[#2D1826]/20" />
-                          <div className="h-1 w-full rounded-full bg-[#2D1826]/20" />
-                        </div>
-                        <div className="space-y-1">
-                          <div className="h-1 w-full rounded-full bg-[#724060]/30" />
-                          <div className="h-1 w-3/4 rounded-full bg-[#724060]/20" />
-                          <div className="h-1 w-full rounded-full bg-[#724060]/20" />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Right Branching Nodes */}
-                    <div className="flex flex-col gap-2">
-                      <span className="inline-flex items-center gap-1 rounded-lg border border-[#724060]/20 bg-white px-2 py-1 text-[9px] font-bold text-[#724060] shadow-2xs">
-                        <Play className="h-2 w-2 fill-[#724060] text-[#724060]" />
-                        Videos
-                      </span>
-                      <span className="inline-flex items-center gap-1 rounded-lg bg-[#2D1826] px-2 py-1 text-[9px] font-bold text-white shadow-2xs">
-                        .MD / PNG
-                      </span>
-                    </div>
-                  </div>
+                {/* 3D Visual Illustration Image */}
+                <div className="mt-3.5 overflow-hidden rounded-2xl border border-[#724060]/12 bg-[#FDF3F3]">
+                  <img
+                    src="/illustrations/research-canvas-diagram.jpg"
+                    alt="Research Studio Paper, Citation and Videos Mind-Map"
+                    className="h-40 w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
                 </div>
               </div>
 
@@ -790,7 +570,7 @@ export default function Dashboard() {
               </button>
             </div>
 
-            {/* FEATURE 4: Today's Tasks & Exam Countdown (Interactive MicroKit Bounce Checkboxes — Never Empty!) */}
+            {/* FEATURE 4: Today's Tasks & Exam Planner (3D Planner Roadmap Image + Interactive Checkboxes) */}
             <div
               onMouseEnter={() => setHoveredCard(3)}
               onMouseLeave={() => setHoveredCard(null)}
@@ -812,102 +592,90 @@ export default function Dashboard() {
                       Exam Countdown & Daily Roadmap
                     </p>
                   </div>
-                  <span className="rounded-full bg-[#2D1826] px-2.5 py-1 text-[10px] font-bold text-white">
-                    {daysToExam !== null ? `${daysToExam}d to Exam` : "Study Roadmap"}
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setLocation("/planner")}
+                    className="rounded-full bg-[#2D1826] px-2.5 py-1 text-[10px] font-bold text-white cursor-pointer"
+                  >
+                    {daysToExam !== null ? `${daysToExam}d Left` : "Planner →"}
+                  </button>
                 </div>
 
-                {/* Always-Interactive MicroKit Bounce Checkboxes */}
-                <div className="mt-3.5 space-y-1.5">
-                  {data.todayItems.length > 0
-                    ? data.todayItems.slice(0, 4).map(item => {
-                        const done = Boolean(item.completedAt);
-                        return (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onClick={() =>
-                              completeItemMutation.mutate({
-                                id: item.id,
-                                completed: !done,
-                              })
-                            }
-                            className="flex w-full items-center gap-2.5 rounded-xl bg-[#FDF3F3]/90 px-3 py-1.5 text-left transition hover:bg-[#F8E7E7] cursor-pointer"
-                          >
-                            <motion.span
-                              whileTap={{ scale: 1.3 }}
-                              className={`grid h-4.5 w-4.5 shrink-0 place-items-center rounded-md border transition-colors ${
-                                done
-                                  ? "border-[#724060] bg-[#724060] text-white"
-                                  : "border-[#724060]/40 bg-white"
-                              }`}
-                            >
-                              {done && <Check className="h-3 w-3 stroke-[3]" />}
-                            </motion.span>
-                            <span
-                              className={`truncate text-[12px] font-semibold ${
-                                done
-                                  ? "text-[#724060]/55 line-through"
-                                  : "text-[#2D1826]"
-                              }`}
-                            >
-                              {item.title}
-                            </span>
-                          </button>
-                        );
-                      })
-                    : DEMO_TASKS.map(task => {
-                        const done = Boolean(demoTaskState[task.id]);
-                        return (
-                          <button
-                            key={task.id}
-                            type="button"
-                            onClick={() =>
-                              setDemoTaskState(prev => ({
-                                ...prev,
-                                [task.id]: !prev[task.id],
-                              }))
-                            }
-                            className="flex w-full items-center gap-2.5 rounded-xl bg-[#FDF3F3]/90 px-3 py-1.5 text-left transition hover:bg-[#F8E7E7] cursor-pointer"
-                          >
-                            <motion.span
-                              whileTap={{ scale: 1.3 }}
-                              className={`grid h-4.5 w-4.5 shrink-0 place-items-center rounded-md border transition-colors ${
-                                done
-                                  ? "border-[#724060] bg-[#724060] text-white"
-                                  : "border-[#724060]/40 bg-white"
-                              }`}
-                            >
-                              {done && <Check className="h-3 w-3 stroke-[3]" />}
-                            </motion.span>
-                            <span
-                              className={`truncate text-[12px] font-semibold ${
-                                done
-                                  ? "text-[#724060]/55 line-through"
-                                  : "text-[#2D1826]"
-                              }`}
-                            >
-                              {task.title}
-                            </span>
-                          </button>
-                        );
-                      })}
+                {/* 3D Planner Visual Illustration */}
+                <div
+                  onClick={() => setLocation("/planner")}
+                  className="mt-3.5 cursor-pointer overflow-hidden rounded-2xl border border-[#724060]/12 bg-[#FDF3F3]"
+                >
+                  <img
+                    src="/illustrations/planner-roadmap-3d.jpg"
+                    alt="Exam Countdown and Daily Task Planner"
+                    className="h-28 w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                </div>
+
+                {/* Interactive MicroKit Bounce Checkboxes */}
+                <div className="mt-2.5 space-y-1.5">
+                  {(data.todayItems.length > 0
+                    ? data.todayItems.slice(0, 2).map(item => ({
+                        id: item.id,
+                        title: item.title,
+                        done: Boolean(item.completedAt),
+                        isReal: true,
+                      }))
+                    : DEMO_TASKS.map(t => ({
+                        id: t.id,
+                        title: t.title,
+                        done: Boolean(demoTaskState[t.id]),
+                        isReal: false,
+                      }))
+                  ).map(task => (
+                    <button
+                      key={task.id}
+                      type="button"
+                      onClick={() => {
+                        if (task.isReal) {
+                          completeItemMutation.mutate({
+                            id: task.id,
+                            completed: !task.done,
+                          });
+                        } else {
+                          setDemoTaskState(prev => ({
+                            ...prev,
+                            [task.id]: !prev[task.id],
+                          }));
+                        }
+                      }}
+                      className="flex w-full items-center gap-2.5 rounded-xl bg-[#FDF3F3]/90 px-3 py-1.5 text-left transition hover:bg-[#F8E7E7] cursor-pointer"
+                    >
+                      <motion.span
+                        whileTap={{ scale: 1.3 }}
+                        className={`grid h-4 w-4 shrink-0 place-items-center rounded-md border transition-colors ${
+                          task.done
+                            ? "border-[#724060] bg-[#724060] text-white"
+                            : "border-[#724060]/40 bg-white"
+                        }`}
+                      >
+                        {task.done && <Check className="h-2.5 w-2.5 stroke-[3]" />}
+                      </motion.span>
+                      <span
+                        className={`truncate text-[11.5px] font-semibold ${
+                          task.done
+                            ? "text-[#724060]/55 line-through"
+                            : "text-[#2D1826]"
+                        }`}
+                      >
+                        {task.title}
+                      </span>
+                    </button>
+                  ))}
                 </div>
               </div>
-
-              <button
-                type="button"
-                onClick={() => setLocation("/planner")}
-                className="mt-3.5 w-full rounded-full border border-[#724060]/20 bg-[#FDF3F3] py-1.5 text-[12px] font-bold text-[#724060] transition hover:bg-[#F8E7E7] cursor-pointer"
-              >
-                Open Exam Planner →
-              </button>
             </div>
           </section>
 
-          {/* FEATURE SHOWCASE ROW 2: AI Socratic Chat Visual (4 cols) + Subject Folders Hub (4 cols) + Weekly Study Rhythm (4 cols) */}
+          {/* FEATURE SHOWCASE ROW 2: AI Socratic Tutor 3D Image (4 cols) + Subject Folders Hub (4 cols) + Weekly Study Rhythm (4 cols) */}
           <section className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-            {/* FEATURE 5: AI Tutor Chat (Visual Step-by-Step Conversation + 8 Mode Pills) */}
+            {/* FEATURE 5: AI Study Tutor (3D Step-by-Step Socratic Illustration Image) */}
             <div
               onClick={() => setLocation("/chat")}
               className="lg:col-span-4 group cursor-pointer rounded-[26px] border border-[#724060]/12 bg-white p-5 shadow-[0_12px_28px_rgba(114,64,96,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_38px_rgba(114,64,96,0.13)] flex flex-col justify-between"
@@ -919,7 +687,7 @@ export default function Dashboard() {
                       AI Study Tutor (8 Modes)
                     </h2>
                     <p className="text-[11.5px] text-[#724060]/75">
-                      Grounded in your uploaded course PDFs
+                      Socratic step-by-step math & PDF grounding
                     </p>
                   </div>
                   <span className="grid h-8 w-8 place-items-center rounded-xl bg-[#FDF3F3] text-[#724060]">
@@ -927,33 +695,18 @@ export default function Dashboard() {
                   </span>
                 </div>
 
-                {/* Mini Visual Chat Conversation Representation */}
-                <div className="mt-3.5 space-y-2 rounded-2xl border border-[#724060]/12 bg-[#FDF3F3]/80 p-3">
-                  <div className="ml-auto max-w-[82%] rounded-2xl rounded-br-xs bg-[#724060] px-3 py-1.5 text-[11px] font-medium text-white shadow-2xs">
-                    How do I solve this past-paper integral?
-                  </div>
-                  <div className="mr-auto max-w-[90%] rounded-2xl rounded-bl-xs border border-[#724060]/15 bg-white px-3 py-2 text-[11px] text-[#2D1826] shadow-2xs">
-                    <span className="font-bold text-[#724060]">Socratic Step 1:</span>{" "}
-                    Substitute <span className="font-serif font-semibold">u = x² + 1</span>, then{" "}
-                    <span className="font-serif font-semibold">du = 2x dx</span>.
-                  </div>
-                </div>
-
-                {/* Interactive Mode Pills */}
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  {["Explain", "Socratic", "Solve", "Past Papers", "Quiz Me"].map(m => (
-                    <span
-                      key={m}
-                      className="rounded-full border border-[#724060]/15 bg-[#FDF3F3] px-2.5 py-0.5 text-[10.5px] font-bold text-[#724060]"
-                    >
-                      {m}
-                    </span>
-                  ))}
+                {/* 3D AI Tutor Illustration Image */}
+                <div className="mt-3.5 overflow-hidden rounded-2xl border border-[#724060]/12 bg-[#FDF3F3]">
+                  <img
+                    src="/illustrations/ai-tutor-socratic.jpg"
+                    alt="AI Study Tutor Step-by-Step Socratic Solver"
+                    className="h-36 w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
                 </div>
               </div>
 
-              <div className="mt-4 flex items-center justify-between text-[12.5px] font-bold text-[#724060]">
-                <span>Start AI Tutor Session</span>
+              <div className="mt-3.5 flex items-center justify-between text-[12.5px] font-bold text-[#724060]">
+                <span>Open Socratic AI Tutor</span>
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </div>
             </div>
@@ -982,7 +735,7 @@ export default function Dashboard() {
 
                 <div className="mt-3.5 grid grid-cols-2 gap-2.5">
                   {(data.subjects.length > 0
-                    ? data.subjects.slice(0, 4)
+                    ? data.subjects.slice(0, 3)
                     : [
                         { id: -1, name: "Physics 201", color: "#724060" },
                         { id: -2, name: "Calculus II", color: "#A070A1" },
