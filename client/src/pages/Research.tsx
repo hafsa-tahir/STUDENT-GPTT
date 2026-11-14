@@ -438,22 +438,25 @@ export default function Research() {
         <div className="mx-auto max-w-[1500px]">
           
           {/* Header Banner */}
-          <header className="relative overflow-hidden border border-[#A070A1] bg-[#724060] px-6 py-6 text-[#FDF3F3] shadow-[0_15px_42px_rgba(114,64,96,.18)] sm:px-8">
-            <div className="absolute inset-0 opacity-15" style={{ backgroundImage: "linear-gradient(90deg, transparent 49.5%, #FDF3F3 50%, transparent 50.5%), linear-gradient(transparent 49.5%, #FDF3F3 50%, transparent 50.5%)", backgroundSize: "40px 40px" }} />
-            <div className="relative flex flex-wrap items-end justify-between gap-5">
+          <header className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#522943] via-[#724060] to-[#8C5378] px-6 py-7 text-[#FDF3F3] shadow-[0_18px_44px_rgba(114,64,96,.20)] sm:px-9">
+            <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-[#F8E7E7]/10 blur-2xl" />
+            <div className="relative z-10 flex flex-wrap items-end justify-between gap-5">
               <div>
-                <p className="inline-flex items-center gap-2 bg-[#F8E7E7] px-3 py-1 text-[10px] font-bold uppercase tracking-[.16em] text-[#724060]">
+                <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/12 px-3 py-1 text-[10.5px] font-bold uppercase tracking-[.16em] text-[#F8E7E7] backdrop-blur-md">
                   <Compass className="h-3.5 w-3.5" /> Academic Research Canvas
                 </p>
-                <h1 className="mt-4 max-w-3xl text-[30px] font-bold leading-[1.04] tracking-[-.05em] sm:text-[40px]">
+                <h1 className="mt-3 max-w-3xl text-[28px] font-bold leading-tight tracking-tight sm:text-[34px]">
                   Build a publication-grade research paper for any topic.
                 </h1>
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-[#F8E7E7]">
+                <p className="mt-2 max-w-2xl text-[13.5px] leading-6 text-[#F8E7E7]/85">
                   Transforms any inquiry into a structured scholarly paper: formal definitions, operational mechanisms, past-present-future landscape, research objectives, verified videos, and downloadable papers.
                 </p>
               </div>
-              <button onClick={() => setComposerOpen(true)} className="inline-flex h-11 items-center gap-2 bg-[#F8E7E7] px-4 text-[13px] font-bold text-[#724060] shadow-sm transition hover:bg-[#FDF3F3]">
-                <Plus className="h-4 w-4" /> Start a research paper
+              <button
+                onClick={() => setComposerOpen(true)}
+                className="group inline-flex h-11 items-center gap-2 rounded-full bg-white px-5 text-[13px] font-bold text-[#724060] shadow-sm transition hover:bg-[#FDF3F3] cursor-pointer"
+              >
+                <Plus className="h-4 w-4 transition-transform duration-200 group-hover:rotate-90" /> Start a research paper
               </button>
             </div>
           </header>
@@ -484,23 +487,27 @@ export default function Research() {
 
           <div className="mt-6 space-y-6">
             {/* Library Selector */}
-            <aside className="border border-[#F8E7E7] bg-[#FDF3F3] p-3 shadow-sm">
+            <aside className="rounded-[24px] border border-[#F8E7E7] bg-white p-4 shadow-xs">
               <div className="flex items-center justify-between border-b border-[#F8E7E7] px-2 pb-3">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[.16em] text-[#A070A1]">Project library</p>
-                  <p className="mt-0.5 text-[12px] text-[#A070A1]">Saved research papers</p>
+                  <p className="text-[10.5px] font-bold uppercase tracking-[.16em] text-[#A070A1]">Project library</p>
+                  <p className="mt-0.5 text-[12px] text-[#724060]/75">Saved research papers</p>
                 </div>
-                <span className="bg-[#F8E7E7] px-2 py-1 text-[11px] font-bold text-[#724060]">{briefs.data?.length ?? 0}</span>
+                <span className="rounded-full bg-[#FDF3F3] px-2.5 py-0.5 text-[11px] font-bold text-[#724060]">{briefs.data?.length ?? 0} saved</span>
               </div>
-              <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+              <div className="mt-3 flex gap-2.5 overflow-x-auto pb-1">
                 {briefs.data?.length ? briefs.data.map(item => (
                   <button 
                     key={item.id} 
                     onClick={() => setSelectedId(item.id)} 
-                    className={`min-w-[220px] border-l-4 px-3 py-3 text-left transition ${item.id === selectedId ? "border-[#A070A1] bg-[#FDF3F3]" : "border-transparent hover:bg-[#F8E7E7]"}`}
+                    className={`min-w-[230px] rounded-2xl border p-3.5 text-left transition cursor-pointer ${
+                      item.id === selectedId
+                        ? "border-[#724060] bg-[#FDF3F3] shadow-xs"
+                        : "border-[#F8E7E7] bg-[#FDF3F3]/40 hover:bg-[#FDF3F3]"
+                    }`}
                   >
-                    <p className="line-clamp-2 text-[13px] font-bold text-[#724060]">{item.title}</p>
-                    <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-[#A070A1]">{item.researchQuestion}</p>
+                    <p className="line-clamp-1 text-[13px] font-bold text-[#2D1826]">{item.title}</p>
+                    <p className="mt-1 line-clamp-2 text-[11.5px] leading-4 text-[#724060]/70">{item.researchQuestion}</p>
                   </button>
                 )) : <p className="p-4 text-center text-[12px] leading-5 text-[#A070A1]">Your saved research papers will appear here.</p>}
               </div>
@@ -510,16 +517,17 @@ export default function Research() {
               {brief ? (
                 <>
                   {/* Action Toolbar & Topic Summary */}
-                  <div className="border border-[#F8E7E7] bg-[#FDF3F3] p-5 sm:p-7">
+                  <div className="rounded-[24px] border border-[#F8E7E7] bg-white p-5 shadow-xs sm:p-7">
                     <div className="flex flex-wrap items-start justify-between gap-4">
                       <div>
-                        <p className="text-[10px] font-bold uppercase tracking-[.16em] text-[#A070A1]">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FDF3F3] px-3 py-1 text-[10.5px] font-bold uppercase tracking-[.14em] text-[#724060]">
+                          <Sparkles className="h-3 w-3 text-[#A070A1]" />
                           {brief.status === "ready" ? "Research Paper Ready" : "Synthesis in Progress"}
-                        </p>
-                        <h2 className="mt-2 text-[28px] font-bold tracking-[-.045em] text-[#724060] sm:text-[36px]">
+                        </span>
+                        <h2 className="mt-2.5 text-[26px] font-bold tracking-tight text-[#2D1826] sm:text-[32px]">
                           {brief.title}
                         </h2>
-                        <p className="mt-2 max-w-3xl text-[14px] leading-6 text-[#724060]">
+                        <p className="mt-1.5 max-w-3xl text-[13.5px] leading-6 text-[#724060]/80">
                           {brief.researchQuestion}
                         </p>
                       </div>
@@ -527,7 +535,7 @@ export default function Research() {
                         <button 
                           onClick={runSynthesis} 
                           disabled={synthesize.isPending || brief.status === "generating"} 
-                          className="inline-flex h-10 items-center gap-2 bg-[#724060] px-3.5 text-[12px] font-bold text-[#FDF3F3] disabled:opacity-60 shadow-sm transition hover:bg-[#5e344e]"
+                          className="inline-flex h-10 items-center gap-2 rounded-full bg-[#724060] px-4 text-[12px] font-bold text-white disabled:opacity-60 shadow-xs transition hover:bg-[#5a334c] cursor-pointer"
                         >
                           <Wand2 className="h-4 w-4" />
                           {synthesize.isPending ? "Synthesizing…" : "Deepen Paper"}
@@ -535,7 +543,7 @@ export default function Research() {
                         <button 
                           onClick={downloadCanvasImage} 
                           disabled={exportingCanvas || brief.status !== "ready"} 
-                          className="inline-flex h-10 items-center gap-2 bg-[#F8E7E7] px-3.5 text-[12px] font-bold text-[#724060] disabled:opacity-60 shadow-sm transition hover:bg-[#FDF3F3]"
+                          className="inline-flex h-10 items-center gap-2 rounded-full border border-[#724060]/15 bg-[#FDF3F3] px-4 text-[12px] font-bold text-[#724060] disabled:opacity-60 transition hover:bg-[#F8E7E7] cursor-pointer"
                         >
                           <Download className="h-4 w-4" />
                           {exportingCanvas ? "Rendering Paper…" : "Download Paper Image"}
@@ -543,7 +551,7 @@ export default function Research() {
                         <button 
                           onClick={saveResearchDocument} 
                           disabled={exportDocument.isPending} 
-                          className="inline-flex h-10 items-center gap-2 bg-[#F8E7E7] px-3.5 text-[12px] font-bold text-[#724060] disabled:opacity-60 shadow-sm transition hover:bg-[#FDF3F3]"
+                          className="inline-flex h-10 items-center gap-2 rounded-full border border-[#724060]/15 bg-[#FDF3F3] px-4 text-[12px] font-bold text-[#724060] disabled:opacity-60 transition hover:bg-[#F8E7E7] cursor-pointer"
                         >
                           <FileText className="h-4 w-4" />
                           {exportDocument.isPending ? "Preparing…" : "Download Research Paper (.md)"}

@@ -1,4 +1,5 @@
 import { AppLoading, AuthError, StudentAppShell } from "@/components/StudentAppShell";
+import { HoldToDeleteButton } from "@/components/HoldToDeleteButton";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { getSupabaseAccessToken } from "@/lib/supabase";
 import { trpc } from "@/lib/trpc";
@@ -307,29 +308,40 @@ export default function Documents() {
           className="sr-only"
         />
 
-        {/* Header */}
-        <header className="flex flex-wrap items-end justify-between gap-5 border-b border-[#F8E7E7] pb-8">
-          <div>
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-[#A070A1]/20 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#724060]">
-              <LockKeyhole className="h-3 w-3" /> Private Academic Vault
+        {/* Header Banner + Uiverse 3D Folder Dropzone */}
+        <header className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#522943] via-[#724060] to-[#8C5378] px-6 py-7 text-white shadow-[0_18px_44px_rgba(114,64,96,0.20)] sm:px-9">
+          <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-[#F8E7E7]/10 blur-2xl" />
+          <div className="relative z-10 flex flex-wrap items-center justify-between gap-6">
+            <div>
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/12 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#F8E7E7] backdrop-blur-md">
+                <LockKeyhole className="h-3 w-3" /> Private Academic Vault
+              </div>
+              <h1 className="mt-2.5 text-[28px] font-bold tracking-tight sm:text-[34px]">
+                Documents & Source Material
+              </h1>
+              <p className="mt-1.5 max-w-xl text-[13.5px] leading-relaxed text-[#F8E7E7]/85">
+                Upload lectures, textbook chapters, and syllabi. Link each file to its subject so notes, flashcards, and practice questions stay strictly organized.
+              </p>
             </div>
-            <h1 className="mt-2 text-[32px] font-bold tracking-tight text-[#724060]">
-              Documents & Source Material
-            </h1>
-            <p className="mt-2 max-w-xl text-sm leading-relaxed text-[#724060]/80">
-              Upload lectures, textbook chapters, and syllabi. Link each file to its subject so notes, flashcards, and practice questions stay strictly organized.
-            </p>
-          </div>
 
-          {/* Primary Upload Button */}
-          <div className="flex items-center gap-3">
+            {/* Uiverse 3D Animated Folder Upload Card */}
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#724060] px-5 text-[13px] font-bold text-white shadow-xs transition hover:bg-[#5a334c] cursor-pointer"
+              className="group flex items-center gap-4 rounded-[22px] border border-white/20 bg-white/12 px-5 py-3.5 text-left backdrop-blur-md transition hover:border-white/40 hover:bg-white/18 cursor-pointer"
             >
-              <UploadCloud className="h-4 w-4" />
-              Upload PDF Document
+              <div className="relative h-12 w-14 shrink-0">
+                <div className="absolute inset-x-1 top-1.5 h-9 rounded-lg bg-[#522943]" />
+                <div className="absolute left-2 top-0.5 h-8 w-6 -rotate-6 rounded border border-[#724060]/20 bg-white shadow-xs transition-transform duration-300 group-hover:-translate-y-2 group-hover:-rotate-12" />
+                <div className="absolute right-2 top-0.5 h-8 w-6 rotate-6 rounded border border-[#724060]/20 bg-[#FDF3F3] shadow-xs transition-transform duration-300 group-hover:-translate-y-2.5 group-hover:rotate-12" />
+                <div className="absolute inset-x-0 bottom-0 flex h-8 items-center justify-center rounded-lg bg-gradient-to-b from-[#F8E7E7] to-[#e9c8d2] shadow-md transition-transform duration-300 group-hover:scale-[1.04]">
+                  <UploadCloud className="h-4 w-4 text-[#724060]" />
+                </div>
+              </div>
+              <div>
+                <p className="text-[13.5px] font-bold text-white">Drop or Upload PDF</p>
+                <p className="mt-0.5 text-[11.5px] text-[#F8E7E7]/80">Click or drag any lecture PDF anywhere</p>
+              </div>
             </button>
           </div>
         </header>
@@ -460,18 +472,11 @@ export default function Documents() {
                           </span>
                         )}
 
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (window.confirm(`Delete "${doc.originalName}"?`)) {
-                              deleteDocumentMutation.mutate({ documentId: doc.id });
-                            }
-                          }}
-                          className="grid h-7 w-7 place-items-center rounded-lg text-[#A070A1] hover:bg-[#F8E7E7] hover:text-[#724060] transition cursor-pointer"
-                          title="Delete document"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                        <HoldToDeleteButton
+                          compact
+                          label="Hold"
+                          onConfirm={() => deleteDocumentMutation.mutate({ documentId: doc.id })}
+                        />
                       </div>
 
                       {/* Title & Metadata */}

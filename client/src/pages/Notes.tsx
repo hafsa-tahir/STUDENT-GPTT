@@ -1,6 +1,7 @@
 import { AppLoading, AuthError, StudentAppShell } from "@/components/StudentAppShell";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { trpc } from "@/lib/trpc";
+import { motion } from "framer-motion";
 import {
   BookMarked,
   Bot,
@@ -469,46 +470,52 @@ export default function Notes() {
       <div className="min-h-screen bg-[#FDF3F3] px-4 py-6 sm:px-8 lg:px-12">
         <div className="mx-auto max-w-[1440px]">
           {/* Header Banner */}
-          <header className="rounded-[28px] bg-[#724060] px-6 py-8 text-[#FDF3F3] shadow-[0_16px_40px_rgba(114,64,96,0.2)] sm:px-10">
-            <div className="flex flex-wrap items-end justify-between gap-6">
+          <header className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#522943] via-[#724060] to-[#8C5378] px-6 py-7 text-[#FDF3F3] shadow-[0_18px_44px_rgba(114,64,96,0.20)] sm:px-9">
+            <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-[#F8E7E7]/10 blur-2xl" />
+            <div className="relative z-10 flex flex-wrap items-end justify-between gap-6">
               <div>
-                <div className="inline-flex items-center gap-2 rounded-full bg-[#A070A1]/50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#F8E7E7]">
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/12 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-[#F8E7E7] backdrop-blur-md">
                   <Sparkles className="h-3 w-3" /> Notes & Revision Studio
                 </div>
-                <h1 className="mt-3 text-[32px] font-bold tracking-tight sm:text-[42px]">
+                <h1 className="mt-2.5 text-[28px] font-bold tracking-tight sm:text-[34px]">
                   Turn any document into structured, exhaustive notes.
                 </h1>
-                <p className="mt-2.5 max-w-2xl text-[13.5px] leading-6 text-[#F8E7E7]">
+                <p className="mt-1.5 max-w-2xl text-[13.5px] leading-6 text-[#F8E7E7]/85">
                   Ingests every heading, concept, and formula from your uploaded source without missing a detail. Includes a strictly grounded Q&A box at the bottom.
                 </p>
               </div>
 
-              {/* Mode Toggle */}
-              <div className="inline-flex rounded-2xl bg-[#A070A1]/60 p-1.5 shadow-inner">
-                <button
-                  type="button"
-                  onClick={() => setMode("notes")}
-                  className={`flex items-center gap-2 rounded-xl px-4 py-2 text-[12.5px] font-semibold transition ${
-                    mode === "notes"
-                      ? "bg-[#F8E7E7] text-[#724060] shadow-sm"
-                      : "text-[#FDF3F3] hover:text-white"
-                  }`}
-                >
-                  <BookMarked className="h-4 w-4" />
-                  Notes Maker
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMode("revision")}
-                  className={`flex items-center gap-2 rounded-xl px-4 py-2 text-[12.5px] font-semibold transition ${
-                    mode === "revision"
-                      ? "bg-[#F8E7E7] text-[#724060] shadow-sm"
-                      : "text-[#FDF3F3] hover:text-white"
-                  }`}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  Revision Bot
-                </button>
+              {/* MicroKit Sliding Pill Mode Toggle */}
+              <div className="inline-flex rounded-full border border-white/15 bg-black/20 p-1.5 backdrop-blur-md">
+                {(["notes", "revision"] as const).map(itemMode => {
+                  const active = mode === itemMode;
+                  return (
+                    <button
+                      key={itemMode}
+                      type="button"
+                      onClick={() => setMode(itemMode)}
+                      className={`relative flex items-center gap-2 rounded-full px-4 py-2 text-[12.5px] font-bold transition cursor-pointer ${
+                        active ? "text-[#724060]" : "text-[#FDF3F3]/85 hover:text-white"
+                      }`}
+                    >
+                      {active && (
+                        <motion.span
+                          layoutId="notes-mode-glide"
+                          transition={{ type: "spring", stiffness: 420, damping: 32 }}
+                          className="absolute inset-0 rounded-full bg-[#FDF3F3] shadow-xs"
+                        />
+                      )}
+                      {itemMode === "notes" ? (
+                        <BookMarked className="relative z-10 h-4 w-4" />
+                      ) : (
+                        <RefreshCw className="relative z-10 h-4 w-4" />
+                      )}
+                      <span className="relative z-10">
+                        {itemMode === "notes" ? "Notes Maker" : "Revision Bot"}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </header>
