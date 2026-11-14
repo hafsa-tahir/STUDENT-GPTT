@@ -15,27 +15,35 @@ import {
   Loader2,
   MessageCircle,
   NotebookPen,
+  Play,
   Plus,
   Sparkles,
   UploadCloud,
-  Zap,
+  Volume2,
 } from "lucide-react";
 import { ChangeEvent, DragEvent, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 
 const SAMPLE_CARDS = [
   {
-    q: "Active Recall & Spaced Repetition",
-    a: "Rate cards Again / Good / Easy to schedule optimal review intervals.",
+    q: "What is Gauss's Law in integral form?",
+    a: "∮ E · dA = Q_enc / ε₀ — electric flux through a closed surface.",
+  },
+  {
+    q: "How does spaced repetition boost retention?",
+    a: "Rating cards Easy / Good / Again schedules reviews right before forgetting.",
   },
   {
     q: "Scoped AI Assessment Quizzes",
-    a: "Generate Easy, Medium, or Hard MCQs from any uploaded lecture PDF.",
+    a: "Generates Easy, Medium, or Hard MCQs strictly from your uploaded PDF.",
   },
-  {
-    q: "Formula & Definition Mastery",
-    a: "Synthesize high-yield revision sheets with LaTeX math and exam traps.",
-  },
+];
+
+const DEMO_TASKS = [
+  { id: -1, title: "Upload & synthesize lecture PDF", done: true },
+  { id: -2, title: "Review 3D flashcards & take quiz", done: true },
+  { id: -3, title: "Generate publication research brief", done: false },
+  { id: -4, title: "Ask AI Socratic Tutor on weak topic", done: false },
 ];
 
 export default function Dashboard() {
@@ -47,6 +55,13 @@ export default function Dashboard() {
   const [hoveredCard, setHoveredCard] = useState<number | null>(null);
   const [cardIndex, setCardIndex] = useState(0);
   const [cardFlipped, setCardFlipped] = useState(false);
+  const [demoTaskState, setDemoTaskState] = useState<Record<number, boolean>>({
+    [-1]: true,
+    [-2]: true,
+    [-3]: false,
+    [-4]: false,
+  });
+  const [selectedQuizDemo, setSelectedQuizDemo] = useState<"A" | "B" | "C">("B");
   const [isDraggingPdf, setIsDraggingPdf] = useState(false);
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [uploadNotice, setUploadNotice] = useState<string | null>(null);
@@ -115,12 +130,13 @@ export default function Dashboard() {
     (user.user_metadata?.full_name as string | undefined)?.split(" ")[0] ||
     "Student";
 
+  const demoDoneCount = Object.values(demoTaskState).filter(Boolean).length;
   const completedCount = data.todayItems.filter(item => item.completedAt).length;
   const completion = data.todayItems.length
     ? Math.round((completedCount / data.todayItems.length) * 100)
     : data.sessionMinutesToday > 0
     ? Math.min(100, Math.round((data.sessionMinutesToday / 30) * 100))
-    : 0;
+    : Math.round((demoDoneCount / DEMO_TASKS.length) * 100);
 
   // Determine primary resume item
   const latestNote = notesQuery.data?.[0];
@@ -268,8 +284,8 @@ export default function Dashboard() {
               <h1 className="text-[28px] font-bold tracking-tight text-[#2D1826] sm:text-[34px]">
                 Welcome back, {name}
               </h1>
-              <p className="mt-0.5 text-[14px] text-[#724060]/80">
-                Pick a study tool below or drop a lecture PDF to synthesize notes.
+              <p className="mt-0.5 text-[13.5px] text-[#724060]/80">
+                Every tool below shows a live visual preview — click any card to jump straight in.
               </p>
             </div>
 
@@ -277,7 +293,7 @@ export default function Dashboard() {
               <button
                 type="button"
                 onClick={() => setLocation("/chat")}
-                className="inline-flex items-center gap-2 rounded-full border border-[#724060]/15 bg-white px-4 py-2 text-[13px] font-semibold text-[#2D1826] shadow-2xs transition hover:bg-[#F8E7E7]"
+                className="inline-flex items-center gap-2 rounded-full border border-[#724060]/15 bg-white px-4 py-2 text-[13px] font-semibold text-[#2D1826] shadow-2xs transition hover:bg-[#F8E7E7] cursor-pointer"
               >
                 <MessageCircle className="h-4 w-4 text-[#724060]" />
                 Ask AI Tutor
@@ -285,7 +301,7 @@ export default function Dashboard() {
               <button
                 type="button"
                 onClick={() => setLocation("/subjects?create=1")}
-                className="inline-flex items-center gap-1.5 rounded-full bg-[#724060] px-4 py-2 text-[13px] font-semibold text-white shadow-[0_6px_18px_rgba(114,64,96,0.22)] transition hover:bg-[#5a334c]"
+                className="inline-flex items-center gap-1.5 rounded-full bg-[#724060] px-4 py-2 text-[13px] font-semibold text-white shadow-[0_6px_18px_rgba(114,64,96,0.22)] transition hover:bg-[#5a334c] cursor-pointer"
               >
                 <Plus className="h-4 w-4" />
                 New Subject
@@ -295,14 +311,13 @@ export default function Dashboard() {
 
           {/* TOP HERO BENTO ROW: MicroKit Progress Ring Card (8 cols) + Uiverse 3D Folder Dropzone (4 cols) */}
           <section className="grid grid-cols-12 gap-4">
-            {/* Hero Left: Glassmorphic Plum Resume Card + MicroKit Animated Progress Ring */}
+            {/* Hero Left: Glassmorphic Plum Resume Card + MicroKit Animated Progress Ring + 3D Glass Book Visual */}
             <div className="col-span-12 lg:col-span-8 relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#522943] via-[#724060] to-[#8C5378] p-6 sm:p-7 text-white shadow-[0_20px_45px_rgba(114,64,96,0.24)] flex flex-col sm:flex-row items-center justify-between gap-6">
-              {/* Decorative soft glass glow */}
               <div className="pointer-events-none absolute -right-12 -top-12 h-56 w-56 rounded-full bg-[#F8E7E7]/10 blur-2xl" />
               <div className="pointer-events-none absolute right-24 -bottom-16 h-44 w-44 rounded-full bg-[#A070A1]/25 blur-xl" />
 
-              {/* Left: Animated SVG Progress Ring */}
-              <div className="flex items-center gap-5 sm:gap-6 z-10 w-full sm:w-auto">
+              {/* Left: Animated SVG Progress Ring with Checkmark Badge */}
+              <div className="flex items-center gap-5 sm:gap-6 z-10 w-full sm:w-auto flex-1 min-w-0">
                 <div className="relative flex h-28 w-28 shrink-0 items-center justify-center">
                   <svg className="h-28 w-28 -rotate-90" viewBox="0 0 100 100">
                     <circle
@@ -327,10 +342,13 @@ export default function Dashboard() {
                     />
                   </svg>
                   <div className="absolute flex flex-col items-center">
-                    <span className="text-[22px] font-bold leading-none">
+                    <span className="mb-0.5 grid h-5 w-5 place-items-center rounded-full bg-[#F8E7E7] text-[#724060] shadow-xs">
+                      <Check className="h-3 w-3 stroke-[3]" />
+                    </span>
+                    <span className="text-[21px] font-bold leading-none">
                       {completion}%
                     </span>
-                    <span className="mt-1 text-[10px] font-medium text-[#F8E7E7]/80">
+                    <span className="mt-0.5 text-[9.5px] font-medium text-[#F8E7E7]/80">
                       Daily Goal
                     </span>
                   </div>
@@ -348,34 +366,65 @@ export default function Dashboard() {
                     {resumeSubtitle}
                   </p>
 
-                  {/* MicroKit Glow-Arrow Button */}
-                  <div className="mt-4 flex flex-wrap items-center gap-3">
+                  {/* MicroKit Glow-Arrow Button + Audio Lecture Pill */}
+                  <div className="mt-4 flex flex-wrap items-center gap-2.5">
                     <button
                       type="button"
                       onClick={() => setLocation(resumeHref)}
-                      className="group inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-[13px] font-bold text-[#2D1826] shadow-[0_8px_24px_rgba(0,0,0,0.18)] transition-all hover:bg-[#FDF3F3] hover:pr-6"
+                      className="group inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-[13px] font-bold text-[#2D1826] shadow-[0_8px_24px_rgba(0,0,0,0.18)] transition-all hover:bg-[#FDF3F3] hover:pr-6 cursor-pointer"
                     >
                       <span>Continue</span>
                       <ArrowRight className="h-4 w-4 text-[#724060] transition-transform duration-200 group-hover:translate-x-1" />
                     </button>
-                    {daysToExam !== null && nextExamPlan && (
-                      <button
-                        type="button"
-                        onClick={() => setLocation("/planner")}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3.5 py-2 text-[12px] font-medium text-white backdrop-blur-xs hover:bg-white/20 transition"
-                      >
-                        <CalendarDays className="h-3.5 w-3.5 text-[#F8E7E7]" />
-                        <span>
-                          {nextExamPlan.title}: {daysToExam}d left
-                        </span>
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => setLocation("/notes")}
+                      className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/12 px-3.5 py-2 text-[12px] font-semibold text-[#FDF3F3] backdrop-blur-md transition hover:bg-white/20 cursor-pointer"
+                    >
+                      <Volume2 className="h-3.5 w-3.5 text-[#F8E7E7]" />
+                      <span>Play Audio Lecture</span>
+                      <span className="flex items-end gap-0.5 h-3">
+                        <span className="w-0.5 h-2 bg-[#F8E7E7] rounded-full animate-pulse" />
+                        <span className="w-0.5 h-3 bg-[#F8E7E7] rounded-full animate-pulse" />
+                        <span className="w-0.5 h-1.5 bg-[#F8E7E7] rounded-full animate-pulse" />
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Decorative 3D Glass Open Book Visual Illustration */}
+              <div className="hidden xl:flex relative h-32 w-40 shrink-0 items-center justify-center select-none pointer-events-none">
+                <div className="relative flex items-center justify-center -rotate-6">
+                  {/* Left book page */}
+                  <div className="h-24 w-16 rounded-l-xl rounded-r-xs border border-white/30 bg-gradient-to-br from-white/25 to-white/10 p-2.5 backdrop-blur-md shadow-lg -skew-y-6">
+                    <div className="h-1.5 w-8 rounded-full bg-white/60 mb-2" />
+                    <div className="space-y-1.5">
+                      <div className="h-1 w-full rounded-full bg-white/35" />
+                      <div className="h-1 w-5/6 rounded-full bg-white/35" />
+                      <div className="h-1 w-4/6 rounded-full bg-white/35" />
+                    </div>
+                    <div className="mt-3 rounded bg-white/20 px-1.5 py-1 text-[8px] font-serif text-white/90">
+                      {"∫ f(x)dx"}
+                    </div>
+                  </div>
+                  {/* Right book page */}
+                  <div className="h-24 w-16 rounded-r-xl rounded-l-xs border border-white/30 bg-gradient-to-bl from-white/30 to-white/12 p-2.5 backdrop-blur-md shadow-lg skew-y-6">
+                    <div className="h-1.5 w-9 rounded-full bg-[#F8E7E7]/80 mb-2" />
+                    <div className="space-y-1.5">
+                      <div className="h-1 w-full rounded-full bg-white/40" />
+                      <div className="h-1 w-3/4 rounded-full bg-white/40" />
+                    </div>
+                    <div className="mt-3 flex items-center gap-1 rounded bg-[#F8E7E7]/25 px-1.5 py-1">
+                      <Sparkles className="h-2.5 w-2.5 text-[#F8E7E7]" />
+                      <span className="text-[7.5px] font-bold text-white">AI Notes</span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Hero Right: Uiverse 3D Animated Folder PDF Dropzone */}
+            {/* Hero Right: Uiverse 3D Animated Folder PDF Dropzone (Documents Vault Visual) */}
             <div
               onDragOver={e => {
                 e.preventDefault();
@@ -398,33 +447,35 @@ export default function Dashboard() {
                 className="hidden"
               />
 
-              {/* Custom 3D CSS Folder Illustration */}
-              <div className="relative mb-3 flex h-24 w-28 items-center justify-center">
-                {/* Back folder tab + body */}
-                <div className="relative h-16 w-24 rounded-2xl bg-gradient-to-br from-[#522943] to-[#724060] shadow-md">
-                  <div className="absolute -top-2.5 left-3 h-4 w-10 rounded-t-lg bg-[#522943]" />
-                  {/* Floating PDF pages inside folder */}
-                  <div className="absolute -top-4 left-3.5 h-14 w-11 -rotate-6 rounded-lg border border-[#724060]/20 bg-[#FDF3F3] p-1.5 shadow-sm transition-transform duration-300 group-hover:-translate-y-3 group-hover:-rotate-12">
+              {/* Custom 3D CSS Folder Illustration with 2 Pop-Out PDF Pages */}
+              <div className="relative mb-3 flex h-24 w-32 items-center justify-center">
+                <div className="relative h-16 w-26 rounded-2xl bg-gradient-to-br from-[#522943] to-[#724060] shadow-md">
+                  <div className="absolute -top-2.5 left-3 h-4 w-11 rounded-t-lg bg-[#522943]" />
+                  {/* Left floating PDF sheet */}
+                  <div className="absolute -top-5 left-3 h-15 w-12 -rotate-8 rounded-lg border border-[#724060]/20 bg-[#FDF3F3] p-1.5 shadow-sm transition-transform duration-300 group-hover:-translate-y-3 group-hover:-rotate-14">
                     <span className="block rounded bg-[#724060] px-1 py-0.5 text-[7px] font-bold text-white">
                       PDF
                     </span>
-                    <div className="mt-1 space-y-1">
-                      <div className="h-0.5 w-full rounded bg-[#A070A1]/50" />
-                      <div className="h-0.5 w-4/5 rounded bg-[#A070A1]/50" />
+                    <div className="mt-1.5 space-y-1">
+                      <div className="h-0.5 w-full rounded bg-[#A070A1]/60" />
+                      <div className="h-0.5 w-4/5 rounded bg-[#A070A1]/60" />
+                      <div className="h-0.5 w-3/5 rounded bg-[#A070A1]/60" />
                     </div>
                   </div>
-                  <div className="absolute -top-5 right-3.5 h-14 w-11 rotate-6 rounded-lg border border-[#724060]/20 bg-white p-1.5 shadow-md transition-transform duration-300 group-hover:-translate-y-4 group-hover:rotate-12">
+                  {/* Right floating PDF sheet */}
+                  <div className="absolute -top-6 right-3 h-15 w-12 rotate-8 rounded-lg border border-[#724060]/20 bg-white p-1.5 shadow-md transition-transform duration-300 group-hover:-translate-y-4 group-hover:rotate-14">
                     <span className="block rounded bg-[#A070A1] px-1 py-0.5 text-[7px] font-bold text-white">
                       PDF
                     </span>
-                    <div className="mt-1 space-y-1">
-                      <div className="h-0.5 w-full rounded bg-[#724060]/40" />
-                      <div className="h-0.5 w-3/4 rounded bg-[#724060]/40" />
+                    <div className="mt-1.5 space-y-1">
+                      <div className="h-0.5 w-full rounded bg-[#724060]/45" />
+                      <div className="h-0.5 w-3/4 rounded bg-[#724060]/45" />
+                      <div className="h-0.5 w-4/5 rounded bg-[#724060]/45" />
                     </div>
                   </div>
                   {/* Front Folder Flap */}
                   <div className="absolute inset-x-0 bottom-0 h-11 origin-bottom rounded-2xl bg-gradient-to-br from-[#8C5378] to-[#724060] shadow-inner transition-transform duration-300 group-hover:scale-y-90 flex items-center justify-center">
-                    <div className="h-3.5 w-3.5 rounded-full bg-[#F8E7E7]/80 shadow-xs" />
+                    <div className="h-3.5 w-3.5 rounded-full bg-[#F8E7E7]/85 shadow-xs" />
                   </div>
                 </div>
               </div>
@@ -443,14 +494,14 @@ export default function Dashboard() {
                 )}
               </h3>
               <p className="mt-1 text-[12px] text-[#724060]/75">
-                {uploadNotice || "Click or drag a course PDF to generate notes & quizzes"}
+                {uploadNotice || "Drag & drop syllabus or slides → auto-indexes into Notes & Quiz"}
               </p>
             </div>
           </section>
 
-          {/* MIDDLE ROW: 4 Interactive MicroKit Hover-Glide Feature Cards */}
+          {/* FEATURE SHOWCASE ROW 1: 4 Visual Feature Representations */}
           <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {/* CARD 1: AI Note Maker (Mini LaTeX Formula + Sticky Note Preview) */}
+            {/* FEATURE 1: AI Note Maker & Revision Bot (Visual PDF -> Formula Notes + Curled Sticky Note Diagram) */}
             <div
               onMouseEnter={() => setHoveredCard(0)}
               onMouseLeave={() => setHoveredCard(null)}
@@ -465,43 +516,80 @@ export default function Dashboard() {
               )}
               <div>
                 <div className="flex items-center justify-between">
-                  <h3 className="text-[17px] font-bold text-[#2D1826]">
-                    AI Note Maker
-                  </h3>
+                  <div>
+                    <h3 className="text-[17px] font-bold text-[#2D1826]">
+                      AI Note Maker
+                    </h3>
+                    <p className="text-[11.5px] text-[#724060]/70">
+                      PDF → Formulas, Sticky Notes & Audio
+                    </p>
+                  </div>
                   <span className="grid h-8 w-8 place-items-center rounded-xl bg-[#FDF3F3] text-[#724060]">
                     <NotebookPen className="h-4 w-4" />
                   </span>
                 </div>
 
-                {/* Live Mini Visual Preview: LaTeX Equation Card + Sticky Note */}
-                <div className="relative mt-4 rounded-2xl border border-[#724060]/12 bg-[#FDF3F3]/80 p-3.5">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-[#A070A1]">
-                    Synthesized Formula & Proof
-                  </p>
-                  <div className="mt-2 rounded-xl bg-white px-3 py-2.5 font-serif text-[13px] text-[#2D1826] shadow-2xs">
-                    <div>{"∮ E · dA = Q_enc / ε₀"}</div>
-                    <div className="mt-1 text-[11px] font-sans text-[#724060]/80">
-                      {"U = -p · E  (Dipole Energy)"}
+                {/* Visual Diagram: Mini Lecture PDF -> Arrow -> Rendered LaTeX Notes + 3D Sticky Note */}
+                <div className="relative mt-4 rounded-2xl border border-[#724060]/12 bg-[#FDF3F3]/90 p-3">
+                  <div className="flex items-center gap-2">
+                    {/* Mini Source PDF Sheet */}
+                    <div className="w-[74px] shrink-0 rounded-xl border border-[#724060]/15 bg-white p-2 shadow-2xs">
+                      <span className="inline-block rounded bg-[#724060] px-1.5 py-0.5 text-[8px] font-bold text-white">
+                        Lecture PDF
+                      </span>
+                      <div className="mt-2 space-y-1.5">
+                        <div className="h-1 w-full rounded-full bg-[#724060]/30" />
+                        <div className="h-1 w-4/5 rounded-full bg-[#724060]/25" />
+                        <div className="h-1 w-full rounded-full bg-[#724060]/25" />
+                        <div className="h-1 w-3/5 rounded-full bg-[#724060]/20" />
+                      </div>
+                    </div>
+
+                    {/* Animated Transformation Arrow */}
+                    <div className="flex flex-col items-center text-[#724060]">
+                      <Sparkles className="h-3 w-3 text-[#A070A1]" />
+                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                    </div>
+
+                    {/* Mini Synthesized Math & Notes Sheet */}
+                    <div className="min-w-0 flex-1 rounded-xl border border-[#724060]/15 bg-white p-2.5 shadow-xs">
+                      <p className="text-[8.5px] font-bold uppercase tracking-wider text-[#A070A1]">
+                        Rendered LaTeX Form
+                      </p>
+                      <div className="mt-1 font-serif text-[12px] font-semibold text-[#2D1826]">
+                        {"∮ E · dA = Q / ε₀"}
+                      </div>
+                      <div className="mt-1 font-serif text-[10.5px] text-[#724060]">
+                        {"f(x) = ∫ a²ψ(x) dx"}
+                      </div>
+                      <div className="mt-1.5 space-y-1">
+                        <div className="h-1 w-4/5 rounded-full bg-[#A070A1]/40" />
+                        <div className="h-1 w-3/5 rounded-full bg-[#A070A1]/30" />
+                      </div>
                     </div>
                   </div>
-                  {/* Floating Sticky Note Badge */}
-                  <div className="absolute -bottom-2 right-3 rotate-3 rounded-lg bg-[#8C5378] px-2.5 py-1 text-[10px] font-semibold text-white shadow-md transition-transform group-hover:rotate-6">
-                    Sticky note
+
+                  {/* Realistic 3D Curled Sticky Note */}
+                  <div className="absolute -bottom-2.5 right-2.5 rotate-[-5deg] rounded-xl bg-gradient-to-br from-[#A070A1] to-[#724060] px-2.5 py-1.5 text-[10px] font-bold text-white shadow-[0_6px_14px_rgba(114,64,96,0.28)] transition-transform duration-300 group-hover:rotate-0 group-hover:scale-105">
+                    <span>Sticky note</span>
+                    <span className="block text-[8px] font-normal text-[#F8E7E7]">
+                      Exam trap inside
+                    </span>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-5 flex items-center justify-between text-[13px] font-semibold text-[#724060]">
+              <div className="mt-5 flex items-center justify-between text-[12.5px] font-bold text-[#724060]">
                 <span>
                   {notesQuery.data?.length
-                    ? `${notesQuery.data.length} saved notes`
-                    : "Synthesize PDF or topic"}
+                    ? `${notesQuery.data.length} saved notes · Open Studio`
+                    : "Open Notes & Revision Bot"}
                 </span>
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </div>
             </div>
 
-            {/* CARD 2: Bencho 3D Flashcard Stack & Quiz Studio */}
+            {/* FEATURE 2: 3D Flashcards & Quiz Studio (Visual 3D Layered Deck + Interactive A/B/C Quiz Tiles) */}
             <div
               onMouseEnter={() => setHoveredCard(1)}
               onMouseLeave={() => setHoveredCard(null)}
@@ -515,73 +603,100 @@ export default function Dashboard() {
               )}
               <div>
                 <div className="flex items-center justify-between">
-                  <h3 className="text-[17px] font-bold text-[#2D1826]">
-                    3D Flashcard Stack
-                  </h3>
+                  <div>
+                    <h3 className="text-[17px] font-bold text-[#2D1826]">
+                      Practice & 3D Cards
+                    </h3>
+                    <p className="text-[11.5px] text-[#724060]/70">
+                      Active Recall Deck + A/B/C Quizzes
+                    </p>
+                  </div>
                   <button
                     type="button"
                     onClick={() => setLocation("/practice")}
-                    className="text-[12px] font-semibold text-[#724060] hover:underline"
+                    className="rounded-full bg-[#2D1826] px-2.5 py-1 text-[10.5px] font-bold text-white transition hover:bg-[#724060] cursor-pointer"
                   >
-                    Open Practice →
+                    Quiz + Deck →
                   </button>
                 </div>
 
-                {/* Interactive Stacked Cards */}
+                {/* Visual 3D Perspective Layered Deck + Interactive A/B/C Quiz Option Tiles */}
                 <div
                   onClick={() => setCardFlipped(prev => !prev)}
-                  className="relative mt-4 h-28 cursor-pointer select-none"
+                  className="relative mt-4 h-31 cursor-pointer select-none pt-1"
                   title="Click card to flip answer"
                 >
-                  <div className="absolute inset-x-5 -bottom-2 h-24 rounded-2xl border border-[#724060]/15 bg-[#522943] opacity-85 transition-transform group-hover:translate-y-0.5" />
-                  <div className="absolute inset-x-2.5 -bottom-1 h-24 rounded-2xl border border-[#724060]/15 bg-[#A070A1] opacity-90" />
+                  {/* 3D Back Cards Tilted in Perspective */}
+                  <div className="absolute inset-x-6 top-3 h-23 rotate-6 rounded-2xl bg-[#2D1826] shadow-md transition-transform duration-300 group-hover:rotate-9 group-hover:translate-x-1" />
+                  <div className="absolute inset-x-4 top-2 h-23 rotate-3 rounded-2xl bg-[#724060] shadow-md transition-transform duration-300 group-hover:rotate-5" />
+                  <div className="absolute inset-x-2 top-1 h-23 -rotate-2 rounded-2xl bg-[#A070A1] shadow-sm transition-transform duration-300 group-hover:-rotate-3" />
+
+                  {/* Front Interactive Card */}
                   <motion.div
                     key={`${cardIndex}-${cardFlipped}`}
-                    initial={{ scale: 0.95, opacity: 0.7 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ duration: 0.18 }}
-                    className="relative flex h-24 w-full flex-col justify-between rounded-2xl border border-[#724060]/20 bg-[#FDF3F3] p-3.5 shadow-sm"
+                    initial={{ rotateX: 40, opacity: 0.75, scale: 0.96 }}
+                    animate={{ rotateX: 0, opacity: 1, scale: 1 }}
+                    transition={{ type: "spring", stiffness: 360, damping: 26 }}
+                    className="relative flex h-24 w-full flex-col justify-between rounded-2xl border border-[#724060]/20 bg-[#FDF3F3] p-3 shadow-md"
                   >
-                    <div className="flex items-center justify-between text-[10px] font-semibold text-[#A070A1]">
-                      <span>{cardFlipped ? "ANSWER" : "QUESTION"}</span>
-                      <span>
-                        {(cardIndex % deck.length) + 1}/{deck.length} · Tap to flip
+                    <div className="flex items-center justify-between text-[10px] font-bold text-[#724060]">
+                      <span className="uppercase tracking-wider">
+                        {cardFlipped ? "✓ Answer" : "Question · Tap to Flip"}
                       </span>
+                      <div
+                        className="flex items-center gap-1"
+                        onClick={e => e.stopPropagation()}
+                      >
+                        {(["A", "B", "C"] as const).map(opt => (
+                          <button
+                            key={opt}
+                            type="button"
+                            onClick={() => setSelectedQuizDemo(opt)}
+                            className={`h-4.5 w-4.5 rounded-md text-[9.5px] font-bold transition cursor-pointer ${
+                              selectedQuizDemo === opt
+                                ? "bg-[#724060] text-white shadow-2xs"
+                                : "bg-white text-[#724060] border border-[#724060]/20"
+                            }`}
+                          >
+                            {opt}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                    <p className="line-clamp-2 text-[13px] font-semibold text-[#2D1826]">
+                    <p className="line-clamp-2 text-[12.5px] font-bold text-[#2D1826]">
                       {cardFlipped ? activeCard.a : activeCard.q}
                     </p>
                   </motion.div>
                 </div>
               </div>
 
-              {/* Rating Pills */}
-              <div className="mt-5 flex items-center gap-1.5">
+              {/* Spaced Repetition Rating Pills */}
+              <div className="mt-3 flex items-center gap-1.5">
                 <button
                   type="button"
                   onClick={cycleFlashcard}
-                  className="flex-1 rounded-full bg-[#2D1826] py-1.5 text-[12px] font-semibold text-white transition hover:bg-[#724060]"
+                  className="flex-1 rounded-full bg-[#2D1826] py-1.5 text-[11.5px] font-bold text-white transition hover:bg-[#724060] cursor-pointer"
                 >
                   Easy
                 </button>
                 <button
                   type="button"
                   onClick={cycleFlashcard}
-                  className="flex-1 rounded-full border border-[#724060]/20 bg-[#FDF3F3] py-1.5 text-[12px] font-semibold text-[#2D1826] transition hover:bg-[#F8E7E7]"
+                  className="flex-1 rounded-full border border-[#724060]/20 bg-[#FDF3F3] py-1.5 text-[11.5px] font-bold text-[#2D1826] transition hover:bg-[#F8E7E7] cursor-pointer"
                 >
                   Good
                 </button>
                 <button
                   type="button"
                   onClick={cycleFlashcard}
-                  className="flex-1 rounded-full border border-[#724060]/20 bg-white py-1.5 text-[12px] font-semibold text-[#724060] transition hover:bg-[#FDF3F3]"
+                  className="flex-1 rounded-full border border-[#724060]/20 bg-white py-1.5 text-[11.5px] font-bold text-[#724060] transition hover:bg-[#FDF3F3] cursor-pointer"
                 >
                   Again
                 </button>
               </div>
             </div>
 
-            {/* CARD 3: Research Studio + MicroKit Aurora Export Button */}
+            {/* FEATURE 3: Research Studio (Visual Scholarly Paper + Branching Citation Mind-Map Graphic) */}
             <div
               onMouseEnter={() => setHoveredCard(2)}
               onMouseLeave={() => setHoveredCard(null)}
@@ -596,54 +711,86 @@ export default function Dashboard() {
               )}
               <div>
                 <div className="flex items-center justify-between">
-                  <h3 className="text-[17px] font-bold text-[#2D1826]">
-                    Research Studio
-                  </h3>
+                  <div>
+                    <h3 className="text-[17px] font-bold text-[#2D1826]">
+                      Research Studio
+                    </h3>
+                    <p className="text-[11.5px] text-[#724060]/70">
+                      Topic → Paper, Citations & Videos
+                    </p>
+                  </div>
                   <span className="grid h-8 w-8 place-items-center rounded-xl bg-[#FDF3F3] text-[#724060]">
                     <Compass className="h-4 w-4" />
                   </span>
                 </div>
 
-                {/* Mini Scholarly Paper Preview */}
-                <div className="mt-4 rounded-2xl border border-[#724060]/12 bg-[#FDF3F3]/80 p-3">
-                  <div className="rounded-xl bg-white p-2.5 shadow-2xs">
-                    <p className="truncate text-[12px] font-bold text-[#2D1826]">
-                      {latestResearch
-                        ? latestResearch.title
-                        : "Publication-Grade Research Paper"}
-                    </p>
-                    <p className="mt-0.5 line-clamp-2 text-[11px] text-[#724060]/75">
-                      Formal definitions, literature synthesis, verified YouTube lectures & citations.
-                    </p>
-                  </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                    <span className="rounded-full bg-[#2D1826] px-2.5 py-0.5 text-[10px] font-semibold text-white">
-                      Research Paper
-                    </span>
-                    <span className="rounded-full border border-[#724060]/20 bg-white px-2 py-0.5 text-[10px] font-medium text-[#724060]">
-                      Citations
-                    </span>
-                    <span className="rounded-full border border-[#724060]/20 bg-white px-2 py-0.5 text-[10px] font-medium text-[#724060]">
-                      Videos
-                    </span>
+                {/* Visual Mind-Map + Miniature Multi-Column Academic Paper Illustration */}
+                <div className="relative mt-4 rounded-2xl border border-[#724060]/12 bg-[#FDF3F3]/90 p-3">
+                  <div className="flex items-center justify-between gap-1.5">
+                    {/* Left Branching Nodes */}
+                    <div className="flex flex-col gap-2">
+                      <span className="inline-flex items-center gap-1 rounded-lg border border-[#724060]/20 bg-white px-2 py-1 text-[9px] font-bold text-[#724060] shadow-2xs">
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#724060]" />
+                        Citation
+                      </span>
+                      <span className="inline-flex items-center gap-1 rounded-lg border border-[#724060]/20 bg-white px-2 py-1 text-[9px] font-bold text-[#724060] shadow-2xs">
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#A070A1]" />
+                        Sources
+                      </span>
+                    </div>
+
+                    {/* Central Miniature Publication Paper Sheet */}
+                    <div className="min-w-0 flex-1 rounded-xl border border-[#724060]/15 bg-white p-2.5 shadow-xs text-center">
+                      <p className="truncate text-[9.5px] font-bold text-[#2D1826]">
+                        {latestResearch
+                          ? latestResearch.title
+                          : "Academic Research Paper"}
+                      </p>
+                      <p className="text-[7.5px] font-semibold uppercase tracking-wider text-[#A070A1]">
+                        Abstract & Literature Review
+                      </p>
+                      <div className="mt-1.5 grid grid-cols-2 gap-1.5 text-left">
+                        <div className="space-y-1">
+                          <div className="h-1 w-full rounded-full bg-[#2D1826]/30" />
+                          <div className="h-1 w-4/5 rounded-full bg-[#2D1826]/20" />
+                          <div className="h-1 w-full rounded-full bg-[#2D1826]/20" />
+                        </div>
+                        <div className="space-y-1">
+                          <div className="h-1 w-full rounded-full bg-[#724060]/30" />
+                          <div className="h-1 w-3/4 rounded-full bg-[#724060]/20" />
+                          <div className="h-1 w-full rounded-full bg-[#724060]/20" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right Branching Nodes */}
+                    <div className="flex flex-col gap-2">
+                      <span className="inline-flex items-center gap-1 rounded-lg border border-[#724060]/20 bg-white px-2 py-1 text-[9px] font-bold text-[#724060] shadow-2xs">
+                        <Play className="h-2 w-2 fill-[#724060] text-[#724060]" />
+                        Videos
+                      </span>
+                      <span className="inline-flex items-center gap-1 rounded-lg bg-[#2D1826] px-2 py-1 text-[9px] font-bold text-white shadow-2xs">
+                        .MD / PNG
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* MicroKit Aurora Button */}
+              {/* MicroKit Aurora Glow Button */}
               <button
                 type="button"
                 onClick={e => {
                   e.stopPropagation();
                   setLocation("/research");
                 }}
-                className="mt-4 w-full rounded-full bg-gradient-to-r from-[#2D1826] via-[#724060] to-[#4A263D] py-2 text-[13px] font-semibold text-white shadow-[0_6px_20px_rgba(114,64,96,0.3)] transition hover:opacity-95"
+                className="mt-4 w-full rounded-full bg-gradient-to-r from-[#2D1826] via-[#724060] to-[#4A263D] py-2 text-[12.5px] font-bold text-white shadow-[0_6px_20px_rgba(114,64,96,0.32)] transition hover:opacity-95 cursor-pointer"
               >
-                {latestResearch ? "Open & Export Paper" : "Start Research Paper"}
+                {latestResearch ? "Export Research Paper" : "Build Research Paper"}
               </button>
             </div>
 
-            {/* CARD 4: Today's Tasks (MicroKit Bounce Checkboxes) */}
+            {/* FEATURE 4: Today's Tasks & Exam Countdown (Interactive MicroKit Bounce Checkboxes — Never Empty!) */}
             <div
               onMouseEnter={() => setHoveredCard(3)}
               onMouseLeave={() => setHoveredCard(null)}
@@ -657,175 +804,271 @@ export default function Dashboard() {
               )}
               <div>
                 <div className="flex items-center justify-between">
-                  <h3 className="text-[17px] font-bold text-[#2D1826]">
-                    Today’s Tasks
-                  </h3>
-                  <button
-                    type="button"
-                    onClick={() => setLocation("/planner")}
-                    className="text-[12px] font-semibold text-[#724060] hover:underline"
-                  >
-                    Planner →
-                  </button>
+                  <div>
+                    <h3 className="text-[17px] font-bold text-[#2D1826]">
+                      Today’s Tasks
+                    </h3>
+                    <p className="text-[11.5px] text-[#724060]/70">
+                      Exam Countdown & Daily Roadmap
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-[#2D1826] px-2.5 py-1 text-[10px] font-bold text-white">
+                    {daysToExam !== null ? `${daysToExam}d to Exam` : "Study Roadmap"}
+                  </span>
                 </div>
 
-                <div className="mt-4 space-y-2">
-                  {data.todayItems.length > 0 ? (
-                    data.todayItems.slice(0, 4).map(item => {
-                      const done = Boolean(item.completedAt);
-                      return (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() =>
-                            completeItemMutation.mutate({
-                              id: item.id,
-                              completed: !done,
-                            })
-                          }
-                          className="flex w-full items-center gap-2.5 rounded-xl bg-[#FDF3F3]/80 px-3 py-2 text-left transition hover:bg-[#F8E7E7]"
-                        >
-                          <motion.span
-                            whileTap={{ scale: 1.25 }}
-                            className={`grid h-5 w-5 shrink-0 place-items-center rounded-md border transition-colors ${
-                              done
-                                ? "border-[#724060] bg-[#724060] text-white"
-                                : "border-[#724060]/40 bg-white"
-                            }`}
+                {/* Always-Interactive MicroKit Bounce Checkboxes */}
+                <div className="mt-3.5 space-y-1.5">
+                  {data.todayItems.length > 0
+                    ? data.todayItems.slice(0, 4).map(item => {
+                        const done = Boolean(item.completedAt);
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() =>
+                              completeItemMutation.mutate({
+                                id: item.id,
+                                completed: !done,
+                              })
+                            }
+                            className="flex w-full items-center gap-2.5 rounded-xl bg-[#FDF3F3]/90 px-3 py-1.5 text-left transition hover:bg-[#F8E7E7] cursor-pointer"
                           >
-                            {done && <Check className="h-3.5 w-3.5" />}
-                          </motion.span>
-                          <span
-                            className={`truncate text-[13px] font-medium ${
-                              done
-                                ? "text-[#724060]/60 line-through"
-                                : "text-[#2D1826]"
-                            }`}
+                            <motion.span
+                              whileTap={{ scale: 1.3 }}
+                              className={`grid h-4.5 w-4.5 shrink-0 place-items-center rounded-md border transition-colors ${
+                                done
+                                  ? "border-[#724060] bg-[#724060] text-white"
+                                  : "border-[#724060]/40 bg-white"
+                              }`}
+                            >
+                              {done && <Check className="h-3 w-3 stroke-[3]" />}
+                            </motion.span>
+                            <span
+                              className={`truncate text-[12px] font-semibold ${
+                                done
+                                  ? "text-[#724060]/55 line-through"
+                                  : "text-[#2D1826]"
+                              }`}
+                            >
+                              {item.title}
+                            </span>
+                          </button>
+                        );
+                      })
+                    : DEMO_TASKS.map(task => {
+                        const done = Boolean(demoTaskState[task.id]);
+                        return (
+                          <button
+                            key={task.id}
+                            type="button"
+                            onClick={() =>
+                              setDemoTaskState(prev => ({
+                                ...prev,
+                                [task.id]: !prev[task.id],
+                              }))
+                            }
+                            className="flex w-full items-center gap-2.5 rounded-xl bg-[#FDF3F3]/90 px-3 py-1.5 text-left transition hover:bg-[#F8E7E7] cursor-pointer"
                           >
-                            {item.title}
-                          </span>
-                        </button>
-                      );
-                    })
-                  ) : (
-                    <div className="rounded-2xl bg-[#FDF3F3] p-3.5 text-[12px] text-[#724060]/80">
-                      <p className="font-semibold text-[#2D1826]">
-                        No tasks scheduled today
-                      </p>
-                      <p className="mt-0.5">
-                        Add an exam date or study task in Planner to track daily progress.
-                      </p>
-                    </div>
-                  )}
+                            <motion.span
+                              whileTap={{ scale: 1.3 }}
+                              className={`grid h-4.5 w-4.5 shrink-0 place-items-center rounded-md border transition-colors ${
+                                done
+                                  ? "border-[#724060] bg-[#724060] text-white"
+                                  : "border-[#724060]/40 bg-white"
+                              }`}
+                            >
+                              {done && <Check className="h-3 w-3 stroke-[3]" />}
+                            </motion.span>
+                            <span
+                              className={`truncate text-[12px] font-semibold ${
+                                done
+                                  ? "text-[#724060]/55 line-through"
+                                  : "text-[#2D1826]"
+                              }`}
+                            >
+                              {task.title}
+                            </span>
+                          </button>
+                        );
+                      })}
                 </div>
               </div>
 
               <button
                 type="button"
                 onClick={() => setLocation("/planner")}
-                className="mt-4 w-full rounded-full border border-[#724060]/20 bg-[#FDF3F3] py-1.5 text-[12px] font-semibold text-[#724060] transition hover:bg-[#F8E7E7]"
+                className="mt-3.5 w-full rounded-full border border-[#724060]/20 bg-[#FDF3F3] py-1.5 text-[12px] font-bold text-[#724060] transition hover:bg-[#F8E7E7] cursor-pointer"
               >
-                + Add or manage tasks
+                Open Exam Planner →
               </button>
             </div>
           </section>
 
-          {/* BOTTOM COMPACT SPLIT: Subject Folders (Left) + 7-Day Focus Rhythm (Right) */}
-          <section className="grid grid-cols-12 gap-4">
-            {/* Subject Folders */}
-            <div className="col-span-12 lg:col-span-6 rounded-[26px] border border-[#724060]/12 bg-white p-5 shadow-[0_12px_28px_rgba(114,64,96,0.06)]">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-[17px] font-bold text-[#2D1826]">
-                    Subject Folders
-                  </h2>
-                  <p className="text-[12px] text-[#724060]/75">
-                    Jump into a course workspace
-                  </p>
+          {/* FEATURE SHOWCASE ROW 2: AI Socratic Chat Visual (4 cols) + Subject Folders Hub (4 cols) + Weekly Study Rhythm (4 cols) */}
+          <section className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+            {/* FEATURE 5: AI Tutor Chat (Visual Step-by-Step Conversation + 8 Mode Pills) */}
+            <div
+              onClick={() => setLocation("/chat")}
+              className="lg:col-span-4 group cursor-pointer rounded-[26px] border border-[#724060]/12 bg-white p-5 shadow-[0_12px_28px_rgba(114,64,96,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_38px_rgba(114,64,96,0.13)] flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-[17px] font-bold text-[#2D1826]">
+                      AI Study Tutor (8 Modes)
+                    </h2>
+                    <p className="text-[11.5px] text-[#724060]/75">
+                      Grounded in your uploaded course PDFs
+                    </p>
+                  </div>
+                  <span className="grid h-8 w-8 place-items-center rounded-xl bg-[#FDF3F3] text-[#724060]">
+                    <MessageCircle className="h-4 w-4" />
+                  </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setLocation("/subjects")}
-                  className="inline-flex items-center gap-1 rounded-full bg-[#FDF3F3] px-3 py-1.5 text-[12px] font-semibold text-[#724060] hover:bg-[#F8E7E7]"
-                >
-                  <span>All subjects ({data.subjects.length})</span>
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </button>
-              </div>
 
-              {data.subjects.length > 0 ? (
-                <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                  {data.subjects.slice(0, 6).map(subject => (
-                    <button
-                      key={subject.id}
-                      type="button"
-                      onClick={() => setLocation(`/subjects?subjectId=${subject.id}`)}
-                      className="group relative overflow-hidden rounded-2xl border border-[#724060]/12 bg-[#FDF3F3] p-3.5 text-left transition hover:-translate-y-0.5 hover:bg-[#F8E7E7]"
+                {/* Mini Visual Chat Conversation Representation */}
+                <div className="mt-3.5 space-y-2 rounded-2xl border border-[#724060]/12 bg-[#FDF3F3]/80 p-3">
+                  <div className="ml-auto max-w-[82%] rounded-2xl rounded-br-xs bg-[#724060] px-3 py-1.5 text-[11px] font-medium text-white shadow-2xs">
+                    How do I solve this past-paper integral?
+                  </div>
+                  <div className="mr-auto max-w-[90%] rounded-2xl rounded-bl-xs border border-[#724060]/15 bg-white px-3 py-2 text-[11px] text-[#2D1826] shadow-2xs">
+                    <span className="font-bold text-[#724060]">Socratic Step 1:</span>{" "}
+                    Substitute <span className="font-serif font-semibold">u = x² + 1</span>, then{" "}
+                    <span className="font-serif font-semibold">du = 2x dx</span>.
+                  </div>
+                </div>
+
+                {/* Interactive Mode Pills */}
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {["Explain", "Socratic", "Solve", "Past Papers", "Quiz Me"].map(m => (
+                    <span
+                      key={m}
+                      className="rounded-full border border-[#724060]/15 bg-[#FDF3F3] px-2.5 py-0.5 text-[10.5px] font-bold text-[#724060]"
                     >
-                      <span
-                        className="mb-2 block h-2 w-8 rounded-full"
-                        style={{ backgroundColor: subject.color || "#724060" }}
-                      />
-                      <p className="truncate text-[13px] font-bold text-[#2D1826]">
-                        {subject.name}
-                      </p>
-                      <p className="mt-0.5 text-[11px] text-[#724060]/70">
-                        Open folder →
-                      </p>
-                    </button>
+                      {m}
+                    </span>
                   ))}
                 </div>
-              ) : (
-                <div className="mt-4 flex items-center justify-between rounded-2xl bg-[#FDF3F3] p-4">
-                  <div className="flex items-center gap-3">
-                    <BookOpen className="h-5 w-5 text-[#724060]" />
-                    <span className="text-[13px] font-medium text-[#2D1826]">
-                      Create your first subject folder to organize notes & PDFs.
-                    </span>
+              </div>
+
+              <div className="mt-4 flex items-center justify-between text-[12.5px] font-bold text-[#724060]">
+                <span>Start AI Tutor Session</span>
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </div>
+            </div>
+
+            {/* FEATURE 6: Subject Folders Hub (Visual Colored Folder Cards) */}
+            <div className="lg:col-span-4 rounded-[26px] border border-[#724060]/12 bg-white p-5 shadow-[0_12px_28px_rgba(114,64,96,0.06)] flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-[17px] font-bold text-[#2D1826]">
+                      Subject Folders
+                    </h2>
+                    <p className="text-[11.5px] text-[#724060]/75">
+                      Organize PDFs, notes & flashcards by course
+                    </p>
                   </div>
                   <button
                     type="button"
-                    onClick={() => setLocation("/subjects?create=1")}
-                    className="shrink-0 rounded-full bg-[#724060] px-3.5 py-1.5 text-[12px] font-semibold text-white"
+                    onClick={() => setLocation("/subjects")}
+                    className="inline-flex items-center gap-1 rounded-full bg-[#FDF3F3] px-3 py-1 text-[11.5px] font-bold text-[#724060] hover:bg-[#F8E7E7] cursor-pointer"
                   >
-                    Create
+                    <span>All ({data.subjects.length})</span>
+                    <ArrowRight className="h-3 w-3" />
                   </button>
                 </div>
-              )}
+
+                <div className="mt-3.5 grid grid-cols-2 gap-2.5">
+                  {(data.subjects.length > 0
+                    ? data.subjects.slice(0, 4)
+                    : [
+                        { id: -1, name: "Physics 201", color: "#724060" },
+                        { id: -2, name: "Calculus II", color: "#A070A1" },
+                        { id: -3, name: "Computer Science", color: "#522943" },
+                      ]
+                  ).map(subject => (
+                    <button
+                      key={subject.id}
+                      type="button"
+                      onClick={() =>
+                        setLocation(
+                          subject.id > 0
+                            ? `/subjects?subjectId=${subject.id}`
+                            : "/subjects?create=1"
+                        )
+                      }
+                      className="group relative overflow-hidden rounded-2xl border border-[#724060]/12 bg-[#FDF3F3] p-3 text-left transition hover:-translate-y-0.5 hover:bg-[#F8E7E7] cursor-pointer"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span
+                          className="h-2.5 w-8 rounded-full"
+                          style={{ backgroundColor: subject.color || "#724060" }}
+                        />
+                        <FileText className="h-3.5 w-3.5 text-[#A070A1]" />
+                      </div>
+                      <p className="mt-2 truncate text-[12.5px] font-bold text-[#2D1826]">
+                        {subject.name}
+                      </p>
+                      <p className="mt-0.5 text-[10.5px] font-semibold text-[#724060]/70">
+                        {subject.id > 0 ? "Open folder →" : "Sample folder →"}
+                      </p>
+                    </button>
+                  ))}
+
+                  <button
+                    type="button"
+                    onClick={() => setLocation("/subjects?create=1")}
+                    className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#724060]/25 bg-[#FDF3F3]/50 p-3 text-center text-[#724060] transition hover:border-[#724060] hover:bg-[#F8E7E7] cursor-pointer"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span className="mt-1 text-[11.5px] font-bold">New Subject</span>
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setLocation("/documents")}
+                className="mt-4 w-full rounded-full border border-[#724060]/20 bg-[#FDF3F3] py-1.5 text-[12px] font-bold text-[#724060] transition hover:bg-[#F8E7E7] cursor-pointer"
+              >
+                Open Document Vault →
+              </button>
             </div>
 
-            {/* Compact 7-Day Focus Bar */}
-            <div className="col-span-12 lg:col-span-6 rounded-[26px] border border-[#724060]/12 bg-white p-5 shadow-[0_12px_28px_rgba(114,64,96,0.06)] flex flex-col justify-between">
+            {/* FEATURE 7: Compact 7-Day Focus Bar */}
+            <div className="lg:col-span-4 rounded-[26px] border border-[#724060]/12 bg-white p-5 shadow-[0_12px_28px_rgba(114,64,96,0.06)] flex flex-col justify-between">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-[17px] font-bold text-[#2D1826]">
                     Weekly Study Rhythm
                   </h2>
-                  <p className="text-[12px] text-[#724060]/75">
-                    {data.sessionMinutesToday}m focused today · auto-tracked while you study
+                  <p className="text-[11.5px] text-[#724060]/75">
+                    {data.sessionMinutesToday}m focused today · auto-tracked live
                   </p>
                 </div>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FDF3F3] px-3 py-1 text-[11px] font-semibold text-[#724060]">
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#FDF3F3] px-2.5 py-1 text-[10.5px] font-bold text-[#724060]">
                   <Flame className="h-3.5 w-3.5 text-[#724060]" />
                   Live
                 </span>
               </div>
 
-              <div className="mt-4 grid grid-cols-7 items-end gap-2 pt-2">
+              <div className="mt-4 grid grid-cols-7 items-end gap-1.5 pt-2">
                 {weekTrend.map(point => {
                   const h = Math.max(
-                    12,
+                    14,
                     Math.round((point.minutes / maxWeekMinutes) * 100)
                   );
                   return (
                     <div
                       key={point.dayName}
-                      className="flex flex-col items-center gap-1.5"
+                      className="flex flex-col items-center gap-1"
                     >
-                      <span className="text-[10px] font-semibold text-[#724060]">
+                      <span className="text-[9.5px] font-bold text-[#724060]">
                         {point.minutes > 0 ? `${point.minutes}m` : "0m"}
                       </span>
-                      <div className="flex h-20 w-full max-w-10 items-end rounded-xl bg-[#FDF3F3] p-1">
+                      <div className="flex h-20 w-full max-w-9 items-end rounded-xl bg-[#FDF3F3] p-1">
                         <div
                           className={`w-full rounded-lg transition-all duration-500 ${
                             point.isToday
@@ -838,7 +1081,7 @@ export default function Dashboard() {
                         />
                       </div>
                       <span
-                        className={`text-[11px] font-semibold ${
+                        className={`text-[10.5px] font-semibold ${
                           point.isToday ? "text-[#2D1826] font-bold" : "text-[#724060]/75"
                         }`}
                       >
