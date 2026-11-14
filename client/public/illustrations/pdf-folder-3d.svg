@@ -30,31 +30,26 @@
     </filter>
   </defs>
   <rect width="480" height="280" fill="url(#bgGlow)" />
-  <g filter="url(#shadow3d)" transform="translate(120, 32)">
-    <path d="M 16 68 L 88 68 L 104 84 L 214 84 Q 228 84 228 98 L 228 202 Q 228 216 214 216 L 16 216 Q 2 216 2 202 L 2 82 Q 2 68 16 68 Z" fill="#4A253D" />
+  <g filter="url(#shadow3d)" transform="translate(132, 26)">
+    <path d="M 16 68 L 88 68 L 104 84 L 204 84 Q 218 84 218 98 L 218 198 Q 218 212 204 212 L 16 212 Q 2 212 2 198 L 2 82 Q 2 68 16 68 Z" fill="#4A253D" />
 
-    <g filter="url(#softShadow)" transform="translate(34, 24) rotate(-8)">
-      <rect width="98" height="132" rx="12" fill="#FDF3F3" stroke="#EAD2D9" stroke-width="1.5" />
-      <rect x="14" y="18" width="42" height="14" rx="4" fill="#ECCFD9" />
-      <rect x="14" y="44" width="70" height="5" rx="2.5" fill="#8C5378" />
-      <rect x="14" y="56" width="70" height="5" rx="2.5" fill="#A070A1" />
-      <rect x="14" y="68" width="56" height="5" rx="2.5" fill="#A070A1" />
+    <g filter="url(#softShadow)" transform="translate(36, 18) rotate(-8)">
+      <rect width="92" height="124" rx="12" fill="#FFFFFF" stroke="#EAD2D9" stroke-width="1.5" />
+      <text x="16" y="30" font-family="Inter, system-ui, sans-serif" font-size="15" font-weight="800" fill="#724060">PDF</text>
+      <rect x="16" y="44" width="60" height="5" rx="2.5" fill="#8C5378" />
+      <rect x="16" y="56" width="60" height="5" rx="2.5" fill="#A070A1" />
+      <rect x="16" y="68" width="46" height="5" rx="2.5" fill="#C4A6B5" />
     </g>
 
-    <g filter="url(#softShadow)" transform="translate(84, 6) rotate(4)">
-      <rect width="112" height="144" rx="14" fill="#FFFFFF" stroke="#EAD2D9" stroke-width="1.5" />
-      <rect x="58" y="12" width="44" height="22" rx="11" fill="url(#plumGrad)" />
-      <text x="80" y="27" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="800" fill="#FFFFFF">PDF</text>
-
-      <rect x="16" y="46" width="46" height="8" rx="4" fill="#E5C5D0" />
-      <rect x="16" y="64" width="80" height="5" rx="2.5" fill="#724060" />
-      <rect x="16" y="76" width="80" height="5" rx="2.5" fill="#8C5378" />
-      <rect x="16" y="88" width="80" height="5" rx="2.5" fill="#8C5378" />
-      <rect x="16" y="100" width="54" height="5" rx="2.5" fill="#C4A6B5" />
+    <g filter="url(#softShadow)" transform="translate(94, 4) rotate(8)">
+      <rect width="96" height="128" rx="12" fill="#FFFFFF" stroke="#EAD2D9" stroke-width="1.5" />
+      <text x="16" y="30" font-family="Inter, system-ui, sans-serif" font-size="15" font-weight="800" fill="#724060">PDF</text>
+      <rect x="16" y="44" width="64" height="5" rx="2.5" fill="#724060" />
+      <rect x="16" y="56" width="64" height="5" rx="2.5" fill="#8C5378" />
+      <rect x="16" y="68" width="50" height="5" rx="2.5" fill="#C4A6B5" />
     </g>
 
-    <path d="M 8 112 L 132 112 L 148 94 L 222 94 Q 234 94 232 108 L 218 206 Q 216 216 204 216 L 16 216 Q 4 216 4 204 Z" fill="url(#plumGrad)" />
-    <rect x="152" y="104" width="64" height="16" rx="6" fill="#FDF3F3" />
-    <text x="184" y="115" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="8.5" font-weight="800" fill="#522943">DOCUMENTS</text>
+    <path d="M 4 106 L 216 106 Q 226 106 222 118 L 208 202 Q 206 212 194 212 L 16 212 Q 4 212 2 200 Z" fill="url(#plumGrad)" />
+    <circle cx="110" cy="158" r="18" fill="#F8E7E7" />
   </g>
 </svg>

@@ -30,56 +30,30 @@
     </filter>
   </defs>
   <rect width="480" height="280" fill="url(#bgGlow)" />
-  <path d="M 150 86 C 185 68, 215 72, 236 96" fill="none" stroke="#8C5378" stroke-width="3" stroke-linecap="round" />
-  <path d="M 148 198 C 182 212, 215 204, 236 182" fill="none" stroke="#8C5378" stroke-width="3" stroke-linecap="round" />
-  <path d="M 332 88 C 302 68, 272 74, 252 96" fill="none" stroke="#8C5378" stroke-width="3" stroke-linecap="round" />
-  <path d="M 334 198 C 302 214, 272 204, 252 182" fill="none" stroke="#8C5378" stroke-width="3" stroke-linecap="round" />
+  <g filter="url(#shadow3d)" transform="translate(48, 28)">
+    <rect width="384" height="168" rx="20" fill="#FFFFFF" stroke="#EAD2D9" stroke-width="1.5" />
+    <rect x="84" y="24" width="216" height="10" rx="5" fill="#2D1826" />
+    <rect x="118" y="42" width="148" height="8" rx="4" fill="#724060" />
+    <rect x="148" y="58" width="88" height="6" rx="3" fill="#A070A1" />
 
-  <circle cx="150" cy="86" r="5.5" fill="#724060" />
-  <circle cx="148" cy="198" r="5.5" fill="#724060" />
-  <circle cx="332" cy="88" r="5.5" fill="#724060" />
-  <circle cx="334" cy="198" r="5.5" fill="#724060" />
-
-  <g filter="url(#shadow3d)" transform="translate(174, 56)">
-    <rect width="132" height="168" rx="16" fill="#FFFFFF" stroke="#EAD2D9" stroke-width="1.5" />
-    <rect x="16" y="18" width="100" height="12" rx="4" fill="url(#plumGrad)" />
-    <rect x="16" y="36" width="68" height="5" rx="2.5" fill="#A070A1" />
-
-    <rect x="16" y="52" width="46" height="4" rx="2" fill="#CDB5C3" />
-    <rect x="16" y="61" width="46" height="4" rx="2" fill="#DCC8D3" />
-    <rect x="16" y="70" width="46" height="4" rx="2" fill="#DCC8D3" />
-    <rect x="16" y="79" width="38" height="4" rx="2" fill="#DCC8D3" />
-
-    <rect x="70" y="52" width="46" height="4" rx="2" fill="#CDB5C3" />
-    <rect x="70" y="61" width="46" height="4" rx="2" fill="#DCC8D3" />
-    <rect x="70" y="70" width="46" height="4" rx="2" fill="#DCC8D3" />
-    <rect x="70" y="79" width="42" height="4" rx="2" fill="#DCC8D3" />
-
-    <rect x="16" y="96" width="100" height="24" rx="6" fill="#FDF3F3" stroke="#EAD2D9" />
-    <text x="66" y="112" text-anchor="middle" font-family="Georgia, serif" font-size="10.5" font-style="italic" font-weight="700" fill="#724060">Hψ = Eψ · Literature</text>
-
-    <rect x="16" y="130" width="100" height="4" rx="2" fill="#CDB5C3" />
-    <rect x="16" y="139" width="88" height="4" rx="2" fill="#DCC8D3" />
-    <rect x="16" y="148" width="72" height="4" rx="2" fill="#DCC8D3" />
+    <rect x="36" y="80" width="52" height="7" rx="3.5" fill="#724060" />
+    <rect x="36" y="96" width="312" height="5" rx="2.5" fill="#CDB5C3" />
+    <rect x="36" y="108" width="312" height="5" rx="2.5" fill="#DCC8D3" />
+    <rect x="36" y="120" width="296" height="5" rx="2.5" fill="#DCC8D3" />
+    <rect x="36" y="132" width="312" height="5" rx="2.5" fill="#DCC8D3" />
+    <rect x="36" y="144" width="220" height="5" rx="2.5" fill="#DCC8D3" />
   </g>
 
-  <g filter="url(#softShadow)" transform="translate(38, 60)">
-    <rect width="108" height="40" rx="20" fill="#FFFFFF" stroke="#EAD2D9" stroke-width="1.5" />
-    <text x="54" y="25" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="13.5" font-weight="800" fill="#724060">Citations</text>
+  <g filter="url(#softShadow)" transform="translate(48, 214)">
+    <rect width="148" height="38" rx="19" fill="url(#darkPlumGrad)" />
+    <text x="74" y="24" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="700" fill="#FFFFFF">Research Paper</text>
   </g>
-
-  <g filter="url(#softShadow)" transform="translate(38, 178)">
-    <rect width="108" height="40" rx="20" fill="url(#plumGrad)" />
-    <text x="54" y="25" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="13.5" font-weight="800" fill="#FFFFFF">Paper .MD</text>
+  <g filter="url(#softShadow)" transform="translate(208, 214)">
+    <rect width="96" height="38" rx="19" fill="#FFFFFF" stroke="#D8C2CD" stroke-width="1.5" />
+    <text x="48" y="24" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="700" fill="#2D1826">Tags</text>
   </g>
-
-  <g filter="url(#softShadow)" transform="translate(334, 60)">
-    <rect width="108" height="40" rx="20" fill="url(#darkPlumGrad)" />
-    <text x="54" y="25" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="13.5" font-weight="800" fill="#FFFFFF">Literature</text>
-  </g>
-
-  <g filter="url(#softShadow)" transform="translate(334, 178)">
-    <rect width="108" height="40" rx="20" fill="#F8E7E7" stroke="#E2C2CE" stroke-width="1.5" />
-    <text x="54" y="25" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="13.5" font-weight="800" fill="#2D1826">▶ Videos</text>
+  <g filter="url(#softShadow)" transform="translate(316, 214)">
+    <rect width="116" height="38" rx="19" fill="#FFFFFF" stroke="#D8C2CD" stroke-width="1.5" />
+    <text x="58" y="24" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="700" fill="#2D1826">Citation</text>
   </g>
 </svg>
