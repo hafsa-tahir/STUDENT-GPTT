@@ -200,7 +200,8 @@ export function AiSynthesisLoader({
 }
 
 /**
- * Floating 3D Illustration Showcase Badge for Page Hero Banners
+ * Static Crisp 3D Illustration Showcase Badge for Page Hero Banners
+ * (No continuous movement or subpixel scale so vector graphics stay 100% razor-sharp)
  */
 export function FloatingHeroIllustration({
   src,
@@ -212,22 +213,18 @@ export function FloatingHeroIllustration({
   caption?: string;
 }) {
   return (
-    <motion.div
-      animate={{ y: [0, -6, 0] }}
-      transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-      whileHover={{ scale: 1.04, rotate: -1 }}
-      className="relative overflow-hidden rounded-[22px] border border-white/25 bg-white/15 p-2 shadow-[0_14px_34px_rgba(0,0,0,0.2)] backdrop-blur-md"
-    >
+    <div className="relative overflow-hidden rounded-[22px] border border-white/25 bg-white/15 p-2 shadow-[0_14px_34px_rgba(0,0,0,0.2)]">
       <img
-        src={src}
+        src={src.replace(/\.jpg$/, ".svg")}
         alt={alt}
-        className="h-24 w-40 sm:h-28 sm:w-48 rounded-2xl object-cover"
+        className="h-28 w-48 sm:h-32 sm:w-56 rounded-2xl object-cover"
       />
       {caption && (
-        <span className="mt-1 block text-center text-[10px] font-bold uppercase tracking-wider text-[#FDF3F3]/90">
+        <span className="mt-1.5 block text-center text-[10.5px] font-bold uppercase tracking-wider text-white">
           {caption}
         </span>
       )}
-    </motion.div>
+    </div>
   );
 }
+

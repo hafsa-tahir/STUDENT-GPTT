@@ -527,7 +527,7 @@ export default function Notes() {
 
               <div className="hidden lg:block">
                 <FloatingHeroIllustration
-                  src="/illustrations/ai-notes-diagram.jpg"
+                  src="/illustrations/ai-notes-diagram.svg"
                   alt="PDF to Formula Notes 3D Diagram"
                   caption="PDF → LaTeX Notes & Audio"
                 />
@@ -1508,7 +1508,7 @@ function EmptyWorkspace({ mode }: { mode: "notes" | "revision" }) {
       <div className="flex flex-col items-center">
         <div className="overflow-hidden rounded-2xl border border-[#724060]/12 bg-[#FDF3F3] shadow-xs">
           <img
-            src="/illustrations/ai-notes-diagram.jpg"
+            src="/illustrations/ai-notes-diagram.svg"
             alt="AI Notes Workflow"
             className="h-36 w-60 object-cover"
           />

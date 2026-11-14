@@ -467,7 +467,7 @@ export default function Research() {
               </div>
               <div className="hidden lg:block">
                 <FloatingHeroIllustration
-                  src="/illustrations/research-canvas-diagram.jpg"
+                  src="/illustrations/research-canvas-diagram.svg"
                   alt="Research Paper Mind-Map"
                   caption="Topic → Paper, Citations & Videos"
                 />
@@ -1078,7 +1078,7 @@ export default function Research() {
                   <div className="flex flex-col items-center">
                     <div className="overflow-hidden rounded-2xl border border-[#724060]/12 bg-[#FDF3F3] shadow-xs">
                       <img
-                        src="/illustrations/research-canvas-diagram.jpg"
+                        src="/illustrations/research-canvas-diagram.svg"
                         alt="Research Studio Mind-Map"
                         className="h-40 w-64 object-cover"
                       />

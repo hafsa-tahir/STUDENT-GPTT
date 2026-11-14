@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 280" shape-rendering="geometricPrecision" text-rendering="geometricPrecision">
+  <defs>
+    <radialGradient id="bgGlow" cx="50%" cy="45%" r="65%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#F8E7E7" />
+    </radialGradient>
+    <linearGradient id="plumGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8C5378" />
+      <stop offset="50%" stop-color="#724060" />
+      <stop offset="100%" stop-color="#4A253D" />
+    </linearGradient>
+    <linearGradient id="darkPlumGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4A253D" />
+      <stop offset="100%" stop-color="#2D1826" />
+    </linearGradient>
+    <linearGradient id="berryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#C69EC7" />
+      <stop offset="100%" stop-color="#966397" />
+    </linearGradient>
+    <linearGradient id="blushCard" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#FDF3F3" />
+    </linearGradient>
+    <filter id="shadow3d" x="-15%" y="-15%" width="135%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#522943" flood-opacity="0.16" />
+      <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#2D1826" flood-opacity="0.08" />
+    </filter>
+    <filter id="softShadow" x="-12%" y="-12%" width="128%" height="132%">
+      <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#522943" flood-opacity="0.12" />
+    </filter>
+  </defs>
+  <rect width="480" height="280" fill="url(#bgGlow)" />
+  <g filter="url(#shadow3d)" transform="translate(38, 36)">
+    <rect width="142" height="204" rx="18" fill="#FFFFFF" stroke="#EFE0E4" stroke-width="1.5" />
+    <path d="M 22 -4 L 44 -4 L 44 36 L 33 27 L 22 36 Z" fill="url(#plumGrad)" />
+    <path d="M 106 0 L 142 36 L 116 36 Q 106 36 106 26 Z" fill="url(#plumGrad)" />
+    <text x="20" y="72" font-family="Inter, system-ui, sans-serif" font-size="15" font-weight="800" fill="#2D1826">Lecture PDF</text>
+    <rect x="20" y="88" width="98" height="5" rx="2.5" fill="#C4A6B5" />
+    <rect x="20" y="100" width="98" height="5" rx="2.5" fill="#D8C2CD" />
+    <rect x="20" y="112" width="82" height="5" rx="2.5" fill="#D8C2CD" />
+    <rect x="20" y="124" width="64" height="5" rx="2.5" fill="#E5D4DC" />
+    <rect x="20" y="146" width="98" height="5" rx="2.5" fill="#C4A6B5" />
+    <rect x="20" y="158" width="90" height="5" rx="2.5" fill="#D8C2CD" />
+    <rect x="20" y="170" width="72" height="5" rx="2.5" fill="#E5D4DC" />
+  </g>
+
+  <g filter="url(#softShadow)">
+    <path d="M 196 154 Q 232 114 268 128 L 263 114 L 292 138 L 258 154 L 264 140 Q 232 130 196 154 Z" fill="url(#plumGrad)" />
+  </g>
+
+  <g filter="url(#shadow3d)" transform="translate(304, 34)">
+    <rect width="146" height="208" rx="18" fill="#FFFFFF" stroke="#EFE0E4" stroke-width="1.5" />
+    <text x="18" y="32" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="800" fill="#2D1826">Study Note</text>
+    <line x1="18" y1="42" x2="128" y2="42" stroke="#EAD2D9" stroke-width="1.5" />
+
+    <rect x="18" y="52" width="74" height="15" rx="5" fill="#F4E3EC" />
+    <text x="24" y="63" font-family="Inter, system-ui, sans-serif" font-size="9.5" font-weight="700" fill="#522943">Key Concepts</text>
+
+    <rect x="18" y="72" width="110" height="14" rx="4" fill="#FAF0F4" />
+    <circle cx="25" cy="79" r="2.2" fill="#724060" />
+    <text x="31" y="82.5" font-family="Inter, system-ui, sans-serif" font-size="8.8" font-weight="600" fill="#2D1826">Gauss Flux Theorem</text>
+
+    <rect x="18" y="90" width="104" height="14" rx="4" fill="#FAF0F4" />
+    <circle cx="25" cy="97" r="2.2" fill="#724060" />
+    <text x="31" y="100.5" font-family="Inter, system-ui, sans-serif" font-size="8.8" font-weight="600" fill="#2D1826">Dipole Potential U</text>
+
+    <rect x="18" y="112" width="54" height="15" rx="5" fill="#F4E3EC" />
+    <text x="24" y="123" font-family="Inter, system-ui, sans-serif" font-size="9.5" font-weight="700" fill="#522943">Calculus</text>
+
+    <text x="18" y="146" font-family="Georgia, serif" font-size="13" font-style="italic" font-weight="700" fill="#2D1826">∫ f(x) dx = F(b) − F(a)</text>
+    <text x="18" y="168" font-family="Georgia, serif" font-size="12.5" font-style="italic" font-weight="700" fill="#724060">∮ E · dA = Q / ε₀</text>
+
+    <g filter="url(#softShadow)" transform="translate(84, 146)">
+      <path d="M 0 6 Q 0 0 6 0 L 54 0 Q 60 0 60 6 L 60 44 L 44 60 L 6 60 Q 0 60 0 54 Z" fill="url(#berryGrad)" />
+      <path d="M 44 60 L 60 44 L 48 44 Q 44 44 44 48 Z" fill="#522943" />
+      <text x="10" y="24" font-family="Inter, system-ui, sans-serif" font-size="9.5" font-weight="800" fill="#FFFFFF">Sticky</text>
+      <text x="10" y="36" font-family="Inter, system-ui, sans-serif" font-size="9" font-weight="600" fill="#FDF3F3">Exam tip</text>
+    </g>
+  </g>
+</svg>

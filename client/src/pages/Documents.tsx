@@ -332,9 +332,9 @@ export default function Documents() {
               className="group flex items-center gap-4 rounded-[22px] border border-white/20 bg-white/12 px-4 py-3 text-left backdrop-blur-md transition hover:border-white/40 hover:bg-white/18 cursor-pointer"
             >
               <img
-                src="/illustrations/pdf-folder-3d.jpg"
+                src="/illustrations/pdf-folder-3d.svg"
                 alt="3D PDF Folder"
-                className="h-14 w-20 rounded-xl object-cover shadow-sm transition-transform duration-300 group-hover:scale-105"
+                className="h-14 w-20 rounded-xl object-cover shadow-sm "
               />
               <div>
                 <p className="text-[13.5px] font-bold text-white flex items-center gap-1.5">
@@ -573,7 +573,7 @@ export default function Documents() {
             <div className="rounded-3xl border border-dashed border-[#A070A1]/30 bg-white p-12 text-center shadow-xs">
               <div className="mx-auto w-56 overflow-hidden rounded-2xl border border-[#724060]/12 bg-[#FDF3F3] shadow-xs">
                 <img
-                  src="/illustrations/pdf-folder-3d.jpg"
+                  src="/illustrations/pdf-folder-3d.svg"
                   alt="3D PDF Folder"
                   className="h-36 w-full object-cover"
                 />

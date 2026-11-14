@@ -178,7 +178,7 @@ export default function Planner() {
             </div>
             <div className="hidden lg:block">
               <FloatingHeroIllustration
-                src="/illustrations/planner-roadmap-3d.jpg"
+                src="/illustrations/planner-roadmap-3d.svg"
                 alt="Study Planner Roadmap"
                 caption="Exam Countdown & Tasks"
               />
@@ -343,7 +343,7 @@ export default function Planner() {
           <div className="mt-8 rounded-[28px] border-2 border-dashed border-[#724060]/25 bg-white px-6 py-12 text-center shadow-xs">
             <div className="mx-auto w-60 overflow-hidden rounded-2xl border border-[#724060]/12 bg-[#FDF3F3] shadow-xs">
               <img
-                src="/illustrations/planner-roadmap-3d.jpg"
+                src="/illustrations/planner-roadmap-3d.svg"
                 alt="Study Planner Roadmap"
                 className="h-36 w-full object-cover"
               />

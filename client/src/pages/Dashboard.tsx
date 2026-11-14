@@ -377,9 +377,9 @@ export default function Dashboard() {
 
               <div className="overflow-hidden rounded-2xl bg-[#FDF3F3] mb-2.5">
                 <img
-                  src="/illustrations/pdf-folder-3d.jpg"
+                  src="/illustrations/pdf-folder-3d.svg"
                   alt="Drop Lecture PDF 3D Folder"
-                  className="h-28 w-48 object-cover transition-transform duration-500 group-hover:scale-105"
+                  className="h-28 w-48 object-cover "
                 />
               </div>
 
@@ -435,9 +435,9 @@ export default function Dashboard() {
                 {/* 3D Visual Illustration Image */}
                 <div className="mt-3.5 overflow-hidden rounded-2xl border border-[#724060]/12 bg-[#FDF3F3]">
                   <img
-                    src="/illustrations/ai-notes-diagram.jpg"
+                    src="/illustrations/ai-notes-diagram.svg"
                     alt="AI Note Maker: Lecture PDF to Formula Study Notes"
-                    className="h-40 w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    className="h-40 w-full object-cover "
                   />
                 </div>
               </div>
@@ -483,9 +483,9 @@ export default function Dashboard() {
                 {/* 3D Visual Illustration Image */}
                 <div className="mt-3.5 overflow-hidden rounded-2xl border border-[#724060]/12 bg-[#FDF3F3]">
                   <img
-                    src="/illustrations/flashcards-quiz-3d.jpg"
+                    src="/illustrations/flashcards-quiz-3d.svg"
                     alt="3D Flashcard Stack and Multiple Choice Quiz"
-                    className="h-40 w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    className="h-40 w-full object-cover "
                   />
                 </div>
               </div>
@@ -550,9 +550,9 @@ export default function Dashboard() {
                 {/* 3D Visual Illustration Image */}
                 <div className="mt-3.5 overflow-hidden rounded-2xl border border-[#724060]/12 bg-[#FDF3F3]">
                   <img
-                    src="/illustrations/research-canvas-diagram.jpg"
+                    src="/illustrations/research-canvas-diagram.svg"
                     alt="Research Studio Paper, Citation and Videos Mind-Map"
-                    className="h-40 w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    className="h-40 w-full object-cover "
                   />
                 </div>
               </div>
@@ -607,9 +607,9 @@ export default function Dashboard() {
                   className="mt-3.5 cursor-pointer overflow-hidden rounded-2xl border border-[#724060]/12 bg-[#FDF3F3]"
                 >
                   <img
-                    src="/illustrations/planner-roadmap-3d.jpg"
+                    src="/illustrations/planner-roadmap-3d.svg"
                     alt="Exam Countdown and Daily Task Planner"
-                    className="h-28 w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    className="h-28 w-full object-cover "
                   />
                 </div>
 
@@ -698,9 +698,9 @@ export default function Dashboard() {
                 {/* 3D AI Tutor Illustration Image */}
                 <div className="mt-3.5 overflow-hidden rounded-2xl border border-[#724060]/12 bg-[#FDF3F3]">
                   <img
-                    src="/illustrations/ai-tutor-socratic.jpg"
+                    src="/illustrations/ai-tutor-socratic.svg"
                     alt="AI Study Tutor Step-by-Step Socratic Solver"
-                    className="h-36 w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    className="h-36 w-full object-cover "
                   />
                 </div>
               </div>

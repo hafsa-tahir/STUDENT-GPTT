@@ -242,7 +242,7 @@ export default function Chat() {
                 <div className="px-3 py-8 text-center">
                   <div className="mx-auto w-44 overflow-hidden rounded-2xl border border-[#724060]/12 bg-[#FDF3F3] shadow-2xs">
                     <img
-                      src="/illustrations/ai-tutor-socratic.jpg"
+                      src="/illustrations/ai-tutor-socratic.svg"
                       alt="AI Study Tutor"
                       className="h-28 w-full object-cover"
                     />

@@ -442,7 +442,7 @@ export default function Practice() {
               <div className="rounded-[28px] border-2 border-dashed border-[#724060]/25 bg-white px-6 py-12 text-center shadow-xs">
                 <div className="mx-auto w-60 overflow-hidden rounded-2xl border border-[#724060]/12 bg-[#FDF3F3] shadow-xs">
                   <img
-                    src="/illustrations/flashcards-quiz-3d.jpg"
+                    src="/illustrations/flashcards-quiz-3d.svg"
                     alt="3D Quiz and Flashcards"
                     className="h-36 w-full object-cover"
                   />
@@ -555,7 +555,7 @@ export default function Practice() {
               <div className="rounded-[28px] border-2 border-dashed border-[#724060]/25 bg-white px-6 py-12 text-center shadow-xs">
                 <div className="mx-auto w-60 overflow-hidden rounded-2xl border border-[#724060]/12 bg-[#FDF3F3] shadow-xs">
                   <img
-                    src="/illustrations/flashcards-quiz-3d.jpg"
+                    src="/illustrations/flashcards-quiz-3d.svg"
                     alt="3D Flashcards Stack"
                     className="h-36 w-full object-cover"
                   />
