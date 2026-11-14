@@ -4903,6 +4903,44 @@ function createExpressApp() {
       return res.status(404).json({ error: "Research export not found." });
     }
   });
+  app2.get(["/api/tts", "/tts"], async (req, res) => {
+    try {
+      const rawText = typeof req.query.text === "string" ? req.query.text.trim() : "";
+      if (!rawText) return res.status(400).json({ error: "Text is required." });
+      const text4 = rawText.slice(0, 200);
+      const ttsUrls = [
+        `https://translate.googleapis.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q=${encodeURIComponent(text4)}`,
+        `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q=${encodeURIComponent(text4)}`,
+        `https://api.streamelements.com/kappa/v2/speech?voice=Brian&text=${encodeURIComponent(text4)}`
+      ];
+      for (const url of ttsUrls) {
+        try {
+          const upstream = await fetch(url, {
+            headers: {
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+            },
+            signal: AbortSignal.timeout(1e4)
+          });
+          if (upstream.ok) {
+            const arrayBuf = await upstream.arrayBuffer();
+            const buffer = Buffer.from(arrayBuf);
+            if (buffer.length > 100) {
+              res.status(200).set({
+                "Content-Type": "audio/mpeg",
+                "Content-Length": String(buffer.length),
+                "Cache-Control": "public, max-age=86400"
+              });
+              return res.send(buffer);
+            }
+          }
+        } catch {
+        }
+      }
+      return res.status(502).json({ error: "TTS audio stream unavailable." });
+    } catch {
+      return res.status(500).json({ error: "TTS failed." });
+    }
+  });
   app2.post(["/api/chat/stream", "/chat/stream"], async (req, res) => {
     try {
       const user = await authenticateSupabaseRequest(req);

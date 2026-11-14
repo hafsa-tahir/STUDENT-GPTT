@@ -219,10 +219,13 @@ export const VoiceReader: React.FC<VoiceReaderProps> = ({
   const chunksRef = useRef(chunks);
   chunksRef.current = chunks;
 
-  // Load available speech synthesis voices
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const useCloudAudioRef = useRef<boolean>(false);
+
+  // Load available speech synthesis voices (or fall back to Cloud TTS for Android WebView / APK)
   useEffect(() => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-      setErrorMessage("Web Speech API is not supported in this browser.");
+      useCloudAudioRef.current = true;
       return;
     }
 
@@ -230,6 +233,7 @@ export const VoiceReader: React.FC<VoiceReaderProps> = ({
       try {
         const available = window.speechSynthesis.getVoices();
         if (available && available.length > 0) {
+          useCloudAudioRef.current = false;
           setVoices(available);
 
           // Find default preferred voice
@@ -266,12 +270,18 @@ export const VoiceReader: React.FC<VoiceReaderProps> = ({
           window.speechSynthesis.cancel();
         } catch {}
       }
+      if (audioRef.current) {
+        try {
+          audioRef.current.pause();
+          audioRef.current.src = "";
+        } catch {}
+      }
     };
   }, []);
 
   // Heartbeat to prevent Chromium from silently sleeping after 14s of speech
   useEffect(() => {
-    if (!isPlaying) return;
+    if (!isPlaying || useCloudAudioRef.current) return;
 
     const interval = setInterval(() => {
       if (typeof window !== "undefined" && "speechSynthesis" in window) {
@@ -287,13 +297,10 @@ export const VoiceReader: React.FC<VoiceReaderProps> = ({
     return () => clearInterval(interval);
   }, [isPlaying]);
 
-  // Core function to speak a specific chunk by index
+  // Core function to speak a specific chunk by index (supports both Web Speech API & Cloud Audio for Android APK)
   const speakChunk = useCallback((index: number) => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-
     const chunkList = chunksRef.current;
     if (!chunkList || index < 0 || index >= chunkList.length) {
-      // Reached the end
       setIsPlaying(false);
       setIsPaused(false);
       setCurrentChunkIndex(0);
@@ -302,6 +309,64 @@ export const VoiceReader: React.FC<VoiceReaderProps> = ({
 
     setCurrentChunkIndex(index);
     const textToSpeak = chunkList[index];
+
+    const hasWebSpeech =
+      typeof window !== "undefined" &&
+      "speechSynthesis" in window &&
+      typeof SpeechSynthesisUtterance !== "undefined" &&
+      !useCloudAudioRef.current;
+
+    if (!hasWebSpeech) {
+      // Cloud TTS Audio Engine for Android APK WebView & unsupported mobile browsers
+      try {
+        if (audioRef.current) {
+          audioRef.current.pause();
+        }
+        const audio = new Audio(`/api/tts?text=${encodeURIComponent(textToSpeak)}`);
+        audio.playbackRate = rateRef.current;
+        audioRef.current = audio;
+
+        audio.onplay = () => {
+          setIsPlaying(true);
+          setIsPaused(false);
+          setErrorMessage(null);
+        };
+
+        audio.onended = () => {
+          if (!isPlayingRef.current) return;
+          const nextIndex = index + 1;
+          if (nextIndex < chunkList.length) {
+            setTimeout(() => {
+              if (isPlayingRef.current) speakChunk(nextIndex);
+            }, 50);
+          } else {
+            setIsPlaying(false);
+            setIsPaused(false);
+            setCurrentChunkIndex(0);
+          }
+        };
+
+        audio.onerror = () => {
+          if (!isPlayingRef.current) return;
+          const nextIndex = index + 1;
+          if (nextIndex < chunkList.length) {
+            setTimeout(() => {
+              if (isPlayingRef.current) speakChunk(nextIndex);
+            }, 80);
+          } else {
+            setIsPlaying(false);
+            setIsPaused(false);
+          }
+        };
+
+        audio.play().catch(() => {
+          setIsPlaying(false);
+        });
+      } catch {
+        setIsPlaying(false);
+      }
+      return;
+    }
 
     // Unpause in case Chromium was stuck
     try {
@@ -395,10 +460,7 @@ export const VoiceReader: React.FC<VoiceReaderProps> = ({
   }, []);
 
   const handlePlay = () => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-      setErrorMessage("Speech synthesis is not supported on this device.");
-      return;
-    }
+    if (typeof window === "undefined") return;
 
     setErrorMessage(null);
 
@@ -410,50 +472,76 @@ export const VoiceReader: React.FC<VoiceReaderProps> = ({
     // Play subtle wake-up chime to ensure audio output is unlocked
     playAudioChime();
 
-    // If currently paused, resume directly if synthesis is still speaking
+    // If currently paused, resume directly
     if (isPaused) {
-      try {
-        window.speechSynthesis.resume();
-        if (window.speechSynthesis.speaking) {
-          setIsPaused(false);
-          setIsPlaying(true);
-          return;
-        }
-      } catch {}
+      if (useCloudAudioRef.current && audioRef.current) {
+        audioRef.current.play().catch(() => {});
+        setIsPaused(false);
+        setIsPlaying(true);
+        return;
+      }
+      if ("speechSynthesis" in window) {
+        try {
+          window.speechSynthesis.resume();
+          if (window.speechSynthesis.speaking) {
+            setIsPaused(false);
+            setIsPlaying(true);
+            return;
+          }
+        } catch {}
+      }
     }
 
     // Immediate UI feedback
     setIsPlaying(true);
     setIsPaused(false);
 
-    // Cancel any stuck previous speech, unfreeze, and speak starting at current or 0
-    try {
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.resume();
-    } catch {}
+    if ("speechSynthesis" in window) {
+      try {
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.resume();
+      } catch {}
+    }
+    if (audioRef.current) {
+      try {
+        audioRef.current.pause();
+      } catch {}
+    }
 
     const startIndex = currentChunkIndexRef.current >= chunks.length ? 0 : currentChunkIndexRef.current;
 
-    // Small timeout ensures Chromium's cancellation queue has cleared completely
     setTimeout(() => {
       speakChunk(startIndex);
     }, 70);
   };
 
   const handlePause = () => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    try {
-      window.speechSynthesis.pause();
-    } catch {}
+    if (audioRef.current) {
+      try {
+        audioRef.current.pause();
+      } catch {}
+    }
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      try {
+        window.speechSynthesis.pause();
+      } catch {}
+    }
     setIsPaused(true);
     setIsPlaying(false);
   };
 
   const handleStop = () => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    try {
-      window.speechSynthesis.cancel();
-    } catch {}
+    if (audioRef.current) {
+      try {
+        audioRef.current.pause();
+        audioRef.current.src = "";
+      } catch {}
+    }
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch {}
+    }
     globalUtteranceRegistry.clear();
     setIsPlaying(false);
     setIsPaused(false);
@@ -496,6 +584,13 @@ export const VoiceReader: React.FC<VoiceReaderProps> = ({
     const nextRate = rates[nextIdx];
     setRate(nextRate);
     rateRef.current = nextRate;
+
+    if (useCloudAudioRef.current && audioRef.current) {
+      try {
+        audioRef.current.playbackRate = nextRate;
+      } catch {}
+      return;
+    }
 
     // If currently playing, restart current chunk with new rate
     if (isPlaying) {
