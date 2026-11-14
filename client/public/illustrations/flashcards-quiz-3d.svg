@@ -30,16 +30,31 @@
     </filter>
   </defs>
   <rect width="480" height="280" fill="url(#bgGlow)" />
-  <g filter="url(#shadow3d)">
-    <rect x="178" y="48" width="168" height="148" rx="24" transform="rotate(24 262 122)" fill="url(#darkPlumGrad)" />
-    <rect x="156" y="52" width="168" height="148" rx="24" transform="rotate(16 240 126)" fill="url(#plumGrad)" />
-    <rect x="134" y="56" width="168" height="148" rx="24" transform="rotate(8 218 130)" fill="url(#berryGrad)" />
+  <g filter="url(#softShadow)" transform="translate(192, 18)">
+    <rect width="96" height="36" rx="18" fill="url(#darkPlumGrad)" stroke="#8C5378" stroke-width="1.5" />
+    <circle cx="26" cy="18" r="7" fill="#FDE68A" />
+    <text x="58" y="23" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="800" fill="#FFFFFF">Quiz</text>
+  </g>
 
-    <g transform="translate(112, 62) rotate(-4)">
-      <rect width="176" height="152" rx="24" fill="url(#blushCard)" stroke="#FFFFFF" stroke-width="3" />
-      <rect x="30" y="48" width="68" height="12" rx="6" fill="#724060" />
-      <rect x="30" y="72" width="114" height="12" rx="6" fill="#724060" />
-      <rect x="30" y="96" width="92" height="12" rx="6" fill="#A070A1" />
+  <g filter="url(#shadow3d)">
+    <rect x="88" y="96" width="170" height="124" rx="20" transform="rotate(-18 173 158)" fill="url(#berryGrad)" stroke="#FFFFFF" stroke-opacity="0.3" />
+    <rect x="126" y="92" width="174" height="126" rx="20" transform="rotate(-12 213 155)" fill="url(#plumGrad)" stroke="#FFFFFF" stroke-opacity="0.25" />
+    <rect x="164" y="88" width="178" height="128" rx="20" transform="rotate(-6 253 152)" fill="url(#darkPlumGrad)" />
+
+    <g transform="translate(196, 74) rotate(-2)">
+      <rect width="224" height="156" rx="20" fill="#FFFFFF" stroke="#EAD2D9" stroke-width="2" />
+      <text x="20" y="30" font-family="Inter, system-ui, sans-serif" font-size="13.5" font-weight="800" fill="#2D1826">Question 1</text>
+      <text x="20" y="47" font-family="Inter, system-ui, sans-serif" font-size="10.5" font-weight="600" fill="#724060">Which law governs electric flux?</text>
+
+      <rect x="20" y="58" width="184" height="26" rx="9" fill="#FDF3F3" stroke="#EAD2D9" />
+      <text x="32" y="75" font-family="Inter, system-ui, sans-serif" font-size="10.5" font-weight="700" fill="#724060">A   Faraday Induction Law</text>
+
+      <rect x="20" y="90" width="184" height="26" rx="9" fill="url(#plumGrad)" />
+      <text x="32" y="107" font-family="Inter, system-ui, sans-serif" font-size="10.5" font-weight="700" fill="#FFFFFF">B   Gauss Flux Theorem</text>
+      <text x="186" y="107" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="800" fill="#FFFFFF">✓</text>
+
+      <rect x="20" y="122" width="184" height="26" rx="9" fill="#FDF3F3" stroke="#EAD2D9" />
+      <text x="32" y="139" font-family="Inter, system-ui, sans-serif" font-size="10.5" font-weight="700" fill="#724060">C   Ampere Circuital Law</text>
     </g>
   </g>
 </svg>
