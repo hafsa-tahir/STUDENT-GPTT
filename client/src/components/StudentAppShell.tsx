@@ -1,7 +1,7 @@
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { useStudyTimeTracker } from "@/hooks/useStudyTimeTracker";
 import { trpc } from "@/lib/trpc";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   BookOpen,
   CalendarDays,
@@ -10,6 +10,7 @@ import {
   Flame,
   LayoutDashboard,
   LogOut,
+  Menu,
   MessageCircle,
   NotebookPen,
   Search,
@@ -35,6 +36,7 @@ export function StudentAppShell({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const { user, signOut } = useSupabaseAuth();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [islandExpanded, setIslandExpanded] = useState(false);
 
   const tracker = useStudyTimeTracker();
@@ -65,15 +67,22 @@ export function StudentAppShell({ children }: { children: React.ReactNode }) {
   const isActiveRoute = (href: string) =>
     href === "/" ? location === "/" : location.startsWith(href);
 
+  const activeNavItem =
+    navigation.find(item => isActiveRoute(item.href)) ?? navigation[0];
+
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[#FDF3F3] text-[#724060]">
-      {/* Top Floating MicroKit Blur-Glide Navbar + Bencho Dynamic Island */}
-      <header className="sticky top-0 z-50 w-full px-2.5 pt-2.5 pb-1.5 sm:px-6 sm:pt-3 sm:pb-2">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#FDF3F3] text-[#724060]">
+      {/* Top Floating Navbar (Single Clean Row on Mobile & Desktop) */}
+      <header className="sticky top-0 z-50 w-full px-3 pt-2.5 pb-1.5 sm:px-6 sm:pt-3 sm:pb-2">
         <div className="mx-auto max-w-[1380px] rounded-2xl border border-[#724060]/12 bg-white/95 px-3.5 py-2.5 shadow-[0_8px_30px_rgba(114,64,96,0.08)] backdrop-blur-xl sm:px-6">
           <div className="flex items-center justify-between gap-2">
-            {/* Original Brand Logo Restored */}
-            <Link href="/" className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-              <div className="grid h-8 w-8 sm:h-9 sm:w-9 shrink-0 place-items-center rounded-xl bg-[#F8E7E7] shadow-[0_2px_8px_rgba(114,64,96,0.12)]">
+            {/* Brand Logo */}
+            <Link
+              href="/"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2.5 shrink-0"
+            >
+              <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#F8E7E7] shadow-[0_2px_8px_rgba(114,64,96,0.12)]">
                 <img
                   src="/logo.svg"
                   alt="StudentGPT"
@@ -81,7 +90,7 @@ export function StudentAppShell({ children }: { children: React.ReactNode }) {
                 />
               </div>
               <div className="flex flex-col text-left">
-                <span className="text-[14px] sm:text-[15px] font-bold leading-none tracking-tight text-[#724060]">
+                <span className="text-[14.5px] sm:text-[15px] font-bold leading-none tracking-tight text-[#724060]">
                   StudentGPT
                 </span>
                 <span className="mt-0.5 text-[7.5px] sm:text-[8px] font-bold uppercase tracking-[0.14em] text-[#A070A1]">
@@ -90,7 +99,7 @@ export function StudentAppShell({ children }: { children: React.ReactNode }) {
               </div>
             </Link>
 
-            {/* MicroKit Blur-Glide Pill Navigation (Desktop) */}
+            {/* MicroKit Blur-Glide Pill Navigation (Desktop lg+) */}
             <nav
               aria-label="Primary navigation"
               className="hidden lg:flex items-center gap-0.5 rounded-full border border-[#724060]/10 bg-[#FDF3F3]/95 p-1 shadow-inner overflow-x-auto max-w-full"
@@ -122,22 +131,23 @@ export function StudentAppShell({ children }: { children: React.ReactNode }) {
               })}
             </nav>
 
-            {/* Right Side: Bencho Dynamic Island Timer + Well-Padded Profile Pill */}
-            <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+            {/* Right Controls */}
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Bencho Dynamic Island Timer */}
               <button
                 type="button"
                 onClick={() => setIslandExpanded(prev => !prev)}
                 title="Click to expand live study tracker"
-                className="inline-flex items-center gap-1 sm:gap-1.5 rounded-full bg-[#2D1826] px-2.5 sm:px-3 py-1.5 text-[10.5px] sm:text-[11.5px] font-semibold text-[#FDF3F3] shadow-[0_6px_18px_rgba(45,24,38,0.2)] transition-all duration-300 hover:scale-[1.02]"
+                className="inline-flex items-center gap-1.5 rounded-full bg-[#2D1826] px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-[11.5px] font-semibold text-[#FDF3F3] shadow-[0_6px_18px_rgba(45,24,38,0.2)] transition-all duration-300 hover:scale-[1.02]"
               >
                 <span
-                  className={`h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full shrink-0 ${
+                  className={`h-2 w-2 rounded-full shrink-0 ${
                     tracker.isActive
                       ? "bg-emerald-400 animate-pulse"
                       : "bg-[#A070A1]"
                   }`}
                 />
-                <Flame className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-amber-300 shrink-0" />
+                <Flame className="h-3.5 w-3.5 text-amber-300 shrink-0" />
                 <span className="whitespace-nowrap">
                   {islandExpanded
                     ? `${minutesToday}m · ${tracker.isActive ? "Live" : "Idle"}`
@@ -153,12 +163,12 @@ export function StudentAppShell({ children }: { children: React.ReactNode }) {
                 </span>
               </button>
 
-              {/* User Profile Pill — Properly Padded inside Header Boundary */}
-              <div className="relative">
+              {/* Desktop User Profile Pill (lg+) */}
+              <div className="relative hidden lg:block">
                 <button
                   type="button"
                   onClick={() => setUserMenuOpen(prev => !prev)}
-                  className="flex items-center gap-1.5 sm:gap-2 rounded-full bg-[#724060] pl-1.5 pr-2.5 sm:pr-3.5 py-1 sm:py-1.5 text-[12px] font-bold text-white shadow-xs hover:bg-[#5a334c] transition"
+                  className="flex items-center gap-2 rounded-full bg-[#724060] pl-1.5 pr-3.5 py-1.5 text-[12px] font-bold text-white shadow-xs hover:bg-[#5a334c] transition"
                   aria-expanded={userMenuOpen}
                 >
                   <Avatar className="h-6 w-6 border border-white/25 shrink-0">
@@ -166,7 +176,7 @@ export function StudentAppShell({ children }: { children: React.ReactNode }) {
                       {initial}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="max-w-[90px] truncate hidden md:inline-block">
+                  <span className="max-w-[90px] truncate hidden xl:inline-block">
                     {firstName}
                   </span>
                   <ChevronDown className="h-3.5 w-3.5 text-white/85 shrink-0" />
@@ -174,7 +184,7 @@ export function StudentAppShell({ children }: { children: React.ReactNode }) {
 
                 {userMenuOpen && (
                   <div
-                    className="absolute right-0 top-11 z-50 w-60 rounded-2xl border border-[#F8E7E7] bg-white p-2.5 text-[#724060] shadow-[0_16px_40px_rgba(114,64,96,0.18)]"
+                    className="absolute right-0 top-12 z-50 w-60 rounded-2xl border border-[#F8E7E7] bg-white p-2.5 text-[#724060] shadow-[0_16px_40px_rgba(114,64,96,0.18)]"
                     onMouseLeave={() => setUserMenuOpen(false)}
                   >
                     <div className="border-b border-[#F8E7E7] px-3 py-2.5">
@@ -210,33 +220,95 @@ export function StudentAppShell({ children }: { children: React.ReactNode }) {
                   </div>
                 )}
               </div>
+
+              {/* Mobile & Tablet Menu Button (< lg) */}
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(prev => !prev)}
+                aria-expanded={mobileMenuOpen}
+                aria-label="Toggle navigation menu"
+                className="inline-flex lg:hidden items-center gap-2 rounded-full bg-[#724060] pl-3 pr-2.5 py-1.5 text-[12px] font-bold text-white shadow-xs transition active:scale-95"
+              >
+                <span>{activeNavItem.label}</span>
+                <span className="grid h-6 w-6 place-items-center rounded-full bg-white/20">
+                  {mobileMenuOpen ? (
+                    <X className="h-3.5 w-3.5 text-white" />
+                  ) : (
+                    <Menu className="h-3.5 w-3.5 text-white" />
+                  )}
+                </span>
+              </button>
             </div>
           </div>
 
-          {/* Mobile & Tablet Scrollable Pill Navigation (All 8 Pages Reachable) */}
-          <nav
-            aria-label="Mobile primary navigation"
-            className="mt-2.5 flex lg:hidden items-center gap-1 overflow-x-auto rounded-xl bg-[#FDF3F3] p-1 border border-[#724060]/10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          >
-            {navigation.map(item => {
-              const active = isActiveRoute(item.href);
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11.5px] font-semibold whitespace-nowrap shrink-0 transition-all ${
-                    active
-                      ? "bg-[#724060] text-white shadow-xs"
-                      : "text-[#724060]/80 hover:bg-[#F8E7E7]"
-                  }`}
-                >
-                  <Icon className="h-3.5 w-3.5 shrink-0" />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
+          {/* Mobile & Tablet Clean Bento Dropdown Menu (< lg) */}
+          <AnimatePresence>
+            {mobileMenuOpen && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className="overflow-hidden lg:hidden"
+              >
+                <div className="mt-3 border-t border-[#F8E7E7] pt-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    {navigation.map(item => {
+                      const active = isActiveRoute(item.href);
+                      const Icon = item.icon;
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className={`flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-[13px] font-bold transition ${
+                            active
+                              ? "bg-[#724060] text-white shadow-xs"
+                              : "bg-[#FDF3F3] text-[#2D1826] hover:bg-[#F8E7E7]"
+                          }`}
+                        >
+                          <Icon
+                            className={`h-4 w-4 shrink-0 ${
+                              active ? "text-white" : "text-[#724060]"
+                            }`}
+                          />
+                          <span className="truncate">{item.label}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+
+                  {/* Mobile Account Footer Bar */}
+                  <div className="mt-3 flex items-center justify-between gap-2 rounded-xl bg-[#FDF3F3] px-3.5 py-2.5 border border-[#F8E7E7]">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Avatar className="h-7 w-7 border border-[#724060]/20 shrink-0">
+                        <AvatarFallback className="bg-[#724060] text-[11px] font-bold text-white">
+                          {initial}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                        <p className="truncate text-[12.5px] font-bold text-[#2D1826]">
+                          {name}
+                        </p>
+                        <p className="truncate text-[10.5px] text-[#724060]/75">
+                          {user?.email}
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleSignOut}
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-[11.5px] font-bold text-rose-700 shadow-2xs border border-rose-100 hover:bg-rose-50"
+                    >
+                      <LogOut className="h-3.5 w-3.5 text-rose-500" />
+                      <span>Sign out</span>
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </header>
 
