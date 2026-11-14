@@ -1,5 +1,6 @@
 import { AppLoading, AuthError, StudentAppShell } from "@/components/StudentAppShell";
 import { HoldToDeleteButton } from "@/components/HoldToDeleteButton";
+import { SpotlightCard } from "@/components/MicroInteractions";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { getSupabaseAccessToken } from "@/lib/supabase";
 import { trpc } from "@/lib/trpc";
@@ -328,18 +329,18 @@ export default function Documents() {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="group flex items-center gap-4 rounded-[22px] border border-white/20 bg-white/12 px-5 py-3.5 text-left backdrop-blur-md transition hover:border-white/40 hover:bg-white/18 cursor-pointer"
+              className="group flex items-center gap-4 rounded-[22px] border border-white/20 bg-white/12 px-4 py-3 text-left backdrop-blur-md transition hover:border-white/40 hover:bg-white/18 cursor-pointer"
             >
-              <div className="relative h-12 w-14 shrink-0">
-                <div className="absolute inset-x-1 top-1.5 h-9 rounded-lg bg-[#522943]" />
-                <div className="absolute left-2 top-0.5 h-8 w-6 -rotate-6 rounded border border-[#724060]/20 bg-white shadow-xs transition-transform duration-300 group-hover:-translate-y-2 group-hover:-rotate-12" />
-                <div className="absolute right-2 top-0.5 h-8 w-6 rotate-6 rounded border border-[#724060]/20 bg-[#FDF3F3] shadow-xs transition-transform duration-300 group-hover:-translate-y-2.5 group-hover:rotate-12" />
-                <div className="absolute inset-x-0 bottom-0 flex h-8 items-center justify-center rounded-lg bg-gradient-to-b from-[#F8E7E7] to-[#e9c8d2] shadow-md transition-transform duration-300 group-hover:scale-[1.04]">
-                  <UploadCloud className="h-4 w-4 text-[#724060]" />
-                </div>
-              </div>
+              <img
+                src="/illustrations/pdf-folder-3d.jpg"
+                alt="3D PDF Folder"
+                className="h-14 w-20 rounded-xl object-cover shadow-sm transition-transform duration-300 group-hover:scale-105"
+              />
               <div>
-                <p className="text-[13.5px] font-bold text-white">Drop or Upload PDF</p>
+                <p className="text-[13.5px] font-bold text-white flex items-center gap-1.5">
+                  <UploadCloud className="h-4 w-4 text-[#F8E7E7]" />
+                  Drop or Upload PDF
+                </p>
                 <p className="mt-0.5 text-[11.5px] text-[#F8E7E7]/80">Click or drag any lecture PDF anywhere</p>
               </div>
             </button>
@@ -445,7 +446,7 @@ export default function Documents() {
                   updateSubjectMutation.variables?.documentId === doc.id;
 
                 return (
-                  <article
+                  <SpotlightCard
                     key={doc.id}
                     className="flex flex-col justify-between rounded-2xl border border-[#F8E7E7] bg-white p-5 shadow-xs transition hover:shadow-[0_12px_32px_rgba(114,64,96,0.08)] relative"
                   >
@@ -564,15 +565,19 @@ export default function Documents() {
                         <ExternalLink className="h-3.5 w-3.5 text-[#A070A1]" /> View
                       </a>
                     </div>
-                  </article>
+                  </SpotlightCard>
                 );
               })}
             </div>
           ) : (
             <div className="rounded-3xl border border-dashed border-[#A070A1]/30 bg-white p-12 text-center shadow-xs">
-              <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#FDF3F3] text-[#724060]">
-                <FileText className="h-6 w-6" />
-              </span>
+              <div className="mx-auto w-56 overflow-hidden rounded-2xl border border-[#724060]/12 bg-[#FDF3F3] shadow-xs">
+                <img
+                  src="/illustrations/pdf-folder-3d.jpg"
+                  alt="3D PDF Folder"
+                  className="h-36 w-full object-cover"
+                />
+              </div>
               <h2 className="mt-4 text-[17px] font-bold text-[#724060]">
                 {selectedSubjectFilter === "all"
                   ? "No documents uploaded yet"

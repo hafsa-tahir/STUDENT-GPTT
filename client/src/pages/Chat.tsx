@@ -1,4 +1,5 @@
 import { AIChatBox } from "@/components/AIChatBox";
+import { MorphCopyButton } from "@/components/MicroInteractions";
 import { AppLoading, AuthError, StudentAppShell } from "@/components/StudentAppShell";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { trpc } from "@/lib/trpc";
@@ -238,9 +239,15 @@ export default function Chat() {
                   );
                 })
               ) : (
-                <div className="px-3 py-10 text-center">
-                  <BotMessageSquare className="mx-auto h-6 w-6 text-[#A070A1]" />
-                  <p className="mt-2.5 text-[12.5px] leading-5 text-[#724060]/80">
+                <div className="px-3 py-8 text-center">
+                  <div className="mx-auto w-44 overflow-hidden rounded-2xl border border-[#724060]/12 bg-[#FDF3F3] shadow-2xs">
+                    <img
+                      src="/illustrations/ai-tutor-socratic.jpg"
+                      alt="AI Study Tutor"
+                      className="h-28 w-full object-cover"
+                    />
+                  </div>
+                  <p className="mt-3 text-[12px] leading-5 text-[#724060]/80">
                     Ask your first question on the right to start a saved study thread.
                   </p>
                 </div>
@@ -265,14 +272,24 @@ export default function Chat() {
                 </div>
               </div>
               {active.data?.messages.some(message => message.role === "assistant") && (
-                <button
-                  onClick={() => activeId && regenerate.mutate({ conversationId: activeId })}
-                  disabled={regenerate.isPending || send.isPending}
-                  className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[#FDF3F3] px-3 text-[12px] font-semibold text-[#724060] hover:bg-[#F8E7E7]"
-                >
-                  <RefreshCcw className={`h-3.5 w-3.5 ${regenerate.isPending ? "animate-spin" : ""}`} />
-                  Regenerate
-                </button>
+                <div className="flex items-center gap-2">
+                  <MorphCopyButton
+                    text={
+                      [...(active.data?.messages ?? [])]
+                        .reverse()
+                        .find(m => m.role === "assistant")?.content || ""
+                    }
+                    label="Copy Last Reply"
+                  />
+                  <button
+                    onClick={() => activeId && regenerate.mutate({ conversationId: activeId })}
+                    disabled={regenerate.isPending || send.isPending}
+                    className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[#FDF3F3] px-3 text-[12px] font-semibold text-[#724060] hover:bg-[#F8E7E7] cursor-pointer"
+                  >
+                    <RefreshCcw className={`h-3.5 w-3.5 ${regenerate.isPending ? "animate-spin" : ""}`} />
+                    Regenerate
+                  </button>
+                </div>
               )}
             </div>
 

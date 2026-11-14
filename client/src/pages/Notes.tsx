@@ -1,4 +1,11 @@
 import { AppLoading, AuthError, StudentAppShell } from "@/components/StudentAppShell";
+import { HoldToDeleteButton } from "@/components/HoldToDeleteButton";
+import {
+  AiSynthesisLoader,
+  FloatingHeroIllustration,
+  MorphCopyButton,
+  SpotlightCard,
+} from "@/components/MicroInteractions";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { trpc } from "@/lib/trpc";
 import { motion } from "framer-motion";
@@ -472,50 +479,58 @@ export default function Notes() {
           {/* Header Banner */}
           <header className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#522943] via-[#724060] to-[#8C5378] px-6 py-7 text-[#FDF3F3] shadow-[0_18px_44px_rgba(114,64,96,0.20)] sm:px-9">
             <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-[#F8E7E7]/10 blur-2xl" />
-            <div className="relative z-10 flex flex-wrap items-end justify-between gap-6">
-              <div>
+            <div className="relative z-10 flex flex-wrap items-center justify-between gap-6">
+              <div className="max-w-2xl">
                 <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/12 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-[#F8E7E7] backdrop-blur-md">
                   <Sparkles className="h-3 w-3" /> Notes & Revision Studio
                 </div>
                 <h1 className="mt-2.5 text-[28px] font-bold tracking-tight sm:text-[34px]">
                   Turn any document into structured, exhaustive notes.
                 </h1>
-                <p className="mt-1.5 max-w-2xl text-[13.5px] leading-6 text-[#F8E7E7]/85">
+                <p className="mt-1.5 text-[13.5px] leading-6 text-[#F8E7E7]/85">
                   Ingests every heading, concept, and formula from your uploaded source without missing a detail. Includes a strictly grounded Q&A box at the bottom.
                 </p>
+
+                {/* MicroKit Sliding Pill Mode Toggle */}
+                <div className="mt-4 inline-flex rounded-full border border-white/15 bg-black/20 p-1.5 backdrop-blur-md">
+                  {(["notes", "revision"] as const).map(itemMode => {
+                    const activeMode = mode === itemMode;
+                    return (
+                      <button
+                        key={itemMode}
+                        type="button"
+                        onClick={() => setMode(itemMode)}
+                        className={`relative flex items-center gap-2 rounded-full px-4 py-2 text-[12.5px] font-bold transition cursor-pointer ${
+                          activeMode ? "text-[#724060]" : "text-[#FDF3F3]/85 hover:text-white"
+                        }`}
+                      >
+                        {activeMode && (
+                          <motion.span
+                            layoutId="notes-mode-glide"
+                            transition={{ type: "spring", stiffness: 420, damping: 32 }}
+                            className="absolute inset-0 rounded-full bg-[#FDF3F3] shadow-xs"
+                          />
+                        )}
+                        {itemMode === "notes" ? (
+                          <BookMarked className="relative z-10 h-4 w-4" />
+                        ) : (
+                          <RefreshCw className="relative z-10 h-4 w-4" />
+                        )}
+                        <span className="relative z-10">
+                          {itemMode === "notes" ? "Notes Maker" : "Revision Bot"}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
-              {/* MicroKit Sliding Pill Mode Toggle */}
-              <div className="inline-flex rounded-full border border-white/15 bg-black/20 p-1.5 backdrop-blur-md">
-                {(["notes", "revision"] as const).map(itemMode => {
-                  const active = mode === itemMode;
-                  return (
-                    <button
-                      key={itemMode}
-                      type="button"
-                      onClick={() => setMode(itemMode)}
-                      className={`relative flex items-center gap-2 rounded-full px-4 py-2 text-[12.5px] font-bold transition cursor-pointer ${
-                        active ? "text-[#724060]" : "text-[#FDF3F3]/85 hover:text-white"
-                      }`}
-                    >
-                      {active && (
-                        <motion.span
-                          layoutId="notes-mode-glide"
-                          transition={{ type: "spring", stiffness: 420, damping: 32 }}
-                          className="absolute inset-0 rounded-full bg-[#FDF3F3] shadow-xs"
-                        />
-                      )}
-                      {itemMode === "notes" ? (
-                        <BookMarked className="relative z-10 h-4 w-4" />
-                      ) : (
-                        <RefreshCw className="relative z-10 h-4 w-4" />
-                      )}
-                      <span className="relative z-10">
-                        {itemMode === "notes" ? "Notes Maker" : "Revision Bot"}
-                      </span>
-                    </button>
-                  );
-                })}
+              <div className="hidden lg:block">
+                <FloatingHeroIllustration
+                  src="/illustrations/ai-notes-diagram.jpg"
+                  alt="PDF to Formula Notes 3D Diagram"
+                  caption="PDF → LaTeX Notes & Audio"
+                />
               </div>
             </div>
           </header>
@@ -825,6 +840,17 @@ export default function Notes() {
                 </div>
               </div>
 
+              {/* Multi-Step AI Synthesis Animation when generating */}
+              {(generateNotes.isPending || generateRevision.isPending) && (
+                <AiSynthesisLoader
+                  title={
+                    mode === "notes"
+                      ? "Synthesizing Exhaustive Study Notes…"
+                      : "Building Active-Recall Revision Sheet…"
+                  }
+                />
+              )}
+
               {/* Note / Revision Content View */}
               {mode === "notes" ? (
                 active ? (
@@ -842,20 +868,16 @@ export default function Notes() {
                             </span>
                           )}
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (window.confirm("Are you sure you want to delete this study note?")) {
-                              deleteNote.mutate({ noteId: active.id });
-                            }
-                          }}
-                          disabled={deleteNote.isPending}
-                          className="flex items-center gap-1.5 rounded-xl border border-[#F8E7E7] bg-white px-2.5 py-1 text-[11.5px] font-semibold text-[#724060]/75 hover:bg-[#FDF3F3] hover:text-[#724060] transition shadow-xs disabled:opacity-50"
-                          title="Delete this study note"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          <span>Delete</span>
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <MorphCopyButton
+                            text={noteSpeechText}
+                            label="Copy Note"
+                          />
+                          <HoldToDeleteButton
+                            label="Hold to delete"
+                            onConfirm={() => deleteNote.mutate({ noteId: active.id })}
+                          />
+                        </div>
                       </div>
 
                       <h2 className="mt-3 text-[28px] font-bold tracking-tight text-[#724060] sm:text-[34px]">
@@ -882,16 +904,22 @@ export default function Notes() {
                         />
                       </div>
 
-                      {/* Sections List */}
+                      {/* Sections List with Spotlight Hover & Morph Copy */}
                       <div className="mt-8 space-y-6">
                         {content.sections?.map((section, index) => (
-                          <section
+                          <SpotlightCard
                             key={`${section.heading}-${index}`}
                             className="rounded-2xl border border-[#F8E7E7] bg-white p-5 shadow-sm transition hover:border-[#A070A1]/40 sm:p-6"
                           >
-                            <h3 className="text-[19px] font-bold tracking-tight text-[#724060]">
-                              <MathRenderer content={section.heading || ""} inline />
-                            </h3>
+                            <div className="flex items-start justify-between gap-3">
+                              <h3 className="text-[19px] font-bold tracking-tight text-[#724060]">
+                                <MathRenderer content={section.heading || ""} inline />
+                              </h3>
+                              <MorphCopyButton
+                                text={`${section.heading || ""}\n${section.explanation || ""}\n${(section.bullets || []).join("\n")}`}
+                                label="Copy"
+                              />
+                            </div>
                             <MathRenderer
                               content={section.explanation || ""}
                               className="mt-2 text-[13.5px] leading-6 text-[#724060]/90"
@@ -912,7 +940,7 @@ export default function Notes() {
                                 ))}
                               </ul>
                             </div>
-                          </section>
+                          </SpotlightCard>
                         ))}
                       </div>
 
@@ -1477,12 +1505,18 @@ export default function Notes() {
 function EmptyWorkspace({ mode }: { mode: "notes" | "revision" }) {
   return (
     <div className="grid min-h-80 place-items-center rounded-[28px] border border-dashed border-[#F8E7E7] bg-white p-8 text-center shadow-sm">
-      <div>
-        <FileText className="mx-auto h-8 w-8 text-[#A070A1]" />
+      <div className="flex flex-col items-center">
+        <div className="overflow-hidden rounded-2xl border border-[#724060]/12 bg-[#FDF3F3] shadow-xs">
+          <img
+            src="/illustrations/ai-notes-diagram.jpg"
+            alt="AI Notes Workflow"
+            className="h-36 w-60 object-cover"
+          />
+        </div>
         <h2 className="mt-4 text-[18px] font-bold text-[#724060]">
           {mode === "notes" ? "Your generated notes will appear here." : "Your revision guide will appear here."}
         </h2>
-        <p className="mx-auto mt-2 max-w-sm text-[13px] leading-6 text-[#A070A1]">
+        <p className="mx-auto mt-1.5 max-w-sm text-[13px] leading-6 text-[#A070A1]">
           Choose an uploaded book or document above, then click generate to create exhaustive, structured notes.
         </p>
       </div>

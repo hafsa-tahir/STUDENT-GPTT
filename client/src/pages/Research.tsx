@@ -1,4 +1,9 @@
 import { AppLoading, AuthError, StudentAppShell } from "@/components/StudentAppShell";
+import {
+  AiSynthesisLoader,
+  FloatingHeroIllustration,
+  MorphCopyButton,
+} from "@/components/MicroInteractions";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { getSupabaseAccessToken } from "@/lib/supabase";
 import { trpc } from "@/lib/trpc";
@@ -440,24 +445,33 @@ export default function Research() {
           {/* Header Banner */}
           <header className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#522943] via-[#724060] to-[#8C5378] px-6 py-7 text-[#FDF3F3] shadow-[0_18px_44px_rgba(114,64,96,.20)] sm:px-9">
             <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-[#F8E7E7]/10 blur-2xl" />
-            <div className="relative z-10 flex flex-wrap items-end justify-between gap-5">
-              <div>
+            <div className="relative z-10 flex flex-wrap items-center justify-between gap-6">
+              <div className="max-w-2xl">
                 <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/12 px-3 py-1 text-[10.5px] font-bold uppercase tracking-[.16em] text-[#F8E7E7] backdrop-blur-md">
                   <Compass className="h-3.5 w-3.5" /> Academic Research Canvas
                 </p>
-                <h1 className="mt-3 max-w-3xl text-[28px] font-bold leading-tight tracking-tight sm:text-[34px]">
+                <h1 className="mt-3 text-[28px] font-bold leading-tight tracking-tight sm:text-[34px]">
                   Build a publication-grade research paper for any topic.
                 </h1>
-                <p className="mt-2 max-w-2xl text-[13.5px] leading-6 text-[#F8E7E7]/85">
+                <p className="mt-2 text-[13.5px] leading-6 text-[#F8E7E7]/85">
                   Transforms any inquiry into a structured scholarly paper: formal definitions, operational mechanisms, past-present-future landscape, research objectives, verified videos, and downloadable papers.
                 </p>
+                <div className="mt-4">
+                  <button
+                    onClick={() => setComposerOpen(true)}
+                    className="group inline-flex h-11 items-center gap-2 rounded-full bg-white px-5 text-[13px] font-bold text-[#724060] shadow-sm transition hover:bg-[#FDF3F3] cursor-pointer"
+                  >
+                    <Plus className="h-4 w-4 transition-transform duration-200 group-hover:rotate-90" /> Start a research paper
+                  </button>
+                </div>
               </div>
-              <button
-                onClick={() => setComposerOpen(true)}
-                className="group inline-flex h-11 items-center gap-2 rounded-full bg-white px-5 text-[13px] font-bold text-[#724060] shadow-sm transition hover:bg-[#FDF3F3] cursor-pointer"
-              >
-                <Plus className="h-4 w-4 transition-transform duration-200 group-hover:rotate-90" /> Start a research paper
-              </button>
+              <div className="hidden lg:block">
+                <FloatingHeroIllustration
+                  src="/illustrations/research-canvas-diagram.jpg"
+                  alt="Research Paper Mind-Map"
+                  caption="Topic → Paper, Citations & Videos"
+                />
+              </div>
             </div>
           </header>
 
@@ -531,7 +545,12 @@ export default function Research() {
                           {brief.researchQuestion}
                         </p>
                       </div>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <MorphCopyButton
+                          text={speechText}
+                          label="Copy Paper"
+                          className="h-10 px-4 text-[12px]"
+                        />
                         <button 
                           onClick={runSynthesis} 
                           disabled={synthesize.isPending || brief.status === "generating"} 
@@ -562,6 +581,21 @@ export default function Research() {
                       <p className="mt-4 border-l-4 border-[#A070A1] bg-[#FDF3F3] p-3 text-[13px] text-[#724060]">{brief.failureReason}</p>
                     )}
                   </div>
+
+                  {/* Multi-Step AI Synthesis Animation when generating */}
+                  {(synthesize.isPending || brief.status === "generating") && (
+                    <div className="mt-6">
+                      <AiSynthesisLoader
+                        title="Synthesizing Publication-Grade Research Paper…"
+                        steps={[
+                          "Formulating academic definitions & operational mechanisms…",
+                          "Mapping past, present & future scientific landscape…",
+                          "Verifying scholarly citations & YouTube lectures…",
+                          "Typesetting multi-section research canvas…",
+                        ]}
+                      />
+                    </div>
+                  )}
 
                   {/* Voice Mode Audio Reader Bar */}
                   {brief.status === "ready" && (
@@ -1040,15 +1074,24 @@ export default function Research() {
                   </section>
                 </>
               ) : (
-                <div className="grid min-h-[540px] place-items-center border border-dashed border-[#F8E7E7] bg-[#FDF3F3] p-8 text-center">
-                  <div>
-                    <Sparkles className="mx-auto h-7 w-7 text-[#A070A1]" />
-                    <h2 className="mt-4 text-xl font-bold text-[#724060]">Start a publication-grade research paper.</h2>
-                    <p className="mx-auto mt-2 max-w-sm text-[13px] leading-6 text-[#A070A1]">
+                <div className="grid min-h-[460px] place-items-center rounded-[28px] border border-dashed border-[#F8E7E7] bg-white p-8 text-center shadow-xs">
+                  <div className="flex flex-col items-center">
+                    <div className="overflow-hidden rounded-2xl border border-[#724060]/12 bg-[#FDF3F3] shadow-xs">
+                      <img
+                        src="/illustrations/research-canvas-diagram.jpg"
+                        alt="Research Studio Mind-Map"
+                        className="h-40 w-64 object-cover"
+                      />
+                    </div>
+                    <h2 className="mt-4 text-xl font-bold text-[#2D1826]">Start a publication-grade research paper.</h2>
+                    <p className="mx-auto mt-2 max-w-sm text-[13px] leading-6 text-[#724060]/75">
                       Choose a topic and StudentGPT will create a formal research paper with definitions, operational mechanics, chronological landscape, objectives, and verified resources.
                     </p>
-                    <button onClick={() => setComposerOpen(true)} className="mt-5 bg-[#F8E7E7] px-4 py-2 text-[12px] font-bold text-[#724060]">
-                      Start a project
+                    <button
+                      onClick={() => setComposerOpen(true)}
+                      className="mt-5 rounded-full bg-[#724060] px-5 py-2.5 text-[12.5px] font-bold text-white shadow-sm transition hover:bg-[#5a334c] cursor-pointer"
+                    >
+                      + Start a Research Paper
                     </button>
                   </div>
                 </div>

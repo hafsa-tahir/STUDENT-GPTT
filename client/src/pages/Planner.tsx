@@ -1,5 +1,6 @@
 import { AppLoading, AuthError, StudentAppShell } from "@/components/StudentAppShell";
 import { HoldToDeleteButton } from "@/components/HoldToDeleteButton";
+import { FloatingHeroIllustration, SpotlightCard } from "@/components/MicroInteractions";
 import { PlannerNotesSummary } from "@/components/PlannerNotesSummary";
 import { PlannerSessionSummary } from "@/components/PlannerSessionSummary";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
@@ -157,24 +158,31 @@ export default function Planner() {
         {/* Hero Header */}
         <header className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#522943] via-[#724060] to-[#8C5378] px-6 py-7 text-white shadow-[0_18px_40px_rgba(114,64,96,0.22)] sm:px-9">
           <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-[#F8E7E7]/10 blur-2xl" />
-          <div className="relative flex flex-wrap items-end justify-between gap-5">
-            <div>
+          <div className="relative z-10 flex flex-wrap items-center justify-between gap-6">
+            <div className="max-w-xl">
               <div className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-[#F8E7E7]">
                 <Sparkles className="h-3.5 w-3.5" /> Exam & Session Planner
               </div>
               <h1 className="mt-2.5 text-[28px] font-bold tracking-tight sm:text-[36px]">
                 Study Planner & Deadlines
               </h1>
-              <p className="mt-1.5 max-w-xl text-[13.5px] text-[#F8E7E7]/85">
+              <p className="mt-1.5 text-[13.5px] text-[#F8E7E7]/85">
                 Turn exam dates into checkable study tasks, track progress rings, and log focused study minutes.
               </p>
+              <button
+                onClick={openNewPlan}
+                className="mt-4 inline-flex h-11 items-center gap-2 rounded-full bg-white px-5 text-[13px] font-bold text-[#2D1826] shadow-md transition hover:bg-[#FDF3F3] hover:scale-[1.02] cursor-pointer"
+              >
+                <Plus className="h-4 w-4 text-[#724060]" /> New Study Plan
+              </button>
             </div>
-            <button
-              onClick={openNewPlan}
-              className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-5 text-[13px] font-bold text-[#2D1826] shadow-md transition hover:bg-[#FDF3F3] hover:scale-[1.02]"
-            >
-              <Plus className="h-4 w-4 text-[#724060]" /> New Study Plan
-            </button>
+            <div className="hidden lg:block">
+              <FloatingHeroIllustration
+                src="/illustrations/planner-roadmap-3d.jpg"
+                alt="Study Planner Roadmap"
+                caption="Exam Countdown & Tasks"
+              />
+            </div>
           </div>
         </header>
 
@@ -332,17 +340,21 @@ export default function Planner() {
             })}
           </div>
         ) : (
-          <div className="mt-8 rounded-[28px] border-2 border-dashed border-[#724060]/25 bg-white px-6 py-16 text-center shadow-xs">
-            <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#FDF3F3] text-[#724060]">
-              <CalendarDays className="h-6 w-6" />
-            </span>
+          <div className="mt-8 rounded-[28px] border-2 border-dashed border-[#724060]/25 bg-white px-6 py-12 text-center shadow-xs">
+            <div className="mx-auto w-60 overflow-hidden rounded-2xl border border-[#724060]/12 bg-[#FDF3F3] shadow-xs">
+              <img
+                src="/illustrations/planner-roadmap-3d.jpg"
+                alt="Study Planner Roadmap"
+                className="h-36 w-full object-cover"
+              />
+            </div>
             <h2 className="mt-4 text-[18px] font-bold text-[#2D1826]">Start with an exam date or study goal</h2>
             <p className="mx-auto mt-1.5 max-w-sm text-[13px] leading-5 text-[#724060]/75">
               Create a study plan, check off tasks with spring checkboxes, and watch your daily progress ring fill up.
             </p>
             <button
               onClick={openNewPlan}
-              className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#724060] px-5 py-2.5 text-[13px] font-bold text-white shadow-sm hover:bg-[#5a334c]"
+              className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#724060] px-5 py-2.5 text-[13px] font-bold text-white shadow-sm hover:bg-[#5a334c] cursor-pointer"
             >
               <Plus className="h-4 w-4" /> Create a study plan
             </button>

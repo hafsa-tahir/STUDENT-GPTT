@@ -212,10 +212,16 @@ export function StudentAppShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="min-h-[calc(100vh-80px)] w-full pb-20 lg:pb-8">
+      {/* Main Content Area with Smooth Page Entrance Transition */}
+      <motion.main
+        key={location}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.26, ease: "easeOut" }}
+        className="min-h-[calc(100vh-80px)] w-full pb-20 lg:pb-8"
+      >
         {children}
-      </main>
+      </motion.main>
 
       {/* Mobile Bottom Dock */}
       <nav

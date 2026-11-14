@@ -1,5 +1,6 @@
 import { AppLoading, AuthError, StudentAppShell } from "@/components/StudentAppShell";
 import { MathRenderer } from "@/components/MathRenderer";
+import { AiSynthesisLoader } from "@/components/MicroInteractions";
 import { PracticeHistory } from "@/components/PracticeHistory";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { trpc } from "@/lib/trpc";
@@ -326,6 +327,18 @@ export default function Practice() {
           </form>
         </section>
 
+        {(generateQuiz.isPending || generateCards.isPending) && (
+          <div className="mt-5">
+            <AiSynthesisLoader
+              title={
+                tab === "quiz"
+                  ? "Synthesizing Scoped Assessment Quiz…"
+                  : "Building 3D Spaced Repetition Flashcard Deck…"
+              }
+            />
+          </div>
+        )}
+
         {/* QUIZ TAB */}
         {tab === "quiz" && (
           <section className="mt-5">
@@ -426,10 +439,14 @@ export default function Practice() {
                 </button>
               </div>
             ) : (
-              <div className="rounded-[28px] border-2 border-dashed border-[#724060]/25 bg-white px-6 py-16 text-center shadow-xs">
-                <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#FDF3F3] text-[#724060]">
-                  <BrainCircuit className="h-6 w-6" />
-                </span>
+              <div className="rounded-[28px] border-2 border-dashed border-[#724060]/25 bg-white px-6 py-12 text-center shadow-xs">
+                <div className="mx-auto w-60 overflow-hidden rounded-2xl border border-[#724060]/12 bg-[#FDF3F3] shadow-xs">
+                  <img
+                    src="/illustrations/flashcards-quiz-3d.jpg"
+                    alt="3D Quiz and Flashcards"
+                    className="h-36 w-full object-cover"
+                  />
+                </div>
                 <h2 className="mt-4 text-[18px] font-bold text-[#2D1826]">
                   Active Recall & Formula Self-Assessment
                 </h2>
@@ -535,10 +552,14 @@ export default function Practice() {
                 </div>
               </div>
             ) : (
-              <div className="rounded-[28px] border-2 border-dashed border-[#724060]/25 bg-white px-6 py-16 text-center shadow-xs">
-                <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#FDF3F3] text-[#724060]">
-                  <Layers3 className="h-6 w-6" />
-                </span>
+              <div className="rounded-[28px] border-2 border-dashed border-[#724060]/25 bg-white px-6 py-12 text-center shadow-xs">
+                <div className="mx-auto w-60 overflow-hidden rounded-2xl border border-[#724060]/12 bg-[#FDF3F3] shadow-xs">
+                  <img
+                    src="/illustrations/flashcards-quiz-3d.jpg"
+                    alt="3D Flashcards Stack"
+                    className="h-36 w-full object-cover"
+                  />
+                </div>
                 <h2 className="mt-4 text-[18px] font-bold text-[#2D1826]">
                   Build a 3D Spaced Repetition Deck
                 </h2>
