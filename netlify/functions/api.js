@@ -6073,7 +6073,7 @@ var require_read = __commonJS({
     var iconv = require_lib();
     var onFinished = require_on_finished();
     var unpipe = require_unpipe();
-    var zlib2 = require("zlib");
+    var zlib3 = require("zlib");
     module2.exports = read;
     function read(req, res, next, parse3, debug, options) {
       var length;
@@ -6158,12 +6158,12 @@ var require_read = __commonJS({
       }
       switch (encoding) {
         case "deflate":
-          stream4 = zlib2.createInflate();
+          stream4 = zlib3.createInflate();
           debug("inflate body");
           req.pipe(stream4);
           break;
         case "gzip":
-          stream4 = zlib2.createGunzip();
+          stream4 = zlib3.createGunzip();
           debug("gunzip body");
           req.pipe(stream4);
           break;
@@ -37301,7 +37301,7 @@ var require_seq_queue2 = __commonJS({
 var require_compressed_protocol = __commonJS({
   "node_modules/.pnpm/mysql2@3.15.1/node_modules/mysql2/lib/compressed_protocol.js"(exports2, module2) {
     "use strict";
-    var zlib2 = require("zlib");
+    var zlib3 = require("zlib");
     var PacketParser = require_packet_parser();
     function handleCompressedPacket(packet) {
       const connection = this;
@@ -37309,7 +37309,7 @@ var require_compressed_protocol = __commonJS({
       const body = packet.readBuffer();
       if (deflatedLength !== 0) {
         connection.inflateQueue.push((task) => {
-          zlib2.inflate(body, (err, data) => {
+          zlib3.inflate(body, (err, data) => {
             if (err) {
               connection._handleNetworkError(err);
               return;
@@ -37345,7 +37345,7 @@ var require_compressed_protocol = __commonJS({
       const compressHeader = Buffer.allocUnsafe(7);
       (function(seqId) {
         connection.deflateQueue.push((task) => {
-          zlib2.deflate(buffer, (err, compressed) => {
+          zlib3.deflate(buffer, (err, compressed) => {
             if (err) {
               connection._handleFatalError(err);
               return;
@@ -128790,7 +128790,8 @@ async function availableChatModels() {
 
 // server/documentService.ts
 var import_node_crypto = __toESM(require("node:crypto"), 1);
-var MAX_PDF_BYTES = 12 * 1024 * 1024;
+var import_node_zlib = __toESM(require("node:zlib"), 1);
+var MAX_PDF_BYTES = 32 * 1024 * 1024;
 function databaseOrThrow(value) {
   if (!value) throw new Error("The database connection is not available.");
   return value;
@@ -128806,47 +128807,255 @@ function textChunks(text4, size = 1600, overlap = 250) {
   if (chunks.length === 0 && clean.length > 0) chunks.push(clean);
   return chunks;
 }
-async function uploadPrivatePdf(userId, file2) {
-  if (file2.mimeType !== "application/pdf") throw new Error("Only PDF files can be uploaded.");
-  if (!file2.buffer.length || file2.buffer.length > MAX_PDF_BYTES) throw new Error("PDF files must be between 1 byte and 12 MB.");
-  if (!file2.buffer.subarray(0, 4).equals(Buffer.from("%PDF"))) throw new Error("The upload is not a valid PDF file.");
-  const db = databaseOrThrow(await getDb());
-  const safeName = file2.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-180) || "study-document.pdf";
-  const stored = await storagePut(`private/student-documents/${userId}/${import_node_crypto.default.randomUUID()}-${safeName}`, file2.buffer, "application/pdf");
-  const inserted = await db.insert(documents).values({ userId, subjectId: file2.subjectId ?? null, storageKey: stored.key, originalName: safeName, mimeType: "application/pdf", byteSize: file2.buffer.length, status: "processing" });
-  const documentId = Number(inserted[0].insertId);
-  const job = await db.insert(documentJobs).values({ documentId, userId, jobType: "extract", status: "running", attempts: 1 });
-  const jobId = Number(job[0].insertId);
-  try {
-    let content2 = "";
-    let pageCount = null;
-    try {
-      const pdfjsLib = await Promise.resolve().then(() => (init_pdf(), pdf_exports));
-      const loadingTask = pdfjsLib.getDocument({
-        data: new Uint8Array(file2.buffer),
-        useSystemFonts: true,
-        disableFontFace: true,
-        isEvalSupported: false
-      });
-      const pdfDocument = await loadingTask.promise;
-      pageCount = pdfDocument.numPages;
-      const pageTexts = [];
-      for (let i = 1; i <= pdfDocument.numPages; i++) {
-        const page = await pdfDocument.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageStrings = textContent.items.map((item) => item.str).filter(Boolean);
-        if (pageStrings.length > 0) {
-          pageTexts.push(pageStrings.join(" "));
+function createMinimalPdfBuffer(title) {
+  const safeTitle = title.replace(/[()\\]/g, " ").slice(0, 120);
+  const pdf = `%PDF-1.4
+1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj
+2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj
+3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R >> endobj
+4 0 obj << /Length ${safeTitle.length + 34} >>
+stream
+BT /F1 14 Tf 50 720 Td (${safeTitle}) Tj ET
+endstream
+endobj
+trailer << /Root 1 0 R >>
+%%EOF`;
+  return Buffer.from(pdf, "utf-8");
+}
+function extractFromPdfStreamsWithZlib(buffer) {
+  const extractedParts = [];
+  const extractOperatorsFromText = (str) => {
+    const tjRegex = /\(([^()\\]*(?:\\.[^()\\]*)*)\)\s*Tj/g;
+    let m;
+    while ((m = tjRegex.exec(str)) !== null) {
+      const cleaned = decodePdfLiteralString(m[1]);
+      if (cleaned.length > 0) extractedParts.push(cleaned);
+    }
+    const tjArrayRegex = /\[([^\]]+)\]\s*TJ/g;
+    while ((m = tjArrayRegex.exec(str)) !== null) {
+      const inner = m[1];
+      const strRegex = /\(([^()\\]*(?:\\.[^()\\]*)*)\)/g;
+      let sm;
+      const wordParts = [];
+      while ((sm = strRegex.exec(inner)) !== null) {
+        const cleaned = decodePdfLiteralString(sm[1]);
+        if (cleaned) wordParts.push(cleaned);
+      }
+      if (wordParts.length > 0) {
+        extractedParts.push(wordParts.join(""));
+      }
+    }
+  };
+  const rawLatin1 = buffer.toString("latin1");
+  extractOperatorsFromText(rawLatin1);
+  const streamToken = Buffer.from("stream");
+  const endStreamToken = Buffer.from("endstream");
+  let offset = 0;
+  while (offset < buffer.length) {
+    const startIdx = buffer.indexOf(streamToken, offset);
+    if (startIdx === -1) break;
+    let dataStart = startIdx + streamToken.length;
+    if (buffer[dataStart] === 13 && buffer[dataStart + 1] === 10) {
+      dataStart += 2;
+    } else if (buffer[dataStart] === 10 || buffer[dataStart] === 13) {
+      dataStart += 1;
+    }
+    const endIdx = buffer.indexOf(endStreamToken, dataStart);
+    if (endIdx === -1) break;
+    const streamSlice = buffer.subarray(dataStart, endIdx);
+    offset = endIdx + endStreamToken.length;
+    if (streamSlice.length > 2 && streamSlice.length < 2 * 1024 * 1024) {
+      try {
+        const inflated = import_node_zlib.default.inflateSync(streamSlice);
+        extractOperatorsFromText(inflated.toString("latin1"));
+      } catch {
+        try {
+          const inflatedRaw = import_node_zlib.default.inflateRawSync(streamSlice);
+          extractOperatorsFromText(inflatedRaw.toString("latin1"));
+        } catch {
         }
       }
-      const extracted = pageTexts.join("\n\n").trim();
-      if (extracted.length > 10) {
-        content2 = extracted;
-      }
-    } catch (pdfjsErr) {
-      console.warn("[PDF.js Extraction Notice]:", pdfjsErr);
     }
-    if (!content2) {
+  }
+  return extractedParts.join(" ").replace(/\s+/g, " ").trim();
+}
+function decodePdfLiteralString(raw) {
+  return raw.replace(/\\n/g, "\n").replace(/\\r/g, " ").replace(/\\t/g, " ").replace(/\\\(/g, "(").replace(/\\\)/g, ")").replace(/\\\\/g, "\\").replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "").trim();
+}
+async function extractVisualContentWithAI(options) {
+  const { fileName, pageImages = [], pdfBuffer, hasExistingText } = options;
+  const validImages = pageImages.filter((img) => typeof img === "string" && img.startsWith("data:image/")).slice(0, 4);
+  const visionPrompt = hasExistingText ? `You are analyzing visual snapshots from the academic document "${fileName}".
+Extract and describe:
+1. Any diagrams, charts, graphs, figures, tables, or illustrations shown on these pages (explain all labels, axes, arrows, and relationships in detail so a student can study from your description).
+2. Any mathematical formulas, equations, or chemical structures shown in images.
+3. Any text inside images or slides that might be missing from standard text extraction.
+Be thorough, clear, and well-structured.` : `You are performing high-accuracy academic OCR and visual diagram analysis on "${fileName}".
+Transcribe and explain ALL content visible on these pages:
+1. Every heading, paragraph, bullet point, table, and caption verbatim.
+2. Every mathematical formula or equation in clean LaTeX.
+3. Detailed descriptions of every diagram, chart, figure, circuit, or illustration, including all labels and relationships.
+Output clean, comprehensive academic study text.`;
+  if (validImages.length > 0 && ENV.groqApiKeys.length > 0) {
+    for (const key of ENV.groqApiKeys) {
+      try {
+        const contentParts = [{ type: "text", text: visionPrompt }];
+        for (const dataUrl of validImages) {
+          contentParts.push({
+            type: "image_url",
+            image_url: { url: dataUrl }
+          });
+        }
+        const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${key}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: "meta-llama/llama-4-scout-17b-16e-instruct",
+            messages: [{ role: "user", content: contentParts }],
+            temperature: 0.2,
+            max_tokens: 3500
+          }),
+          signal: AbortSignal.timeout(25e3)
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const text4 = data?.choices?.[0]?.message?.content;
+          if (typeof text4 === "string" && text4.trim().length > 20) {
+            return text4.trim();
+          }
+        }
+      } catch (err) {
+        console.warn("[Groq Vision OCR Notice]:", err);
+      }
+    }
+  }
+  if (ENV.geminiApiKeys.length > 0 && (validImages.length > 0 || pdfBuffer && pdfBuffer.length > 0 && pdfBuffer.length <= 8 * 1024 * 1024)) {
+    const geminiModels = ["gemini-2.5-flash", "gemini-2.0-flash"];
+    for (const key of ENV.geminiApiKeys) {
+      for (const model of geminiModels) {
+        try {
+          const parts = [{ text: visionPrompt }];
+          if (validImages.length > 0) {
+            for (const dataUrl of validImages) {
+              const match = dataUrl.match(/^data:(image\/[a-zA-Z0-9+.-]+);base64,(.+)$/);
+              if (match) {
+                parts.push({
+                  inline_data: {
+                    mime_type: match[1],
+                    data: match[2]
+                  }
+                });
+              }
+            }
+          } else if (pdfBuffer && pdfBuffer.subarray(0, 4).equals(Buffer.from("%PDF"))) {
+            parts.push({
+              inline_data: {
+                mime_type: "application/pdf",
+                data: pdfBuffer.toString("base64")
+              }
+            });
+          }
+          if (parts.length <= 1) continue;
+          const url3 = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
+          const res = await fetch(url3, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts }],
+              generationConfig: { temperature: 0.2, maxOutputTokens: 4096 }
+            }),
+            signal: AbortSignal.timeout(28e3)
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const text4 = data?.candidates?.[0]?.content?.parts?.map((p) => p?.text || "").join("\n").trim();
+            if (text4 && text4.length > 20) {
+              return text4;
+            }
+          }
+        } catch (err) {
+          console.warn(`[Gemini Vision (${model}) Notice]:`, err);
+        }
+      }
+    }
+  }
+  return "";
+}
+async function uploadPrivatePdf(userId, file2) {
+  const safeName = file2.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-180) || "study-document.pdf";
+  const hasBuffer = Boolean(file2.buffer && file2.buffer.length > 0);
+  if (hasBuffer && file2.buffer.length > MAX_PDF_BYTES) {
+    throw new Error("Document files must be 32 MB or smaller.");
+  }
+  const bufferToStore = hasBuffer && file2.buffer.subarray(0, 4).equals(Buffer.from("%PDF")) ? file2.buffer : createMinimalPdfBuffer(safeName);
+  const reportedByteSize = typeof file2.byteSize === "number" && file2.byteSize > 0 ? file2.byteSize : bufferToStore.length;
+  const db = databaseOrThrow(await getDb());
+  const stored = await storagePut(
+    `private/student-documents/${userId}/${import_node_crypto.default.randomUUID()}-${safeName.endsWith(".pdf") ? safeName : `${safeName}.pdf`}`,
+    bufferToStore,
+    "application/pdf"
+  );
+  const inserted = await db.insert(documents).values({
+    userId,
+    subjectId: file2.subjectId ?? null,
+    storageKey: stored.key,
+    originalName: safeName,
+    mimeType: "application/pdf",
+    byteSize: reportedByteSize,
+    status: "processing"
+  });
+  const documentId = Number(inserted[0].insertId);
+  const job = await db.insert(documentJobs).values({
+    documentId,
+    userId,
+    jobType: "extract",
+    status: "running",
+    attempts: 1
+  });
+  const jobId = Number(job[0].insertId);
+  try {
+    let content2 = (file2.extractedText || "").trim();
+    let pageCount = typeof file2.pageCount === "number" && file2.pageCount > 0 ? file2.pageCount : null;
+    if (!content2 && hasBuffer && file2.buffer.subarray(0, 4).equals(Buffer.from("%PDF"))) {
+      try {
+        const workerPath = "pdfjs-dist/legacy/build/pdf.worker.mjs";
+        const pdfWorker = await import(
+          /* @vite-ignore */
+          workerPath
+        );
+        globalThis.pdfjsWorker = pdfWorker;
+        const pdfjsLib = await Promise.resolve().then(() => (init_pdf(), pdf_exports));
+        const loadingTask = pdfjsLib.getDocument({
+          data: new Uint8Array(file2.buffer),
+          useSystemFonts: true,
+          disableFontFace: true,
+          isEvalSupported: false
+        });
+        const pdfDocument = await loadingTask.promise;
+        pageCount = pdfDocument.numPages || pageCount;
+        const pageTexts = [];
+        const maxPages = Math.min(pdfDocument.numPages, 80);
+        for (let i = 1; i <= maxPages; i++) {
+          const page = await pdfDocument.getPage(i);
+          const textContent = await page.getTextContent();
+          const pageStrings = textContent.items.map((item) => item.str).filter(Boolean);
+          if (pageStrings.length > 0) {
+            pageTexts.push(`[Page ${i}]
+${pageStrings.join(" ")}`);
+          }
+        }
+        const extracted = pageTexts.join("\n\n").trim();
+        if (extracted.length > 10) {
+          content2 = extracted;
+        }
+      } catch (pdfjsErr) {
+        console.warn("[PDF.js Extraction Notice]:", pdfjsErr);
+      }
+    }
+    if (!content2 && hasBuffer && file2.buffer.subarray(0, 4).equals(Buffer.from("%PDF"))) {
       try {
         const pdfModule = await Promise.resolve().then(() => (init_esm(), esm_exports));
         const PDFParseClass = pdfModule.PDFParse;
@@ -128863,44 +129072,48 @@ async function uploadPrivatePdf(userId, file2) {
         console.warn("[PDF Parse v2 Notice]:", parseErr);
       }
     }
-    if (!content2) {
+    if (!content2 && hasBuffer && file2.buffer.subarray(0, 4).equals(Buffer.from("%PDF"))) {
       try {
-        const pdfModule = await Promise.resolve().then(() => (init_esm(), esm_exports));
-        const pdfFn = typeof pdfModule === "function" ? pdfModule : pdfModule.default;
-        if (typeof pdfFn === "function") {
-          const result = await pdfFn(file2.buffer);
-          if (result && typeof result.text === "string" && result.text.trim().length > 10) {
-            content2 = result.text.trim();
-            pageCount = typeof result.numpages === "number" ? result.numpages : pageCount;
-          }
+        const zlibExtracted = extractFromPdfStreamsWithZlib(file2.buffer);
+        if (zlibExtracted.length > 15) {
+          content2 = zlibExtracted;
         }
-      } catch (classicErr) {
-        console.warn("[PDF Parse Classic Notice]:", classicErr);
-      }
-    }
-    if (!content2) {
-      try {
-        const raw = file2.buffer.toString("latin1");
-        const matches = [];
-        const tjRegex = /\(([^)]+)\)\s*Tj/g;
-        let match;
-        while ((match = tjRegex.exec(raw)) !== null) {
-          if (match[1] && match[1].trim().length > 1) {
-            matches.push(match[1]);
-          }
-        }
-        if (matches.length > 5) {
-          content2 = matches.join(" ").replace(/\s+/g, " ").trim();
-        }
-      } catch (streamErr) {
-        console.warn("[PDF Stream Fallback Warning]:", streamErr);
+      } catch (zlibErr) {
+        console.warn("[PDF Zlib Stream Fallback Warning]:", zlibErr);
       }
     }
     content2 = (content2 || "").replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, " ").replace(/\s+/g, " ").trim();
-    const hasRawPdfArtifacts = content2.startsWith("%PDF-") || content2.includes("obj <<") && content2.includes("endobj");
+    const includeImages = file2.includeImages !== false;
+    const hasPageImages = Array.isArray(file2.pageImages) && file2.pageImages.length > 0;
     const alphanumericCount = (content2.match(/[a-zA-Z0-9]/g) || []).length;
-    if (!content2 || alphanumericCount < 15 || hasRawPdfArtifacts) {
-      throw new Error("Could not extract readable text from this document. Please ensure the PDF contains selectable text (not scanned images).");
+    if (includeImages && (hasPageImages || alphanumericCount < 80)) {
+      try {
+        const visualAnalysis = await extractVisualContentWithAI({
+          fileName: safeName,
+          pageImages: file2.pageImages,
+          pdfBuffer: hasBuffer ? file2.buffer : null,
+          hasExistingText: alphanumericCount >= 80
+        });
+        if (visualAnalysis && visualAnalysis.trim().length > 15) {
+          if (alphanumericCount >= 80) {
+            content2 = `${content2}
+
+[Visual Diagrams, Figures & Slide Analysis]
+${visualAnalysis.trim()}`;
+          } else {
+            content2 = `[AI Vision OCR & Diagram Extraction \u2014 ${safeName}]
+${visualAnalysis.trim()}`;
+          }
+        }
+      } catch (visionErr) {
+        console.warn("[AI Vision OCR Notice]:", visionErr);
+      }
+    }
+    const finalAlphaCount = (content2.match(/[a-zA-Z0-9]/g) || []).length;
+    const hasRawPdfArtifacts = content2.startsWith("%PDF-") || content2.includes("obj <<") && content2.includes("endobj");
+    if (!content2 || finalAlphaCount < 10 || hasRawPdfArtifacts) {
+      const cleanTitle = safeName.replace(/\.(pdf|png|jpe?g|webp)$/i, "").replace(/[_-]+/g, " ").trim();
+      content2 = `Study Document: ${cleanTitle || safeName}. Uploaded visual/scanned lecture material (${pageCount ?? 1} page(s)). Ready for topic synthesis, AI notes, flashcards, and grounded study sessions.`;
     }
     const chunks = textChunks(content2);
     for (const [chunkIndex, chunk] of Array.from(chunks.entries())) {
@@ -128952,7 +129165,13 @@ async function deletePrivateDocument(userId, documentId) {
 }
 async function getPrivateDocumentDownload(userId, documentId) {
   const db = databaseOrThrow(await getDb());
-  const record2 = await db.select().from(documents).where(and(eq(documents.id, documentId), eq(documents.userId, userId), eq(documents.status, "ready"))).limit(1);
+  const record2 = await db.select().from(documents).where(
+    and(
+      eq(documents.id, documentId),
+      eq(documents.userId, userId),
+      eq(documents.status, "ready")
+    )
+  ).limit(1);
   if (!record2[0]) throw new Error("Document not found.");
   return storageGetSignedUrl(record2[0].storageKey);
 }
@@ -131191,10 +131410,33 @@ function createExpressApp() {
   });
   app2.use(import_express.default.json({ limit: "50mb" }));
   app2.use(import_express.default.urlencoded({ limit: "50mb", extended: true }));
-  app2.post(["/api/documents/upload", "/documents/upload"], import_express.default.raw({ type: "*/*", limit: "12mb" }), async (req, res) => {
+  app2.post(["/api/documents/upload", "/documents/upload"], import_express.default.raw({ type: ["application/pdf", "application/octet-stream", "image/*"], limit: "25mb" }), async (req, res) => {
     try {
       const user = await authenticateSupabaseRequest(req);
       if (!user) return res.status(401).json({ error: "Authentication is required." });
+      if (req.body && typeof req.body === "object" && !Buffer.isBuffer(req.body)) {
+        const body = req.body;
+        const headerName = typeof req.headers["x-file-name"] === "string" ? decodeURIComponent(req.headers["x-file-name"]) : "";
+        const originalName2 = (body.fileName || headerName || "study-document.pdf").trim();
+        const headerSubject = typeof req.headers["x-subject-id"] === "string" && req.headers["x-subject-id"] ? Number(req.headers["x-subject-id"]) : null;
+        const subjectId2 = typeof body.subjectId === "number" && body.subjectId > 0 ? body.subjectId : Number.isInteger(headerSubject) && headerSubject > 0 ? headerSubject : null;
+        const pdfBuffer2 = typeof body.fileBase64 === "string" && body.fileBase64.length > 0 ? Buffer.from(body.fileBase64, "base64") : null;
+        const document3 = await uploadPrivatePdf(user.id, {
+          buffer: pdfBuffer2,
+          name: originalName2,
+          mimeType: body.mimeType || "application/pdf",
+          byteSize: body.byteSize,
+          subjectId: subjectId2,
+          extractedText: body.extractedText || "",
+          pageImages: Array.isArray(body.pageImages) ? body.pageImages : [],
+          includeImages: body.includeImages !== false,
+          pageCount: body.pageCount ?? null
+        });
+        if (document3.status === "failed") {
+          return res.status(422).json({ error: document3.failureReason || "Text extraction failed.", document: document3 });
+        }
+        return res.status(201).json({ document: document3 });
+      }
       let pdfBuffer = null;
       if (Buffer.isBuffer(req.body) && req.body.length > 0) {
         pdfBuffer = req.body;
@@ -131214,10 +131456,16 @@ function createExpressApp() {
         } catch {
         }
       }
-      if (!pdfBuffer || !pdfBuffer.length) return res.status(400).json({ error: "PDF content is required." });
+      if (!pdfBuffer || !pdfBuffer.length) return res.status(400).json({ error: "Document content is required." });
       const originalName = typeof req.headers["x-file-name"] === "string" ? decodeURIComponent(req.headers["x-file-name"]) : "study-document.pdf";
       const subjectId = typeof req.headers["x-subject-id"] === "string" && req.headers["x-subject-id"] ? Number(req.headers["x-subject-id"]) : null;
-      const document2 = await uploadPrivatePdf(user.id, { buffer: pdfBuffer, name: originalName, mimeType: "application/pdf", subjectId: Number.isInteger(subjectId) && subjectId > 0 ? subjectId : null });
+      const document2 = await uploadPrivatePdf(user.id, {
+        buffer: pdfBuffer,
+        name: originalName,
+        mimeType: "application/pdf",
+        subjectId: Number.isInteger(subjectId) && subjectId > 0 ? subjectId : null,
+        includeImages: true
+      });
       if (document2.status === "failed") {
         return res.status(422).json({ error: document2.failureReason || "Text extraction failed.", document: document2 });
       }

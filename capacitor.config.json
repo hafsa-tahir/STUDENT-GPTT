@@ -1,5 +1,9 @@
 {
   "appId": "com.studentgpt.app",
   "appName": "StudentGPT",
-  "webDir": "dist"
+  "webDir": "dist/public",
+  "server": {
+    "url": "https://student-gptt.vercel.app",
+    "cleartext": true
+  }
 }

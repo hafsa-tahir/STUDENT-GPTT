@@ -38,11 +38,57 @@ export function createExpressApp() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-  app.post(["/api/documents/upload", "/documents/upload"], express.raw({ type: "*/*", limit: "12mb" }), async (req, res) => {
+  app.post(["/api/documents/upload", "/documents/upload"], express.raw({ type: ["application/pdf", "application/octet-stream", "image/*"], limit: "25mb" }), async (req, res) => {
     try {
       const user = await authenticateSupabaseRequest(req);
       if (!user) return res.status(401).json({ error: "Authentication is required." });
-      
+
+      // Case 1: JSON payload with pre-extracted text, rendered page images (Vision OCR), and optional base64 binary
+      if (req.body && typeof req.body === "object" && !Buffer.isBuffer(req.body)) {
+        const body = req.body as {
+          fileName?: string;
+          mimeType?: string;
+          byteSize?: number;
+          subjectId?: number | null;
+          includeImages?: boolean;
+          extractedText?: string;
+          pageImages?: string[];
+          pageCount?: number;
+          fileBase64?: string;
+        };
+
+        const headerName = typeof req.headers["x-file-name"] === "string" ? decodeURIComponent(req.headers["x-file-name"]) : "";
+        const originalName = (body.fileName || headerName || "study-document.pdf").trim();
+        const headerSubject = typeof req.headers["x-subject-id"] === "string" && req.headers["x-subject-id"] ? Number(req.headers["x-subject-id"]) : null;
+        const subjectId = typeof body.subjectId === "number" && body.subjectId > 0
+          ? body.subjectId
+          : Number.isInteger(headerSubject) && headerSubject! > 0
+          ? headerSubject
+          : null;
+
+        const pdfBuffer = typeof body.fileBase64 === "string" && body.fileBase64.length > 0
+          ? Buffer.from(body.fileBase64, "base64")
+          : null;
+
+        const document = await uploadPrivatePdf(user.id, {
+          buffer: pdfBuffer,
+          name: originalName,
+          mimeType: body.mimeType || "application/pdf",
+          byteSize: body.byteSize,
+          subjectId,
+          extractedText: body.extractedText || "",
+          pageImages: Array.isArray(body.pageImages) ? body.pageImages : [],
+          includeImages: body.includeImages !== false,
+          pageCount: body.pageCount ?? null,
+        });
+
+        if (document.status === "failed") {
+          return res.status(422).json({ error: document.failureReason || "Text extraction failed.", document });
+        }
+        return res.status(201).json({ document });
+      }
+
+      // Case 2: Raw binary upload fallback
       let pdfBuffer: Buffer | null = null;
       if (Buffer.isBuffer(req.body) && req.body.length > 0) {
         pdfBuffer = req.body;
@@ -51,7 +97,6 @@ export function createExpressApp() {
         pdfBuffer = Buffer.from(req.body, isBase64 ? "base64" : "binary");
       }
 
-      // Stream fallback if body parser did not consume the stream
       if (!pdfBuffer || !pdfBuffer.length) {
         try {
           const chunks: Buffer[] = [];
@@ -65,11 +110,17 @@ export function createExpressApp() {
           // ignore stream error
         }
       }
-      
-      if (!pdfBuffer || !pdfBuffer.length) return res.status(400).json({ error: "PDF content is required." });
+
+      if (!pdfBuffer || !pdfBuffer.length) return res.status(400).json({ error: "Document content is required." });
       const originalName = typeof req.headers["x-file-name"] === "string" ? decodeURIComponent(req.headers["x-file-name"]) : "study-document.pdf";
       const subjectId = typeof req.headers["x-subject-id"] === "string" && req.headers["x-subject-id"] ? Number(req.headers["x-subject-id"]) : null;
-      const document = await uploadPrivatePdf(user.id, { buffer: pdfBuffer, name: originalName, mimeType: "application/pdf", subjectId: Number.isInteger(subjectId) && subjectId! > 0 ? subjectId : null });
+      const document = await uploadPrivatePdf(user.id, {
+        buffer: pdfBuffer,
+        name: originalName,
+        mimeType: "application/pdf",
+        subjectId: Number.isInteger(subjectId) && subjectId! > 0 ? subjectId : null,
+        includeImages: true,
+      });
       if (document.status === "failed") {
         return res.status(422).json({ error: document.failureReason || "Text extraction failed.", document });
       }

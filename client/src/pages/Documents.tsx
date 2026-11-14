@@ -2,7 +2,12 @@ import { AppLoading, AuthError, StudentAppShell } from "@/components/StudentAppS
 import { HoldToDeleteButton } from "@/components/HoldToDeleteButton";
 import { SpotlightCard } from "@/components/MicroInteractions";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
-import { getSupabaseAccessToken } from "@/lib/supabase";
+import {
+  getPdfVisionSetting,
+  isSupportedDocumentFile,
+  setPdfVisionSetting,
+  uploadStudyDocument,
+} from "@/lib/pdfUploadClient";
 import { trpc } from "@/lib/trpc";
 import {
   BookOpen,
@@ -107,6 +112,10 @@ export default function Documents() {
   const [pendingUploadFile, setPendingUploadFile] = useState<File | null>(null);
   const [pendingUploadSubjectId, setPendingUploadSubjectId] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadStage, setUploadStage] = useState<string | null>(null);
+  const [includePdfImages, setIncludePdfImages] = useState<boolean>(() =>
+    getPdfVisionSetting()
+  );
   const [isDragging, setIsDragging] = useState(false);
 
   // Move document modal state
@@ -146,19 +155,19 @@ export default function Documents() {
   if (authError) return <AuthError message={authError} />;
   if (!user) return <AppLoading />;
 
-  // File selection interceptor: instead of silently uploading, prompt the student for the subject!
+  // File selection interceptor: prompt the student for the subject & Vision OCR setting!
   function handleFileSelected(file: File | undefined) {
     if (!file) return;
     setError(null);
     setNotice(null);
 
-    if (file.type !== "application/pdf") {
-      setError("Please choose a valid PDF file.");
+    if (!isSupportedDocumentFile(file)) {
+      setError("Please choose a valid PDF file (.pdf) or lecture image (.png, .jpg, .webp).");
       return;
     }
 
-    if (file.size > 4.5 * 1024 * 1024) {
-      setError("PDF files on cloud hosting must be 4.5 MB or smaller. Please choose a smaller document.");
+    if (file.size > 30 * 1024 * 1024) {
+      setError("Document files must be 30 MB or smaller.");
       return;
     }
 
@@ -198,63 +207,23 @@ export default function Documents() {
   async function handleConfirmUpload() {
     if (!pendingUploadFile) return;
 
-    if (pendingUploadFile.size > 4.5 * 1024 * 1024) {
-      setError("PDF files on cloud hosting must be 4.5 MB or smaller. Please choose a smaller document.");
-      return;
-    }
-
-    const token = getSupabaseAccessToken();
-    if (!token) {
-      setError("Your session is not active. Please sign in again.");
-      return;
-    }
-
     setUploading(true);
+    setUploadStage(null);
     setError(null);
 
     try {
-      const headers: Record<string, string> = {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/pdf",
-        "X-File-Name": encodeURIComponent(pendingUploadFile.name)
-      };
-
-      if (pendingUploadSubjectId && pendingUploadSubjectId > 0) {
-        headers["X-Subject-Id"] = String(pendingUploadSubjectId);
-      }
-
-      const response = await fetch("/api/documents/upload", {
-        method: "POST",
-        headers,
-        body: pendingUploadFile
+      const uploadedDoc = await uploadStudyDocument({
+        file: pendingUploadFile,
+        subjectId: pendingUploadSubjectId,
+        includeImages: includePdfImages,
+        onStatus: stage => setUploadStage(stage),
       });
-
-      let body: {
-        error?: string;
-        document?: { id: number; status: string; originalName: string; subjectId?: number | null; failureReason?: string | null };
-      } = {};
-
-      try {
-        const text = await response.text();
-        body = JSON.parse(text);
-      } catch {
-        if (response.status === 413) {
-          throw new Error("File exceeds the cloud 4.5 MB upload limit. Please select a smaller PDF.");
-        }
-        if (!response.ok) {
-          throw new Error(`Upload server error (${response.status}: ${response.statusText || "Request failed"}).`);
-        }
-      }
-
-      if (!response.ok || body.error || !body.document || body.document.status === "failed") {
-        throw new Error(body.error || body.document?.failureReason || "Upload failed: unable to process document.");
-      }
 
       const assignedSubjectName = subjects.find((s) => s.id === pendingUploadSubjectId)?.name;
       const destinationText = assignedSubjectName ? ` assigned to "${assignedSubjectName}"` : "";
 
       setNotice(
-        `"${body.document.originalName}" is indexed and ready${destinationText}.`
+        `"${uploadedDoc.originalName}" is indexed and ready${destinationText}.`
       );
 
       // If user uploaded to a specific subject, switch filter so they see it immediately
@@ -267,9 +236,10 @@ export default function Documents() {
       await utils.documents.list.invalidate();
       await utils.academic.getSubjectActivities.invalidate();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not upload your PDF.");
+      setError(caught instanceof Error ? caught.message : "Could not upload your document.");
     } finally {
       setUploading(false);
+      setUploadStage(null);
     }
   }
 
@@ -304,7 +274,7 @@ export default function Documents() {
         <input
           ref={fileInputRef}
           type="file"
-          accept="application/pdf"
+          accept="application/pdf,.pdf,image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"
           onChange={handleFileInputChange}
           className="sr-only"
         />
@@ -800,8 +770,36 @@ export default function Documents() {
               </div>
             </div>
 
-            {/* Modal Actions */}
-            <div className="mt-6 flex items-center justify-end gap-3 border-t border-[#F8E7E7] pt-4">
+            {/* Modal Actions & Vision OCR Setting */}
+            <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-[#724060]/15 bg-[#FDF3F3] px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-[12.5px] font-bold text-[#2D1826]">
+                  Allow PDF with Images & Scanned OCR
+                </p>
+                <p className="text-[11px] text-[#724060]/80">
+                  Extracts diagrams, charts, formulas & scanned pages using AI Vision
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !includePdfImages;
+                  setIncludePdfImages(next);
+                  setPdfVisionSetting(next);
+                }}
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
+                  includePdfImages ? "bg-[#724060]" : "bg-gray-300"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    includePdfImages ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
+
+            <div className="mt-5 flex items-center justify-end gap-3 border-t border-[#F8E7E7] pt-4">
               <button
                 type="button"
                 disabled={uploading}
@@ -823,7 +821,7 @@ export default function Documents() {
                 {uploading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin text-white" />
-                    Extracting & Indexing…
+                    {uploadStage || "Extracting & Indexing…"}
                   </>
                 ) : (
                   <>

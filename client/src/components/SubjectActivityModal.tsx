@@ -1,5 +1,5 @@
 import { trpc } from "@/lib/trpc";
-import { getSupabaseAccessToken } from "@/lib/supabase";
+import { uploadStudyDocument } from "@/lib/pdfUploadClient";
 import {
   BookMarked,
   BookOpen,
@@ -81,53 +81,15 @@ export function SubjectActivityModal({
 
     setDocUploadError(null);
     setDocUploadNotice(null);
-
-    if (file.type !== "application/pdf") {
-      setDocUploadError("Please upload a PDF file.");
-      return;
-    }
-
-    if (file.size > 4.5 * 1024 * 1024) {
-      setDocUploadError("PDF files on cloud hosting must be 4.5 MB or smaller. Please choose a smaller document.");
-      return;
-    }
-
-    const token = getSupabaseAccessToken();
-    if (!token) {
-      setDocUploadError("Session expired. Please sign in again.");
-      return;
-    }
-
     setUploadingDoc(true);
 
     try {
-      const response = await fetch("/api/documents/upload", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/pdf",
-          "X-File-Name": encodeURIComponent(file.name),
-          "X-Subject-Id": String(subject.id)
-        },
-        body: file
+      const uploaded = await uploadStudyDocument({
+        file,
+        subjectId: subject.id,
       });
 
-      let body: { error?: string; document?: { originalName: string } } = {};
-      try {
-        const text = await response.text();
-        body = JSON.parse(text);
-      } catch {
-        if (response.status === 413) {
-          throw new Error("File exceeds cloud 4.5 MB serverless upload limit. Please select a smaller PDF.");
-        }
-        if (!response.ok) {
-          throw new Error(`Upload server error (${response.status}: ${response.statusText || "Request failed"}).`);
-        }
-      }
-
-      if (!response.ok) throw new Error(body.error || "Upload failed.");
-
-      setDocUploadNotice(`"${body.document?.originalName || file.name}" added to ${subject.name}!`);
+      setDocUploadNotice(`"${uploaded.originalName || file.name}" added to ${subject.name}!`);
       await activitiesQuery.refetch();
       await utils.documents.list.invalidate();
     } catch (caught) {

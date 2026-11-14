@@ -2,7 +2,11 @@ import { DashboardSessionSummary } from "@/components/DashboardSessionSummary";
 import { SpotlightCard } from "@/components/MicroInteractions";
 import { AppLoading, AuthError, StudentAppShell } from "@/components/StudentAppShell";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
-import { getSupabaseAccessToken } from "@/lib/supabase";
+import {
+  getPdfVisionSetting,
+  setPdfVisionSetting,
+  uploadStudyDocument,
+} from "@/lib/pdfUploadClient";
 import { trpc } from "@/lib/trpc";
 import { motion } from "framer-motion";
 import {
@@ -41,6 +45,9 @@ export default function Dashboard() {
   const [isDraggingPdf, setIsDraggingPdf] = useState(false);
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [uploadNotice, setUploadNotice] = useState<string | null>(null);
+  const [includePdfImages, setIncludePdfImages] = useState<boolean>(() =>
+    getPdfVisionSetting()
+  );
 
   const dashboard = trpc.workspace.dashboard.useQuery(undefined, {
     enabled: Boolean(user),
@@ -147,37 +154,24 @@ export default function Dashboard() {
     ? "/research"
     : "/documents";
 
-  // Direct PDF Upload handler for the 3D Dropzone card
+  // Direct PDF & Image-PDF Upload handler for the 3D Dropzone card
   async function handlePdfUpload(file: File | undefined) {
     if (!file) return;
-    if (!file.name.toLowerCase().endsWith(".pdf")) {
-      setUploadNotice("Please select a valid PDF file.");
-      return;
-    }
     setUploadingPdf(true);
     setUploadNotice(null);
     try {
-      const token = getSupabaseAccessToken();
-      const res = await fetch("/api/documents/upload", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/pdf",
-          "x-file-name": encodeURIComponent(file.name),
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: file,
+      const doc = await uploadStudyDocument({
+        file,
+        includeImages: includePdfImages,
+        onStatus: stage => setUploadNotice(stage),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Upload failed");
-      }
       await utils.documents.list.invalidate();
       await utils.workspace.dashboard.invalidate();
-      setUploadNotice(`Uploaded "${file.name}"! Opening Documents…`);
+      setUploadNotice(`Indexed "${doc.originalName || file.name}"! Opening Documents…`);
       setTimeout(() => setLocation("/documents"), 900);
     } catch (e) {
       setUploadNotice(
-        e instanceof Error ? e.message : "Could not upload PDF. Opening Documents…"
+        e instanceof Error ? e.message : "Could not upload document."
       );
     } finally {
       setUploadingPdf(false);
@@ -186,6 +180,7 @@ export default function Dashboard() {
 
   function onFileInputChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (file) handlePdfUpload(file);
   }
 
@@ -371,7 +366,7 @@ export default function Dashboard() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="application/pdf,.pdf"
+                accept="application/pdf,.pdf,image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"
                 onChange={onFileInputChange}
                 className="hidden"
               />
@@ -388,18 +383,43 @@ export default function Dashboard() {
                 {uploadingPdf ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin text-[#724060]" />
-                    <span>Uploading PDF…</span>
+                    <span>{uploadNotice || "Processing PDF & Images…"}</span>
                   </>
                 ) : (
                   <>
                     <UploadCloud className="h-4 w-4 text-[#724060]" />
-                    <span>Drop Lecture PDF</span>
+                    <span>Drop Lecture PDF or Slide Image</span>
                   </>
                 )}
               </h3>
               <p className="mt-1 text-[12px] text-[#724060]/75">
-                {uploadNotice || "Click or drag a course PDF to generate notes & quizzes"}
+                {uploadNotice || "Supports text PDFs, scanned PDFs, and PDFs with images/diagrams"}
               </p>
+
+              {/* Setting toggle: Allow PDF with Images & Scanned OCR */}
+              <button
+                type="button"
+                onClick={e => {
+                  e.stopPropagation();
+                  const next = !includePdfImages;
+                  setIncludePdfImages(next);
+                  setPdfVisionSetting(next);
+                }}
+                className={`mt-3 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold transition cursor-pointer ${
+                  includePdfImages
+                    ? "border-[#724060]/30 bg-[#FDF3F3] text-[#724060]"
+                    : "border-gray-200 bg-gray-50 text-gray-500"
+                }`}
+              >
+                <span
+                  className={`h-2 w-2 rounded-full ${
+                    includePdfImages ? "bg-emerald-500" : "bg-gray-400"
+                  }`}
+                />
+                <span>
+                  PDF with Images & Vision OCR: {includePdfImages ? "ON" : "OFF"}
+                </span>
+              </button>
             </div>
           </section>
 
