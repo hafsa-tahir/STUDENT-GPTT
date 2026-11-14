@@ -550,28 +550,28 @@ export const VoiceReader: React.FC<VoiceReaderProps> = ({
 
   return (
     <div
-      className={`rounded-2xl border-2 border-[#A070A1]/30 bg-gradient-to-r from-[#FDF3F3] via-white to-[#F8E7E7] p-4 shadow-sm transition ${className}`}
+      className={`min-w-0 max-w-full overflow-hidden rounded-2xl border-2 border-[#A070A1]/30 bg-gradient-to-r from-[#FDF3F3] via-white to-[#F8E7E7] p-3.5 sm:p-4 shadow-sm transition ${className}`}
     >
       {/* Top Header Row */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="grid h-11 w-11 place-items-center rounded-xl bg-[#724060] text-[#FDF3F3] shadow-xs">
+        <div className="flex min-w-0 flex-1 items-start sm:items-center gap-3">
+          <div className="grid h-10 w-10 sm:h-11 sm:w-11 shrink-0 place-items-center rounded-xl bg-[#724060] text-[#FDF3F3] shadow-xs">
             <Volume2 className={`h-5 w-5 ${isPlaying ? "animate-bounce" : ""}`} />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h4 className="text-[13.5px] font-bold text-[#724060]">{title}</h4>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <h4 className="break-words text-[13px] sm:text-[13.5px] font-bold text-[#724060]">{title}</h4>
               {mode === "lecture" ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-[#724060] px-2.5 py-0.5 text-[10.5px] font-extrabold uppercase tracking-wider text-[#FDF3F3] shadow-xs">
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#724060] px-2.5 py-0.5 text-[10px] sm:text-[10.5px] font-extrabold uppercase tracking-wider text-[#FDF3F3] shadow-xs">
                   <GraduationCap className="h-3 w-3" /> Professor Lecture
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 rounded-full bg-[#F8E7E7] px-2.5 py-0.5 text-[10.5px] font-extrabold uppercase tracking-wider text-[#724060]">
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#F8E7E7] px-2.5 py-0.5 text-[10px] sm:text-[10.5px] font-extrabold uppercase tracking-wider text-[#724060]">
                   <BookOpen className="h-3 w-3" /> Verbatim Reading
                 </span>
               )}
             </div>
-            <p className="mt-0.5 text-[11.5px] text-[#A070A1]">
+            <p className="mt-0.5 text-[11px] sm:text-[11.5px] text-[#A070A1]">
               {isPlaying
                 ? `Reading sentence ${currentChunkIndex + 1} of ${chunks.length}...`
                 : isPaused
@@ -584,7 +584,7 @@ export const VoiceReader: React.FC<VoiceReaderProps> = ({
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
           {/* Animated Audio Equalizer Bars when active */}
           {isPlaying && (
             <div className="hidden sm:flex items-center gap-1 px-2">

@@ -474,25 +474,25 @@ export default function Notes() {
 
   return (
     <StudentAppShell>
-      <div className="min-h-screen bg-[#FDF3F3] px-4 py-6 sm:px-8 lg:px-12">
-        <div className="mx-auto max-w-[1440px]">
+      <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#FDF3F3] px-3.5 py-4 sm:px-8 sm:py-6 lg:px-12">
+        <div className="mx-auto w-full max-w-[1440px]">
           {/* Header Banner */}
-          <header className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#522943] via-[#724060] to-[#8C5378] px-6 py-7 text-[#FDF3F3] shadow-[0_18px_44px_rgba(114,64,96,0.20)] sm:px-9">
+          <header className="relative overflow-hidden rounded-[24px] sm:rounded-[28px] bg-gradient-to-br from-[#522943] via-[#724060] to-[#8C5378] px-5 py-6 text-[#FDF3F3] shadow-[0_18px_44px_rgba(114,64,96,0.20)] sm:px-9 sm:py-7">
             <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-[#F8E7E7]/10 blur-2xl" />
             <div className="relative z-10 flex flex-wrap items-center justify-between gap-6">
-              <div className="max-w-2xl">
-                <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/12 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-[#F8E7E7] backdrop-blur-md">
-                  <Sparkles className="h-3 w-3" /> Notes & Revision Studio
+              <div className="min-w-0 max-w-2xl">
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/12 px-3 py-1 text-[10.5px] sm:text-[11px] font-bold uppercase tracking-[0.16em] text-[#F8E7E7] backdrop-blur-md">
+                  <Sparkles className="h-3 w-3 shrink-0" /> Notes & Revision Studio
                 </div>
-                <h1 className="mt-2.5 text-[28px] font-bold tracking-tight sm:text-[34px]">
+                <h1 className="mt-2.5 text-[23px] font-bold leading-snug tracking-tight sm:text-[34px]">
                   Turn any document into structured, exhaustive notes.
                 </h1>
-                <p className="mt-1.5 text-[13.5px] leading-6 text-[#F8E7E7]/85">
+                <p className="mt-1.5 text-[13px] sm:text-[13.5px] leading-6 text-[#F8E7E7]/85">
                   Ingests every heading, concept, and formula from your uploaded source without missing a detail. Includes a strictly grounded Q&A box at the bottom.
                 </p>
 
                 {/* MicroKit Sliding Pill Mode Toggle */}
-                <div className="mt-4 inline-flex rounded-full border border-white/15 bg-black/20 p-1.5 backdrop-blur-md">
+                <div className="mt-4 inline-flex max-w-full rounded-full border border-white/15 bg-black/20 p-1 sm:p-1.5 backdrop-blur-md">
                   {(["notes", "revision"] as const).map(itemMode => {
                     const activeMode = mode === itemMode;
                     return (
@@ -500,7 +500,7 @@ export default function Notes() {
                         key={itemMode}
                         type="button"
                         onClick={() => setMode(itemMode)}
-                        className={`relative flex items-center gap-2 rounded-full px-4 py-2 text-[12.5px] font-bold transition cursor-pointer ${
+                        className={`relative flex items-center gap-1.5 sm:gap-2 rounded-full px-3.5 sm:px-4 py-1.5 sm:py-2 text-[12px] sm:text-[12.5px] font-bold transition cursor-pointer ${
                           activeMode ? "text-[#724060]" : "text-[#FDF3F3]/85 hover:text-white"
                         }`}
                       >
@@ -512,11 +512,11 @@ export default function Notes() {
                           />
                         )}
                         {itemMode === "notes" ? (
-                          <BookMarked className="relative z-10 h-4 w-4" />
+                          <BookMarked className="relative z-10 h-4 w-4 shrink-0" />
                         ) : (
-                          <RefreshCw className="relative z-10 h-4 w-4" />
+                          <RefreshCw className="relative z-10 h-4 w-4 shrink-0" />
                         )}
-                        <span className="relative z-10">
+                        <span className="relative z-10 whitespace-nowrap">
                           {itemMode === "notes" ? "Notes Maker" : "Revision Bot"}
                         </span>
                       </button>
@@ -538,20 +538,20 @@ export default function Notes() {
           {error && (
             <div role="alert" className="mt-5 flex items-center gap-3 rounded-2xl bg-[#F8E7E7] p-4 text-[13px] text-[#724060] shadow-sm">
               <ShieldAlert className="h-5 w-5 shrink-0 text-[#A070A1]" />
-              <span>{error}</span>
+              <span className="min-w-0 break-words">{error}</span>
             </div>
           )}
 
           {/* Main 2-Column Grid */}
-          <div className="mt-6 grid gap-6 xl:grid-cols-[300px_minmax(0,1fr)]">
+          <div className="mt-5 sm:mt-6 grid grid-cols-[minmax(0,1fr)] gap-5 sm:gap-6 xl:grid-cols-[300px_minmax(0,1fr)]">
             {/* Left Sidebar: Saved Notes Library */}
-            <aside className="rounded-[24px] border border-[#F8E7E7] bg-white p-4 shadow-sm">
+            <aside className="min-w-0 max-w-full overflow-hidden rounded-[24px] border border-[#F8E7E7] bg-white p-4 shadow-sm">
               <div className="border-b border-[#F8E7E7] pb-3 pt-1">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#A070A1]">
                     Study Library
                   </p>
-                  <span className="rounded-full bg-[#F8E7E7] px-2 py-0.5 text-[10.5px] font-bold text-[#724060]">
+                  <span className="shrink-0 rounded-full bg-[#F8E7E7] px-2 py-0.5 text-[10.5px] font-bold text-[#724060]">
                     {mode === "notes" ? filteredNotes.length : filteredRevisions.length} saved
                   </span>
                 </div>
@@ -626,7 +626,7 @@ export default function Notes() {
                 )}
               </div>
 
-              <div className="mt-3 flex gap-2.5 overflow-x-auto pb-1.5 xl:block xl:max-h-[620px] xl:space-y-2 xl:overflow-y-auto xl:pr-1">
+              <div className="mt-3 max-h-[260px] xl:max-h-[620px] space-y-2 overflow-y-auto pr-1">
                 {mode === "notes" ? (
                   filteredNotes.length ? (
                     filteredNotes.map(item => {
@@ -637,7 +637,7 @@ export default function Notes() {
                           key={item.id}
                           type="button"
                           onClick={() => setSelectedNote(item.id)}
-                          className={`min-w-[235px] shrink-0 xl:min-w-0 xl:w-full rounded-2xl p-3 text-left transition ${
+                          className={`w-full min-w-0 max-w-full overflow-hidden rounded-2xl p-3 text-left transition ${
                             isSelected
                               ? "border border-[#A070A1] bg-[#F8E7E7] shadow-sm"
                               : "border border-transparent bg-[#FDF3F3]/60 hover:bg-[#FDF3F3]"
@@ -652,12 +652,12 @@ export default function Notes() {
                               {sub.name}
                             </span>
                           )}
-                          <p className="line-clamp-2 text-[13px] font-semibold text-[#724060]">
+                          <p className="line-clamp-2 break-words text-[13px] font-semibold text-[#724060]">
                             {item.title}
                           </p>
-                          <div className="mt-1.5 flex items-center justify-between text-[11px] text-[#A070A1]">
-                            <span className="capitalize">{item.scopeType}</span>
-                            <span className="truncate max-w-[140px]">{item.scopeLabel}</span>
+                          <div className="mt-1.5 flex min-w-0 items-center justify-between gap-2 text-[11px] text-[#A070A1]">
+                            <span className="shrink-0 capitalize">{item.scopeType}</span>
+                            <span className="min-w-0 truncate">{item.scopeLabel}</span>
                           </div>
                         </button>
                       );
@@ -683,7 +683,7 @@ export default function Notes() {
                           key={item.id}
                           type="button"
                           onClick={() => setSelectedRevisionId(item.id)}
-                          className={`min-w-[235px] shrink-0 xl:min-w-0 xl:w-full rounded-2xl p-3 text-left transition ${
+                          className={`w-full min-w-0 max-w-full overflow-hidden rounded-2xl p-3 text-left transition ${
                             isSelected
                               ? "border border-[#A070A1] bg-[#F8E7E7] shadow-sm"
                               : "border border-transparent bg-[#FDF3F3]/60 hover:bg-[#FDF3F3]"
@@ -698,12 +698,12 @@ export default function Notes() {
                               {sub.name}
                             </span>
                           )}
-                          <p className="line-clamp-2 text-[13px] font-semibold text-[#724060]">
+                          <p className="line-clamp-2 break-words text-[13px] font-semibold text-[#724060]">
                             {item.title}
                           </p>
-                          <div className="mt-1.5 flex items-center justify-between text-[11px] text-[#A070A1]">
-                            <span className="capitalize">Revision Guide</span>
-                            <span className="truncate max-w-[140px]">{item.scopeLabel}</span>
+                          <div className="mt-1.5 flex min-w-0 items-center justify-between gap-2 text-[11px] text-[#A070A1]">
+                            <span className="shrink-0 capitalize">Revision Guide</span>
+                            <span className="min-w-0 truncate">{item.scopeLabel}</span>
                           </div>
                         </button>
                       );
@@ -724,14 +724,14 @@ export default function Notes() {
             </aside>
 
             {/* Right Column: Generation Controls & Note Display */}
-            <section className="space-y-6">
+            <section className="min-w-0 max-w-full space-y-5 sm:space-y-6">
               {/* Scope & Document Configuration Card */}
-              <div className="rounded-[24px] border border-[#F8E7E7] bg-white p-5 shadow-sm sm:p-6">
-                <div className="flex items-center gap-3">
-                  <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#F8E7E7] text-[#724060]">
+              <div className="min-w-0 max-w-full overflow-hidden rounded-[24px] border border-[#F8E7E7] bg-white p-4 shadow-sm sm:p-6">
+                <div className="flex items-start sm:items-center gap-3">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#F8E7E7] text-[#724060]">
                     {mode === "notes" ? <BookMarked className="h-5 w-5" /> : <RefreshCw className="h-5 w-5" />}
                   </span>
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <h2 className="text-[15px] font-bold text-[#724060]">
                       {mode === "notes" ? "Generate Exhaustive Document Notes" : "Build Active-Recall Revision Guide"}
                     </h2>
@@ -741,8 +741,8 @@ export default function Notes() {
                   </div>
                 </div>
 
-                <div className="mt-5 grid gap-4 md:grid-cols-2">
-                  <label className="text-[12px] font-semibold text-[#724060]">
+                <div className="mt-5 grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-2">
+                  <label className="min-w-0 block text-[12px] font-semibold text-[#724060]">
                     Uploaded Document
                     <select
                       value={documentId}
@@ -754,7 +754,7 @@ export default function Notes() {
                           setSubjectId(String(matchedDoc.subjectId));
                         }
                       }}
-                      className="mt-1.5 h-11 w-full rounded-xl border border-[#F8E7E7] bg-[#FDF3F3] px-3 text-[13px] text-[#724060] outline-none transition focus:border-[#A070A1]"
+                      className="mt-1.5 h-11 w-full min-w-0 max-w-full truncate rounded-xl border border-[#F8E7E7] bg-[#FDF3F3] px-3 text-[13px] text-[#724060] outline-none transition focus:border-[#A070A1]"
                     >
                       <option value="">No document selected — use general topic</option>
                       {documents.data
@@ -770,12 +770,12 @@ export default function Notes() {
                     </select>
                   </label>
 
-                  <label className="text-[12px] font-semibold text-[#724060]">
+                  <label className="min-w-0 block text-[12px] font-semibold text-[#724060]">
                     Connect Subject <span className="font-normal text-[#A070A1]">(optional)</span>
                     <select
                       value={subjectId}
                       onChange={e => setSubjectId(e.target.value)}
-                      className="mt-1.5 h-11 w-full rounded-xl border border-[#F8E7E7] bg-[#FDF3F3] px-3 text-[13px] text-[#724060] outline-none transition focus:border-[#A070A1]"
+                      className="mt-1.5 h-11 w-full min-w-0 max-w-full truncate rounded-xl border border-[#F8E7E7] bg-[#FDF3F3] px-3 text-[13px] text-[#724060] outline-none transition focus:border-[#A070A1]"
                     >
                       <option value="">No subject linked</option>
                       {subjects.data?.map(subject => (
@@ -786,12 +786,12 @@ export default function Notes() {
                     </select>
                   </label>
 
-                  <label className="text-[12px] font-semibold text-[#724060]">
+                  <label className="min-w-0 block text-[12px] font-semibold text-[#724060]">
                     Study Scope
                     <select
                       value={scopeType}
                       onChange={e => setScopeType(e.target.value as typeof scopeType)}
-                      className="mt-1.5 h-11 w-full rounded-xl border border-[#F8E7E7] bg-[#FDF3F3] px-3 text-[13px] text-[#724060] outline-none transition focus:border-[#A070A1]"
+                      className="mt-1.5 h-11 w-full min-w-0 max-w-full truncate rounded-xl border border-[#F8E7E7] bg-[#FDF3F3] px-3 text-[13px] text-[#724060] outline-none transition focus:border-[#A070A1]"
                     >
                       <option value="document">Complete Document (All Sections)</option>
                       <option value="chapter">Specific Chapter</option>
@@ -801,7 +801,7 @@ export default function Notes() {
                     </select>
                   </label>
 
-                  <label className="text-[12px] font-semibold text-[#724060]">
+                  <label className="min-w-0 block text-[12px] font-semibold text-[#724060]">
                     Scope Details / Focus
                     <input
                       value={scopeLabel}
@@ -815,7 +815,7 @@ export default function Notes() {
                               ? "e.g. PART 2 · Field Calculations"
                               : "Enter exact focus or section"
                       }
-                      className="mt-1.5 h-11 w-full rounded-xl border border-[#F8E7E7] bg-[#FDF3F3] px-3 text-[13px] text-[#724060] outline-none transition focus:border-[#A070A1]"
+                      className="mt-1.5 h-11 w-full min-w-0 max-w-full rounded-xl border border-[#F8E7E7] bg-[#FDF3F3] px-3 text-[13px] text-[#724060] outline-none transition focus:border-[#A070A1]"
                     />
                   </label>
                 </div>
@@ -854,12 +854,12 @@ export default function Notes() {
               {/* Note / Revision Content View */}
               {mode === "notes" ? (
                 active ? (
-                  <div className="space-y-6">
+                  <div className="min-w-0 max-w-full space-y-5 sm:space-y-6">
                     {/* Note Content Card */}
-                    <div className="rounded-[28px] border border-[#F8E7E7] bg-white p-6 shadow-sm sm:p-8">
+                    <div className="min-w-0 max-w-full overflow-hidden rounded-[24px] sm:rounded-[28px] border border-[#F8E7E7] bg-white p-4 shadow-sm sm:p-8">
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="rounded-full bg-[#F8E7E7] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#724060]">
+                        <div className="flex min-w-0 flex-wrap items-center gap-2">
+                          <span className="truncate max-w-full rounded-full bg-[#F8E7E7] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#724060]">
                             {active.scopeType} · {active.scopeLabel}
                           </span>
                           {active.documentId && (
@@ -868,7 +868,7 @@ export default function Notes() {
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <MorphCopyButton
                             text={noteSpeechText}
                             label="Copy Note"
@@ -880,7 +880,7 @@ export default function Notes() {
                         </div>
                       </div>
 
-                      <h2 className="mt-3 text-[28px] font-bold tracking-tight text-[#724060] sm:text-[34px]">
+                      <h2 className="mt-3 break-words text-[22px] font-bold tracking-tight text-[#724060] sm:text-[34px]">
                         {active.title}
                       </h2>
 
@@ -1023,17 +1023,17 @@ export default function Notes() {
                 )
               ) : activeRevision ? (
                 /* Revision Mode Card */
-                <div className="rounded-[28px] border border-[#F8E7E7] bg-white p-6 shadow-sm sm:p-8">
+                <div className="min-w-0 max-w-full overflow-hidden rounded-[24px] sm:rounded-[28px] border border-[#F8E7E7] bg-white p-4 shadow-sm sm:p-8">
                   <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#F8E7E7] pb-4">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-full bg-[#F8E7E7] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#724060]">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                      <span className="truncate max-w-full rounded-full bg-[#F8E7E7] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#724060]">
                         Revision Guide · {activeRevision.scopeLabel}
                       </span>
                       {revisions.data && revisions.data.length > 1 && (
                         <select
                           value={activeRevision.id}
                           onChange={e => setSelectedRevisionId(Number(e.target.value))}
-                          className="h-8 rounded-lg border border-[#F8E7E7] bg-[#FDF3F3] px-2.5 text-[11.5px] font-semibold text-[#724060] outline-none"
+                          className="h-8 max-w-full truncate rounded-lg border border-[#F8E7E7] bg-[#FDF3F3] px-2.5 text-[11.5px] font-semibold text-[#724060] outline-none"
                         >
                           {revisions.data.map(rev => (
                             <option key={rev.id} value={rev.id}>
@@ -1057,14 +1057,14 @@ export default function Notes() {
                         });
                       }}
                       disabled={generateRevision.isPending}
-                      className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#724060] to-[#8d4774] px-4 text-[12px] font-bold text-white shadow-sm transition hover:opacity-95 disabled:opacity-50"
+                      className="inline-flex h-9 w-full sm:w-auto items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#724060] to-[#8d4774] px-4 text-[12px] font-bold text-white shadow-sm transition hover:opacity-95 disabled:opacity-50"
                     >
-                      <Zap className="h-3.5 w-3.5 fill-amber-300 text-amber-300" />
-                      {generateRevision.isPending ? "Synthesizing Full Solutions & Formulas…" : "Re-Generate High-Yield Revision Guide"}
+                      <Zap className="h-3.5 w-3.5 shrink-0 fill-amber-300 text-amber-300" />
+                      <span className="truncate">{generateRevision.isPending ? "Synthesizing Full Solutions & Formulas…" : "Re-Generate High-Yield Revision Guide"}</span>
                     </button>
                   </div>
 
-                  <h2 className="mt-4 text-[28px] font-bold tracking-tight text-[#724060]">
+                  <h2 className="mt-4 break-words text-[22px] sm:text-[28px] font-bold tracking-tight text-[#724060]">
                     {activeRevision.title}
                   </h2>
 
@@ -1373,14 +1373,14 @@ export default function Notes() {
               )}
 
               {/* STRICTLY GROUNDED DOCUMENT Q&A BOX AT THE BOTTOM */}
-              <div className="rounded-[28px] border-2 border-[#724060]/20 bg-gradient-to-b from-white to-[#FDF3F3] p-6 shadow-md sm:p-8">
+              <div className="min-w-0 max-w-full overflow-hidden rounded-[24px] sm:rounded-[28px] border-2 border-[#724060]/20 bg-gradient-to-b from-white to-[#FDF3F3] p-4 shadow-md sm:p-8">
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#F8E7E7] pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="grid h-10 w-10 place-items-center rounded-xl bg-[#724060] text-white shadow-sm">
+                  <div className="flex min-w-0 items-start sm:items-center gap-3">
+                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#724060] text-white shadow-sm">
                       <Bot className="h-5 w-5" />
                     </div>
-                    <div>
-                      <h3 className="text-[18px] font-bold text-[#724060]">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-[16px] sm:text-[18px] font-bold text-[#724060]">
                         Ask This Document (Strictly Grounded Q&A)
                       </h3>
                       <p className="text-[12px] text-[#A070A1]">
@@ -1390,9 +1390,9 @@ export default function Notes() {
                   </div>
 
                   {currentDoc && (
-                    <div className="inline-flex items-center gap-2 rounded-full border border-[#724060]/20 bg-[#F8E7E7] px-3.5 py-1 text-[11px] font-semibold text-[#724060]">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                      Grounded in: <b className="truncate max-w-[200px]">{currentDoc.originalName}</b>
+                    <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-[#724060]/20 bg-[#F8E7E7] px-3.5 py-1 text-[11px] font-semibold text-[#724060]">
+                      <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="shrink-0">Grounded in:</span> <b className="truncate max-w-[160px] sm:max-w-[200px]">{currentDoc.originalName}</b>
                     </div>
                   )}
                 </div>

@@ -130,13 +130,13 @@ export default function Subjects() {
 
   const subjectCards = subjectsQuery.data?.length ? (
     <>
-      <div className="mt-7 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-6 sm:mt-7 grid grid-cols-[minmax(0,1fr)] gap-4 sm:gap-5 sm:grid-cols-2 xl:grid-cols-3">
         {subjectsQuery.data.map(subject => (
           <article
             key={subject.id}
             onMouseEnter={() => setHoveredSubjectId(subject.id)}
             onMouseLeave={() => setHoveredSubjectId(null)}
-            className="group relative flex flex-col justify-between rounded-[26px] border border-[#724060]/12 bg-white p-6 shadow-[0_12px_28px_rgba(114,64,96,.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_38px_rgba(114,64,96,.13)]"
+            className="group relative min-w-0 max-w-full overflow-hidden flex flex-col justify-between rounded-[24px] sm:rounded-[26px] border border-[#724060]/12 bg-white p-5 sm:p-6 shadow-[0_12px_28px_rgba(114,64,96,.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_38px_rgba(114,64,96,.13)]"
           >
             {hoveredSubjectId === subject.id && (
               <motion.div
@@ -259,25 +259,25 @@ export default function Subjects() {
 
   return (
     <StudentAppShell>
-      <div className="mx-auto max-w-[1280px] p-4 sm:p-7 lg:p-9">
+      <div className="mx-auto w-full max-w-[1280px] overflow-x-hidden p-3.5 sm:p-7 lg:p-9">
         {/* Hero Header */}
-        <header className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#522943] via-[#724060] to-[#8C5378] px-6 py-7 text-white shadow-[0_18px_40px_rgba(114,64,96,0.22)] sm:px-9">
+        <header className="relative overflow-hidden rounded-[24px] sm:rounded-[28px] bg-gradient-to-br from-[#522943] via-[#724060] to-[#8C5378] px-5 py-6 text-white shadow-[0_18px_40px_rgba(114,64,96,0.22)] sm:px-9 sm:py-7">
           <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-[#F8E7E7]/10 blur-2xl" />
-          <div className="relative flex flex-wrap items-end justify-between gap-5">
-            <div>
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-[#F8E7E7]">
-                <Sparkles className="h-3.5 w-3.5" /> Curriculum & Subject Organizer
+          <div className="relative flex flex-wrap items-end justify-between gap-4 sm:gap-5">
+            <div className="min-w-0">
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[10.5px] sm:text-[11px] font-semibold uppercase tracking-wider text-[#F8E7E7]">
+                <Sparkles className="h-3.5 w-3.5 shrink-0" /> Curriculum & Subject Organizer
               </div>
-              <h1 className="mt-2.5 text-[28px] font-bold tracking-tight sm:text-[36px]">
+              <h1 className="mt-2.5 text-[24px] font-bold tracking-tight sm:text-[36px]">
                 Subjects & Learning Spaces
               </h1>
-              <p className="mt-1.5 max-w-xl text-[13.5px] text-[#F8E7E7]/85">
+              <p className="mt-1.5 max-w-xl text-[13px] sm:text-[13.5px] text-[#F8E7E7]/85">
                 Click any subject folder to open its complete study hub: notes, quizzes, research papers, and recorded hours.
               </p>
             </div>
             <button
               onClick={openNew}
-              className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-5 text-[13px] font-bold text-[#2D1826] shadow-md transition hover:bg-[#FDF3F3] hover:scale-[1.02]"
+              className="inline-flex h-11 w-full sm:w-auto items-center justify-center gap-2 rounded-full bg-white px-5 text-[13px] font-bold text-[#2D1826] shadow-md transition hover:bg-[#FDF3F3] hover:scale-[1.02]"
             >
               <Plus className="h-4 w-4 text-[#724060]" /> New Subject
             </button>

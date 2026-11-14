@@ -205,20 +205,20 @@ export default function Practice() {
         <PracticeHistory />
 
         {/* Generator Control Bar */}
-        <section className="mt-5 rounded-[26px] border border-[#724060]/12 bg-white p-4 sm:p-6 shadow-[0_12px_30px_rgba(114,64,96,0.06)]">
+        <section className="mt-5 min-w-0 max-w-full overflow-hidden rounded-[24px] sm:rounded-[26px] border border-[#724060]/12 bg-white p-4 sm:p-6 shadow-[0_12px_30px_rgba(114,64,96,0.06)]">
           <form onSubmit={tab === "quiz" ? createQuiz : createCards}>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[1.2fr_.85fr_.9fr_.7fr_.85fr]">
+            <div className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 lg:grid-cols-[1.2fr_.85fr_.9fr_.7fr_.85fr]">
               <input
                 value={topic}
                 onChange={event => setTopic(event.target.value)}
                 placeholder="Topic or concept you want to practice…"
-                className="h-11 min-w-0 sm:col-span-2 lg:col-span-1 rounded-xl border border-[#F8E7E7] bg-[#FDF3F3] px-3.5 text-sm text-[#2D1826] outline-none focus:border-[#724060]"
+                className="h-11 w-full min-w-0 max-w-full sm:col-span-2 lg:col-span-1 rounded-xl border border-[#F8E7E7] bg-[#FDF3F3] px-3.5 text-sm text-[#2D1826] outline-none focus:border-[#724060]"
                 required
               />
               <select
                 value={subjectId}
                 onChange={event => setSubjectId(event.target.value)}
-                className="h-11 rounded-xl border border-[#F8E7E7] bg-[#FDF3F3] px-3 text-[12.5px] font-medium text-[#724060]"
+                className="h-11 w-full min-w-0 max-w-full truncate rounded-xl border border-[#F8E7E7] bg-[#FDF3F3] px-3 text-[12.5px] font-medium text-[#724060]"
               >
                 <option value="">No subject selected</option>
                 {subjects.data?.map(subject => (
@@ -235,7 +235,7 @@ export default function Practice() {
                   const found = documents.data?.find(d => String(d.id) === docId);
                   if (found?.subjectId) setSubjectId(String(found.subjectId));
                 }}
-                className="h-11 rounded-xl border border-[#F8E7E7] bg-[#FDF3F3] px-3 text-[12.5px] font-medium text-[#724060]"
+                className="h-11 w-full min-w-0 max-w-full truncate rounded-xl border border-[#F8E7E7] bg-[#FDF3F3] px-3 text-[12.5px] font-medium text-[#724060]"
               >
                 <option value="">Topic only (No PDF)</option>
                 {documents.data?.map(document => (
@@ -250,7 +250,7 @@ export default function Practice() {
               <select
                 value={scopeType}
                 onChange={event => setScopeType(event.target.value as typeof scopeType)}
-                className="h-11 rounded-xl border border-[#F8E7E7] bg-[#FDF3F3] px-3 text-[12.5px] font-medium text-[#724060]"
+                className="h-11 w-full min-w-0 max-w-full truncate rounded-xl border border-[#F8E7E7] bg-[#FDF3F3] px-3 text-[12.5px] font-medium text-[#724060]"
               >
                 <option value="topic">Topic</option>
                 <option value="chapter">Chapter</option>
@@ -268,7 +268,7 @@ export default function Practice() {
                       ? "Whole PDF"
                       : "Exact scope"
                 }
-                className="h-11 min-w-0 rounded-xl border border-[#F8E7E7] bg-[#FDF3F3] px-3.5 text-sm text-[#2D1826] outline-none focus:border-[#724060]"
+                className="h-11 w-full min-w-0 max-w-full rounded-xl border border-[#F8E7E7] bg-[#FDF3F3] px-3.5 text-sm text-[#2D1826] outline-none focus:border-[#724060]"
               />
             </div>
 

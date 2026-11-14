@@ -293,7 +293,7 @@ export default function Documents() {
   return (
     <StudentAppShell>
       <div
-        className={`mx-auto max-w-[1280px] p-5 sm:p-8 lg:p-10 transition-colors ${
+        className={`mx-auto w-full max-w-[1280px] overflow-x-hidden p-3.5 sm:p-8 lg:p-10 transition-colors ${
           isDragging ? "bg-[#FDF3F3] ring-4 ring-dashed ring-[#A070A1]" : ""
         }`}
         onDragOver={handleDragOver}
@@ -310,17 +310,17 @@ export default function Documents() {
         />
 
         {/* Header Banner + Uiverse 3D Folder Dropzone */}
-        <header className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#522943] via-[#724060] to-[#8C5378] px-6 py-7 text-white shadow-[0_18px_44px_rgba(114,64,96,0.20)] sm:px-9">
+        <header className="relative overflow-hidden rounded-[24px] sm:rounded-[28px] bg-gradient-to-br from-[#522943] via-[#724060] to-[#8C5378] px-5 py-6 text-white shadow-[0_18px_44px_rgba(114,64,96,0.20)] sm:px-9 sm:py-7">
           <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-[#F8E7E7]/10 blur-2xl" />
-          <div className="relative z-10 flex flex-wrap items-center justify-between gap-6">
-            <div>
-              <div className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/12 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#F8E7E7] backdrop-blur-md">
-                <LockKeyhole className="h-3 w-3" /> Private Academic Vault
+          <div className="relative z-10 flex flex-wrap items-center justify-between gap-5 sm:gap-6">
+            <div className="min-w-0">
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/12 px-3 py-1 text-[10.5px] sm:text-[11px] font-bold uppercase tracking-wider text-[#F8E7E7] backdrop-blur-md">
+                <LockKeyhole className="h-3 w-3 shrink-0" /> Private Academic Vault
               </div>
-              <h1 className="mt-2.5 text-[28px] font-bold tracking-tight sm:text-[34px]">
+              <h1 className="mt-2.5 text-[24px] font-bold tracking-tight sm:text-[34px]">
                 Documents & Source Material
               </h1>
-              <p className="mt-1.5 max-w-xl text-[13.5px] leading-relaxed text-[#F8E7E7]/85">
+              <p className="mt-1.5 max-w-xl text-[13px] sm:text-[13.5px] leading-relaxed text-[#F8E7E7]/85">
                 Upload lectures, textbook chapters, and syllabi. Link each file to its subject so notes, flashcards, and practice questions stay strictly organized.
               </p>
             </div>
@@ -329,17 +329,17 @@ export default function Documents() {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="group flex items-center gap-4 rounded-[22px] border border-white/20 bg-white/12 px-4 py-3 text-left backdrop-blur-md transition hover:border-white/40 hover:bg-white/18 cursor-pointer"
+              className="group flex w-full sm:w-auto items-center gap-3.5 sm:gap-4 rounded-[22px] border border-white/20 bg-white/12 px-4 py-3 text-left backdrop-blur-md transition hover:border-white/40 hover:bg-white/18 cursor-pointer"
             >
               <img
                 src="/illustrations/pdf-folder-3d.svg"
                 alt="3D PDF Folder"
-                className="h-14 w-20 rounded-xl object-cover shadow-sm "
+                className="h-14 w-20 shrink-0 rounded-xl object-cover shadow-sm"
               />
-              <div>
+              <div className="min-w-0">
                 <p className="text-[13.5px] font-bold text-white flex items-center gap-1.5">
-                  <UploadCloud className="h-4 w-4 text-[#F8E7E7]" />
-                  Drop or Upload PDF
+                  <UploadCloud className="h-4 w-4 shrink-0 text-[#F8E7E7]" />
+                  <span>Drop or Upload PDF</span>
                 </p>
                 <p className="mt-0.5 text-[11.5px] text-[#F8E7E7]/80">Click or drag any lecture PDF anywhere</p>
               </div>
@@ -438,7 +438,7 @@ export default function Documents() {
               ))}
             </div>
           ) : filteredDocuments.length ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {filteredDocuments.map((doc) => {
                 const docSubject = subjects.find((s) => s.id === doc.subjectId);
                 const isMovingThis =
@@ -448,7 +448,7 @@ export default function Documents() {
                 return (
                   <SpotlightCard
                     key={doc.id}
-                    className="flex flex-col justify-between rounded-2xl border border-[#F8E7E7] bg-white p-5 shadow-xs transition hover:shadow-[0_12px_32px_rgba(114,64,96,0.08)] relative"
+                    className="min-w-0 max-w-full overflow-hidden flex flex-col justify-between rounded-2xl border border-[#F8E7E7] bg-white p-4 sm:p-5 shadow-xs transition hover:shadow-[0_12px_32px_rgba(114,64,96,0.08)] relative"
                   >
                     <div>
                       {/* Subject Tag & Delete Action */}

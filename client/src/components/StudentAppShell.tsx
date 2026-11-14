@@ -246,35 +246,10 @@ export function StudentAppShell({ children }: { children: React.ReactNode }) {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.26, ease: "easeOut" }}
-        className="min-h-[calc(100vh-80px)] w-full pb-24 lg:pb-8"
+        className="min-h-[calc(100vh-80px)] w-full max-w-full overflow-x-hidden pb-10"
       >
         {children}
       </motion.main>
-
-      {/* Mobile Bottom Dock — Scrollable All 8 Routes */}
-      <nav
-        className="fixed inset-x-2.5 bottom-2.5 z-40 flex h-14 items-center justify-between gap-1 overflow-x-auto rounded-2xl border border-[#724060]/15 bg-white/95 px-2 text-[#724060] shadow-[0_8px_30px_rgba(114,64,96,0.16)] backdrop-blur-md lg:hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        aria-label="Mobile bottom navigation"
-      >
-        {navigation.map(item => {
-          const active = isActiveRoute(item.href);
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex min-w-[56px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl py-1.5 text-[9.5px] font-medium transition-colors ${
-                active
-                  ? "bg-[#FDF3F3] text-[#724060] font-bold"
-                  : "text-[#724060]/65"
-              }`}
-            >
-              <Icon className="h-4 w-4 shrink-0" />
-              <span className="truncate max-w-[54px]">{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
     </div>
   );
 }

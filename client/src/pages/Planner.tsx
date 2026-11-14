@@ -154,24 +154,24 @@ export default function Planner() {
 
   return (
     <StudentAppShell>
-      <div className="mx-auto max-w-[1280px] p-5 sm:p-8 lg:p-10">
+      <div className="mx-auto w-full max-w-[1280px] overflow-x-hidden p-3.5 sm:p-8 lg:p-10">
         {/* Hero Header */}
-        <header className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#522943] via-[#724060] to-[#8C5378] px-6 py-7 text-white shadow-[0_18px_40px_rgba(114,64,96,0.22)] sm:px-9">
+        <header className="relative overflow-hidden rounded-[24px] sm:rounded-[28px] bg-gradient-to-br from-[#522943] via-[#724060] to-[#8C5378] px-5 py-6 text-white shadow-[0_18px_40px_rgba(114,64,96,0.22)] sm:px-9 sm:py-7">
           <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-[#F8E7E7]/10 blur-2xl" />
           <div className="relative z-10 flex flex-wrap items-center justify-between gap-6">
-            <div className="max-w-xl">
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-[#F8E7E7]">
-                <Sparkles className="h-3.5 w-3.5" /> Exam & Session Planner
+            <div className="min-w-0 max-w-xl">
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[10.5px] sm:text-[11px] font-semibold uppercase tracking-wider text-[#F8E7E7]">
+                <Sparkles className="h-3.5 w-3.5 shrink-0" /> Exam & Session Planner
               </div>
-              <h1 className="mt-2.5 text-[28px] font-bold tracking-tight sm:text-[36px]">
+              <h1 className="mt-2.5 text-[24px] font-bold tracking-tight sm:text-[36px]">
                 Study Planner & Deadlines
               </h1>
-              <p className="mt-1.5 text-[13.5px] text-[#F8E7E7]/85">
+              <p className="mt-1.5 text-[13px] sm:text-[13.5px] text-[#F8E7E7]/85">
                 Turn exam dates into checkable study tasks, track progress rings, and log focused study minutes.
               </p>
               <button
                 onClick={openNewPlan}
-                className="mt-4 inline-flex h-11 items-center gap-2 rounded-full bg-white px-5 text-[13px] font-bold text-[#2D1826] shadow-md transition hover:bg-[#FDF3F3] hover:scale-[1.02] cursor-pointer"
+                className="mt-4 inline-flex h-11 w-full sm:w-auto items-center justify-center gap-2 rounded-full bg-white px-5 text-[13px] font-bold text-[#2D1826] shadow-md transition hover:bg-[#FDF3F3] hover:scale-[1.02] cursor-pointer"
               >
                 <Plus className="h-4 w-4 text-[#724060]" /> New Study Plan
               </button>
@@ -193,13 +193,13 @@ export default function Planner() {
         )}
 
         {plans.isLoading ? (
-          <div className="mt-7 grid gap-4 md:grid-cols-2">
+          <div className="mt-7 grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-2">
             {[1, 2].map(key => (
               <div key={key} className="h-52 animate-pulse rounded-[26px] bg-white border border-[#F8E7E7]" />
             ))}
           </div>
         ) : storedPlans.length ? (
-          <div className="mt-7 grid gap-5 lg:grid-cols-2">
+          <div className="mt-6 sm:mt-7 grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-2">
             {storedPlans.map(plan => {
               const completed = plan.items.filter(item => item.completedAt).length;
               const pct = plan.items.length ? Math.round((completed / plan.items.length) * 100) : 0;
@@ -210,7 +210,7 @@ export default function Planner() {
               return (
                 <section
                   key={plan.id}
-                  className="overflow-hidden rounded-[26px] border border-[#724060]/12 bg-white shadow-[0_12px_30px_rgba(114,64,96,0.06)] transition hover:shadow-[0_16px_38px_rgba(114,64,96,0.11)] flex flex-col justify-between"
+                  className="min-w-0 max-w-full overflow-hidden rounded-[24px] sm:rounded-[26px] border border-[#724060]/12 bg-white shadow-[0_12px_30px_rgba(114,64,96,0.06)] transition hover:shadow-[0_16px_38px_rgba(114,64,96,0.11)] flex flex-col justify-between"
                 >
                   <div>
                     {/* Plan Top Bar with MicroKit Progress Ring */}

@@ -119,31 +119,31 @@ export default function Chat() {
 
   return (
     <StudentAppShell>
-      <div className="mx-auto flex min-h-screen max-w-[1380px] flex-col p-4 sm:p-7 lg:p-9">
+      <div className="mx-auto flex min-h-screen w-full max-w-[1380px] overflow-x-hidden flex-col p-3.5 sm:p-7 lg:p-9">
         {/* Hero Header with MicroKit Sliding Mode Selector */}
-        <header className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#522943] via-[#724060] to-[#8C5378] px-6 py-6 text-white shadow-[0_18px_40px_rgba(114,64,96,0.22)] sm:px-8">
+        <header className="relative overflow-hidden rounded-[24px] sm:rounded-[28px] bg-gradient-to-br from-[#522943] via-[#724060] to-[#8C5378] px-5 py-6 text-white shadow-[0_18px_40px_rgba(114,64,96,0.22)] sm:px-8">
           <div className="pointer-events-none absolute -right-10 -top-10 h-44 w-44 rounded-full bg-[#F8E7E7]/10 blur-2xl" />
           <div className="relative flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-[#F8E7E7]">
-                <Sparkles className="h-3.5 w-3.5" /> Grounded AI Study Tutor
+            <div className="min-w-0">
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[10.5px] sm:text-[11px] font-semibold uppercase tracking-wider text-[#F8E7E7]">
+                <Sparkles className="h-3.5 w-3.5 shrink-0" /> Grounded AI Study Tutor
               </div>
-              <h1 className="mt-2 text-[26px] font-bold tracking-tight sm:text-[32px]">
+              <h1 className="mt-2 text-[23px] font-bold tracking-tight sm:text-[32px]">
                 Study Chat Assistant
               </h1>
-              <p className="mt-1 text-[13px] text-[#F8E7E7]/85">
+              <p className="mt-1 text-[12.5px] sm:text-[13px] text-[#F8E7E7]/85">
                 Pick a pedagogical mode or attach a lecture PDF for grounded explanations.
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex w-full sm:w-auto flex-wrap items-center gap-2">
               {/* Document Grounding Selector */}
-              <div className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[12px] text-white backdrop-blur-xs">
-                <FileText className="h-3.5 w-3.5 text-[#F8E7E7]" />
+              <div className="inline-flex min-w-0 flex-1 sm:flex-initial items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-2 text-[12px] text-white backdrop-blur-xs">
+                <FileText className="h-3.5 w-3.5 shrink-0 text-[#F8E7E7]" />
                 <select
                   value={documentId}
                   onChange={event => setDocumentId(event.target.value)}
-                  className="max-w-[180px] bg-transparent text-[12px] font-semibold text-white outline-none [&>option]:text-[#2D1826]"
+                  className="w-full min-w-0 max-w-[190px] truncate bg-transparent text-[12px] font-semibold text-white outline-none [&>option]:text-[#2D1826]"
                 >
                   <option value="">No PDF attached</option>
                   {documents.data?.map(document => (
@@ -157,7 +157,7 @@ export default function Chat() {
               <button
                 onClick={startConversation}
                 disabled={create.isPending}
-                className="inline-flex h-10 items-center gap-1.5 rounded-full bg-white px-4 text-[12.5px] font-bold text-[#2D1826] shadow-md transition hover:bg-[#FDF3F3] hover:scale-[1.02]"
+                className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-white px-4 text-[12.5px] font-bold text-[#2D1826] shadow-md transition hover:bg-[#FDF3F3] hover:scale-[1.02]"
               >
                 <Plus className="h-4 w-4 text-[#724060]" /> New Chat
               </button>
@@ -165,7 +165,7 @@ export default function Chat() {
           </div>
 
           {/* MicroKit Sliding Learning Mode Pills */}
-          <div className="relative mt-5 flex items-center gap-1 overflow-x-auto rounded-full bg-black/20 p-1 backdrop-blur-xs">
+          <div className="relative mt-4 sm:mt-5 flex items-center gap-1 overflow-x-auto rounded-full bg-black/20 p-1 backdrop-blur-xs [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {learningModes.map(([value, label]) => {
               const activeMode = mode === value;
               return (
@@ -197,9 +197,9 @@ export default function Chat() {
           </p>
         )}
 
-        <div className="mt-5 grid min-h-[520px] flex-1 gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
+        <div className="mt-5 grid min-h-[520px] flex-1 grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
           {/* Left Sidebar: Saved Conversations (Horizontal Strip on Mobile, Vertical Sidebar on Desktop) */}
-          <aside className="rounded-[24px] border border-[#724060]/12 bg-white p-3.5 shadow-[0_12px_28px_rgba(114,64,96,0.06)]">
+          <aside className="min-w-0 max-w-full overflow-hidden rounded-[24px] border border-[#724060]/12 bg-white p-3.5 shadow-[0_12px_28px_rgba(114,64,96,0.06)]">
             <div className="flex items-center justify-between border-b border-[#F8E7E7] px-2 pb-2.5">
               <p className="text-[11px] font-bold uppercase tracking-wider text-[#A070A1]">
                 Saved Threads

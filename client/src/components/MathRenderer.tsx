@@ -44,14 +44,14 @@ export const MathRenderer: React.FC<MathRendererProps> = ({ content, className =
         if (inline) {
           return (
             <span
-              className="inline-block px-1 align-baseline text-inherit"
+              className="inline-block max-w-full overflow-x-auto px-1 align-baseline text-inherit"
               dangerouslySetInnerHTML={{ __html: html }}
             />
           );
         }
         return (
           <div
-            className="my-2 overflow-x-auto rounded-xl border border-[#F8E7E7] bg-[#FDF3F3] px-3.5 py-2.5 text-center text-[#724060] shadow-xs"
+            className="my-2 max-w-full overflow-x-auto rounded-xl border border-[#F8E7E7] bg-[#FDF3F3] px-3.5 py-2.5 text-center text-[#724060] shadow-xs"
             dangerouslySetInnerHTML={{ __html: html }}
           />
         );
@@ -132,7 +132,7 @@ export const MathRenderer: React.FC<MathRendererProps> = ({ content, className =
           return (
             <div
               key={key}
-              className="my-2.5 overflow-x-auto rounded-xl border border-[#F8E7E7] bg-[#FDF3F3] px-3.5 py-2 text-center text-[#724060] shadow-xs"
+              className="my-2.5 max-w-full overflow-x-auto rounded-xl border border-[#F8E7E7] bg-[#FDF3F3] px-3.5 py-2 text-center text-[#724060] shadow-xs"
               dangerouslySetInnerHTML={{ __html: html }}
             />
           );
@@ -141,7 +141,7 @@ export const MathRenderer: React.FC<MathRendererProps> = ({ content, className =
         return (
           <span
             key={key}
-            className="inline-block px-1 align-baseline text-inherit"
+            className="inline-block max-w-full overflow-x-auto px-1 align-baseline text-inherit"
             dangerouslySetInnerHTML={{ __html: html }}
           />
         );
@@ -372,10 +372,10 @@ export const MathRenderer: React.FC<MathRendererProps> = ({ content, className =
   }, [content, inline]);
 
   if (inline) {
-    return <span className={`inline-math-container text-inherit ${className}`}>{renderedOutput}</span>;
+    return <span className={`inline-math-container max-w-full break-words text-inherit ${className}`}>{renderedOutput}</span>;
   }
 
-  return <div className={`math-markdown-content text-inherit ${className}`}>{renderedOutput}</div>;
+  return <div className={`math-markdown-content min-w-0 max-w-full break-words text-inherit ${className}`}>{renderedOutput}</div>;
 };
 
 export default MathRenderer;

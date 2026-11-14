@@ -439,27 +439,27 @@ export default function Research() {
 
   return (
     <StudentAppShell>
-      <div className="min-h-screen bg-[#F8E7E7] px-4 py-5 sm:px-7 sm:py-8 lg:px-10">
-        <div className="mx-auto max-w-[1500px]">
+      <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#F8E7E7] px-3.5 py-4 sm:px-7 sm:py-8 lg:px-10">
+        <div className="mx-auto w-full max-w-[1500px]">
           
           {/* Header Banner */}
-          <header className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#522943] via-[#724060] to-[#8C5378] px-6 py-7 text-[#FDF3F3] shadow-[0_18px_44px_rgba(114,64,96,.20)] sm:px-9">
+          <header className="relative overflow-hidden rounded-[24px] sm:rounded-[28px] bg-gradient-to-br from-[#522943] via-[#724060] to-[#8C5378] px-5 py-6 text-[#FDF3F3] shadow-[0_18px_44px_rgba(114,64,96,.20)] sm:px-9 sm:py-7">
             <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-[#F8E7E7]/10 blur-2xl" />
             <div className="relative z-10 flex flex-wrap items-center justify-between gap-6">
-              <div className="max-w-2xl">
+              <div className="min-w-0 max-w-2xl">
                 <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/12 px-3 py-1 text-[10.5px] font-bold uppercase tracking-[.16em] text-[#F8E7E7] backdrop-blur-md">
-                  <Compass className="h-3.5 w-3.5" /> Academic Research Canvas
+                  <Compass className="h-3.5 w-3.5 shrink-0" /> Academic Research Canvas
                 </p>
-                <h1 className="mt-3 text-[28px] font-bold leading-tight tracking-tight sm:text-[34px]">
+                <h1 className="mt-3 text-[23px] font-bold leading-snug tracking-tight sm:text-[34px]">
                   Build a publication-grade research paper for any topic.
                 </h1>
-                <p className="mt-2 text-[13.5px] leading-6 text-[#F8E7E7]/85">
+                <p className="mt-2 text-[13px] sm:text-[13.5px] leading-6 text-[#F8E7E7]/85">
                   Transforms any inquiry into a structured scholarly paper: formal definitions, operational mechanisms, past-present-future landscape, research objectives, verified videos, and downloadable papers.
                 </p>
                 <div className="mt-4">
                   <button
                     onClick={() => setComposerOpen(true)}
-                    className="group inline-flex h-11 items-center gap-2 rounded-full bg-white px-5 text-[13px] font-bold text-[#724060] shadow-sm transition hover:bg-[#FDF3F3] cursor-pointer"
+                    className="group inline-flex h-11 w-full sm:w-auto items-center justify-center gap-2 rounded-full bg-white px-5 text-[13px] font-bold text-[#724060] shadow-sm transition hover:bg-[#FDF3F3] cursor-pointer"
                   >
                     <Plus className="h-4 w-4 transition-transform duration-200 group-hover:rotate-90" /> Start a research paper
                   </button>
@@ -499,9 +499,9 @@ export default function Research() {
             </div>
           )}
 
-          <div className="mt-6 space-y-6">
+          <div className="mt-5 sm:mt-6 min-w-0 max-w-full space-y-5 sm:space-y-6">
             {/* Library Selector */}
-            <aside className="rounded-[24px] border border-[#F8E7E7] bg-white p-4 shadow-xs">
+            <aside className="min-w-0 max-w-full overflow-hidden rounded-[24px] border border-[#F8E7E7] bg-white p-4 shadow-xs">
               <div className="flex items-center justify-between border-b border-[#F8E7E7] px-2 pb-3">
                 <div>
                   <p className="text-[10.5px] font-bold uppercase tracking-[.16em] text-[#A070A1]">Project library</p>
