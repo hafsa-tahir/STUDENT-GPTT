@@ -146,17 +146,17 @@ export default function Dashboard() {
 
   return (
     <StudentAppShell>
-      <div className="min-h-[calc(100vh-88px)] bg-[#FDF3F3] px-5 py-7 sm:px-9 sm:py-10 lg:px-12">
-        <div className="mx-auto max-w-[1360px] space-y-8">
+      <div className="min-h-[calc(100vh-88px)] bg-[#FDF3F3] px-3.5 py-5 sm:px-8 sm:py-9 lg:px-12">
+        <div className="mx-auto max-w-[1360px] space-y-5 sm:space-y-8">
           {/* ROW 1: Hero Resume Card (8 cols) + 3D PDF Folder Dropzone (4 cols) */}
-          <section className="grid grid-cols-12 gap-6">
+          <section className="grid grid-cols-1 gap-5 lg:grid-cols-12 sm:gap-6">
             {/* Hero Left: Glassmorphic Plum Resume Card */}
-            <div className="col-span-12 lg:col-span-8 relative overflow-hidden rounded-[32px] bg-gradient-to-br from-[#4A253D] via-[#683857] to-[#7D4669] px-7 py-8 sm:px-10 sm:py-10 text-white shadow-[0_22px_50px_rgba(82,41,67,0.24)] flex flex-col sm:flex-row items-center gap-7 sm:gap-9">
+            <div className="lg:col-span-8 relative overflow-hidden rounded-[26px] sm:rounded-[32px] bg-gradient-to-br from-[#4A253D] via-[#683857] to-[#7D4669] px-5 py-6 sm:px-10 sm:py-10 text-white shadow-[0_22px_50px_rgba(82,41,67,0.24)] flex flex-col sm:flex-row items-center gap-5 sm:gap-9">
               <div className="pointer-events-none absolute -right-14 -top-14 h-60 w-60 rounded-full bg-[#F8E7E7]/10 blur-3xl" />
 
               {/* Animated SVG Progress Ring */}
-              <div className="relative flex h-34 w-34 shrink-0 items-center justify-center">
-                <svg className="h-34 w-34 -rotate-90" viewBox="0 0 104 104">
+              <div className="relative flex h-28 w-28 sm:h-36 sm:w-36 shrink-0 items-center justify-center">
+                <svg className="h-28 w-28 sm:h-36 sm:w-36 -rotate-90" viewBox="0 0 104 104">
                   <circle
                     cx="52"
                     cy="52"
@@ -179,29 +179,29 @@ export default function Dashboard() {
                   />
                 </svg>
                 <div className="absolute flex flex-col items-center">
-                  <span className="mb-1.5 grid h-6 w-6 place-items-center rounded-full bg-[#F8E7E7] text-[#522943] shadow-xs">
-                    <Check className="h-3.5 w-3.5 stroke-[3]" />
+                  <span className="mb-1 grid h-5 w-5 sm:h-6 sm:w-6 place-items-center rounded-full bg-[#F8E7E7] text-[#522943] shadow-xs">
+                    <Check className="h-3 w-3 sm:h-3.5 sm:w-3.5 stroke-[3]" />
                   </span>
-                  <span className="text-[26px] font-extrabold leading-none tracking-tight">
+                  <span className="text-[22px] sm:text-[26px] font-extrabold leading-none tracking-tight">
                     {completion}%
                   </span>
                 </div>
               </div>
 
               {/* Clean Minimal Resume Text + Glow Button */}
-              <div className="min-w-0 flex-1 text-center sm:text-left">
-                <p className="text-[13px] font-medium text-[#F8E7E7]/80">
+              <div className="min-w-0 w-full flex-1 text-center sm:text-left">
+                <p className="text-[12px] sm:text-[13px] font-medium text-[#F8E7E7]/80">
                   Current study session
                 </p>
-                <h1 className="mt-1.5 truncate text-[26px] sm:text-[32px] font-extrabold tracking-tight text-white">
+                <h1 className="mt-1.5 line-clamp-2 sm:truncate text-[21px] sm:text-[30px] font-extrabold leading-snug tracking-tight text-white">
                   Resume: {resumeTitle}
                 </h1>
 
-                <div className="mt-5">
+                <div className="mt-4 sm:mt-5">
                   <button
                     type="button"
                     onClick={() => setLocation(resumeHref)}
-                    className="group inline-flex items-center gap-2.5 rounded-full bg-gradient-to-r from-[#FDF3F3] to-[#EAD2D9] px-6 py-3 text-[14px] font-bold text-[#2D1826] shadow-[0_8px_28px_rgba(248,231,231,0.3)] transition-all hover:pr-7 cursor-pointer"
+                    className="group inline-flex w-full sm:w-auto items-center justify-center gap-2.5 rounded-full bg-gradient-to-r from-[#FDF3F3] to-[#EAD2D9] px-6 py-3 text-[13.5px] sm:text-[14px] font-bold text-[#2D1826] shadow-[0_8px_28px_rgba(248,231,231,0.3)] transition-all hover:pr-7 cursor-pointer"
                   >
                     <span>Continue</span>
                     <ArrowRight className="h-4 w-4 text-[#522943] transition-transform duration-200 group-hover:translate-x-1" />
@@ -219,7 +219,7 @@ export default function Dashboard() {
               onDragLeave={() => setIsDraggingPdf(false)}
               onDrop={onDropPdf}
               onClick={() => fileInputRef.current?.click()}
-              className={`group col-span-12 lg:col-span-4 cursor-pointer rounded-[32px] border p-6 transition-all duration-300 flex flex-col items-center justify-center text-center shadow-[0_14px_34px_rgba(114,64,96,0.07)] ${
+              className={`group lg:col-span-4 cursor-pointer rounded-[26px] sm:rounded-[32px] border p-5 sm:p-6 transition-all duration-300 flex flex-col items-center justify-center text-center shadow-[0_14px_34px_rgba(114,64,96,0.07)] ${
                 isDraggingPdf
                   ? "border-[#724060] bg-[#F8E7E7]"
                   : "border-[#724060]/12 bg-white hover:-translate-y-1 hover:shadow-[0_20px_42px_rgba(114,64,96,0.12)]"
@@ -236,10 +236,10 @@ export default function Dashboard() {
               <img
                 src="/illustrations/pdf-folder-3d.svg"
                 alt="Drop Lecture PDF"
-                className="h-38 w-60 object-contain"
+                className="h-32 sm:h-40 w-full max-w-[220px] object-contain"
               />
 
-              <h2 className="mt-2 text-[20px] font-extrabold text-[#2D1826] flex items-center gap-2">
+              <h2 className="mt-2 text-[18px] sm:text-[20px] font-extrabold text-[#2D1826] flex items-center gap-2">
                 {uploadingPdf ? (
                   <>
                     <Loader2 className="h-5 w-5 animate-spin text-[#724060]" />
@@ -253,11 +253,11 @@ export default function Dashboard() {
           </section>
 
           {/* ROW 2: 4 Clean Visual Feature Cards with Generous Breathing Room */}
-          <section className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
+          <section className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 xl:grid-cols-4">
             {/* CARD 1: AI Note Maker */}
             <SpotlightCard
               onClick={() => setLocation("/notes")}
-              className="group cursor-pointer rounded-[30px] border border-[#724060]/12 bg-white p-6 shadow-[0_14px_34px_rgba(114,64,96,0.06)]"
+              className="group cursor-pointer rounded-[26px] sm:rounded-[30px] border border-[#724060]/12 bg-white p-5 sm:p-6 shadow-[0_14px_34px_rgba(114,64,96,0.06)]"
             >
               <div
                 onMouseEnter={() => setHoveredCard(0)}
@@ -267,29 +267,29 @@ export default function Dashboard() {
                 {hoveredCard === 0 && (
                   <motion.div
                     layoutId="dashboard-hover-glide"
-                    className="pointer-events-none absolute inset-0 rounded-[30px] ring-2 ring-[#724060]/35"
+                    className="pointer-events-none absolute inset-0 rounded-[26px] sm:rounded-[30px] ring-2 ring-[#724060]/35"
                   />
                 )}
                 <div>
                   <div className="flex items-center justify-between">
-                    <h3 className="text-[19px] font-extrabold text-[#2D1826]">
+                    <h3 className="text-[18px] sm:text-[19px] font-extrabold text-[#2D1826]">
                       AI Note Maker
                     </h3>
                     <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#FDF3F3] text-[#724060]">
-                      <NotebookPen className="h-4.5 w-4.5" />
+                      <NotebookPen className="h-4 w-4" />
                     </span>
                   </div>
 
-                  <div className="mt-5 overflow-hidden rounded-2xl border border-[#724060]/10 bg-[#FDF3F3]">
+                  <div className="mt-4 sm:mt-5 overflow-hidden rounded-2xl border border-[#724060]/10 bg-[#FDF3F3]">
                     <img
                       src="/illustrations/ai-notes-diagram.svg"
                       alt="AI Note Maker Formula and Sticky Note"
-                      className="h-44 w-full object-cover"
+                      className="h-40 sm:h-44 w-full object-contain sm:object-cover"
                     />
                   </div>
                 </div>
 
-                <div className="mt-5 flex items-center justify-between text-[14px] font-bold text-[#2D1826]">
+                <div className="mt-4 sm:mt-5 flex items-center justify-between text-[14px] font-bold text-[#2D1826]">
                   <span>Open Studio</span>
                   <ArrowRight className="h-4 w-4 text-[#724060] transition-transform group-hover:translate-x-1" />
                 </div>
@@ -299,7 +299,7 @@ export default function Dashboard() {
             {/* CARD 2: 3D Flashcard Stack */}
             <SpotlightCard
               onClick={() => setLocation("/practice")}
-              className="group cursor-pointer rounded-[30px] border border-[#724060]/12 bg-white p-6 shadow-[0_14px_34px_rgba(114,64,96,0.06)]"
+              className="group cursor-pointer rounded-[26px] sm:rounded-[30px] border border-[#724060]/12 bg-white p-5 sm:p-6 shadow-[0_14px_34px_rgba(114,64,96,0.06)]"
             >
               <div
                 onMouseEnter={() => setHoveredCard(1)}
@@ -309,30 +309,30 @@ export default function Dashboard() {
                 {hoveredCard === 1 && (
                   <motion.div
                     layoutId="dashboard-hover-glide"
-                    className="pointer-events-none absolute inset-0 rounded-[30px] ring-2 ring-[#724060]/35"
+                    className="pointer-events-none absolute inset-0 rounded-[26px] sm:rounded-[30px] ring-2 ring-[#724060]/35"
                   />
                 )}
                 <div>
                   <div className="flex items-center justify-between">
-                    <h3 className="text-[19px] font-extrabold text-[#2D1826]">
+                    <h3 className="text-[18px] sm:text-[19px] font-extrabold text-[#2D1826]">
                       3D Flashcard Stack
                     </h3>
                     <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#FDF3F3] text-[#724060]">
-                      <Layers3 className="h-4.5 w-4.5" />
+                      <Layers3 className="h-4 w-4" />
                     </span>
                   </div>
 
-                  <div className="mt-5 overflow-hidden rounded-2xl border border-[#724060]/10 bg-[#FDF3F3]">
+                  <div className="mt-4 sm:mt-5 overflow-hidden rounded-2xl border border-[#724060]/10 bg-[#FDF3F3]">
                     <img
                       src="/illustrations/flashcards-quiz-3d.svg"
                       alt="3D Flashcard Stack"
-                      className="h-44 w-full object-cover"
+                      className="h-40 sm:h-44 w-full object-contain sm:object-cover"
                     />
                   </div>
                 </div>
 
                 <div
-                  className="mt-5 flex items-center gap-2"
+                  className="mt-4 sm:mt-5 flex items-center gap-2"
                   onClick={e => {
                     e.stopPropagation();
                     setLocation("/practice");
@@ -363,7 +363,7 @@ export default function Dashboard() {
             {/* CARD 3: Research Studio */}
             <SpotlightCard
               onClick={() => setLocation("/research")}
-              className="group cursor-pointer rounded-[30px] border border-[#724060]/12 bg-white p-6 shadow-[0_14px_34px_rgba(114,64,96,0.06)]"
+              className="group cursor-pointer rounded-[26px] sm:rounded-[30px] border border-[#724060]/12 bg-white p-5 sm:p-6 shadow-[0_14px_34px_rgba(114,64,96,0.06)]"
             >
               <div
                 onMouseEnter={() => setHoveredCard(2)}
@@ -373,24 +373,24 @@ export default function Dashboard() {
                 {hoveredCard === 2 && (
                   <motion.div
                     layoutId="dashboard-hover-glide"
-                    className="pointer-events-none absolute inset-0 rounded-[30px] ring-2 ring-[#724060]/35"
+                    className="pointer-events-none absolute inset-0 rounded-[26px] sm:rounded-[30px] ring-2 ring-[#724060]/35"
                   />
                 )}
                 <div>
                   <div className="flex items-center justify-between">
-                    <h3 className="text-[19px] font-extrabold text-[#2D1826]">
+                    <h3 className="text-[18px] sm:text-[19px] font-extrabold text-[#2D1826]">
                       Research Studio
                     </h3>
                     <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#FDF3F3] text-[#724060]">
-                      <Compass className="h-4.5 w-4.5" />
+                      <Compass className="h-4 w-4" />
                     </span>
                   </div>
 
-                  <div className="mt-5 overflow-hidden rounded-2xl border border-[#724060]/10 bg-[#FDF3F3]">
+                  <div className="mt-4 sm:mt-5 overflow-hidden rounded-2xl border border-[#724060]/10 bg-[#FDF3F3]">
                     <img
                       src="/illustrations/research-canvas-diagram.svg"
                       alt="Research Studio Paper"
-                      className="h-44 w-full object-cover"
+                      className="h-40 sm:h-44 w-full object-contain sm:object-cover"
                     />
                   </div>
                 </div>
@@ -401,7 +401,7 @@ export default function Dashboard() {
                     e.stopPropagation();
                     setLocation("/research");
                   }}
-                  className="mt-5 w-full rounded-full bg-gradient-to-r from-[#2D1826] via-[#724060] to-[#4A263D] py-2.5 text-[13px] font-bold text-white shadow-[0_8px_22px_rgba(114,64,96,0.32)] transition hover:opacity-95 cursor-pointer"
+                  className="mt-4 sm:mt-5 w-full rounded-full bg-gradient-to-r from-[#2D1826] via-[#724060] to-[#4A263D] py-2.5 text-[13px] font-bold text-white shadow-[0_8px_22px_rgba(114,64,96,0.32)] transition hover:opacity-95 cursor-pointer"
                 >
                   Export Paper
                 </button>
@@ -409,7 +409,7 @@ export default function Dashboard() {
             </SpotlightCard>
 
             {/* CARD 4: Today's Tasks (Clean Interactive Bounce Checkboxes) */}
-            <SpotlightCard className="rounded-[30px] border border-[#724060]/12 bg-white p-6 shadow-[0_14px_34px_rgba(114,64,96,0.06)]">
+            <SpotlightCard className="rounded-[26px] sm:rounded-[30px] border border-[#724060]/12 bg-white p-5 sm:p-6 shadow-[0_14px_34px_rgba(114,64,96,0.06)]">
               <div
                 onMouseEnter={() => setHoveredCard(3)}
                 onMouseLeave={() => setHoveredCard(null)}
@@ -418,12 +418,12 @@ export default function Dashboard() {
                 {hoveredCard === 3 && (
                   <motion.div
                     layoutId="dashboard-hover-glide"
-                    className="pointer-events-none absolute inset-0 rounded-[30px] ring-2 ring-[#724060]/35"
+                    className="pointer-events-none absolute inset-0 rounded-[26px] sm:rounded-[30px] ring-2 ring-[#724060]/35"
                   />
                 )}
                 <div>
                   <div className="flex items-center justify-between">
-                    <h3 className="text-[19px] font-extrabold text-[#2D1826]">
+                    <h3 className="text-[18px] sm:text-[19px] font-extrabold text-[#2D1826]">
                       Today’s Tasks
                     </h3>
                     <button
@@ -435,7 +435,7 @@ export default function Dashboard() {
                     </button>
                   </div>
 
-                  <div className="mt-5 space-y-3">
+                  <div className="mt-4 sm:mt-5 space-y-2.5 sm:space-y-3">
                     {(data.todayItems.length > 0
                       ? data.todayItems.slice(0, 4).map(item => ({
                           id: item.id,
@@ -470,7 +470,7 @@ export default function Dashboard() {
                       >
                         <motion.span
                           whileTap={{ scale: 1.3 }}
-                          className={`grid h-5.5 w-5.5 shrink-0 place-items-center rounded-lg border transition-colors ${
+                          className={`grid h-5 w-5 shrink-0 place-items-center rounded-lg border transition-colors ${
                             task.done
                               ? "border-[#724060] bg-[#724060] text-white"
                               : "border-[#724060]/35 bg-white"

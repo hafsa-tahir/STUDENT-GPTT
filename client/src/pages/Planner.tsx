@@ -18,7 +18,7 @@ const toDateInput = (date: Date | string | null) => date ? new Date(date).toISOS
 function Modal({ children }: { children: ReactNode }) {
   return (
     <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 grid place-items-center bg-[#2D1826]/35 p-4 backdrop-blur-xs">
-      <div className="w-full max-w-[470px] rounded-[24px] border border-[#F8E7E7] bg-white p-6 shadow-[0_24px_70px_rgba(114,64,96,.25)]">
+      <div className="max-h-[90dvh] w-full max-w-[470px] overflow-y-auto rounded-[24px] border border-[#F8E7E7] bg-white p-5 sm:p-6 shadow-[0_24px_70px_rgba(114,64,96,.25)]">
         {children}
       </div>
     </div>

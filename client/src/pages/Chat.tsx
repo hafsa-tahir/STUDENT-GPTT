@@ -197,8 +197,8 @@ export default function Chat() {
           </p>
         )}
 
-        <div className="mt-5 grid min-h-[600px] flex-1 gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
-          {/* Left Sidebar: Saved Conversations */}
+        <div className="mt-5 grid min-h-[520px] flex-1 gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
+          {/* Left Sidebar: Saved Conversations (Horizontal Strip on Mobile, Vertical Sidebar on Desktop) */}
           <aside className="rounded-[24px] border border-[#724060]/12 bg-white p-3.5 shadow-[0_12px_28px_rgba(114,64,96,0.06)]">
             <div className="flex items-center justify-between border-b border-[#F8E7E7] px-2 pb-2.5">
               <p className="text-[11px] font-bold uppercase tracking-wider text-[#A070A1]">
@@ -209,9 +209,9 @@ export default function Chat() {
               </span>
             </div>
 
-            <div className="mt-2.5 max-h-[540px] space-y-1.5 overflow-y-auto pr-1">
+            <div className="mt-2.5 flex gap-2 overflow-x-auto pb-1 lg:block lg:max-h-[540px] lg:space-y-1.5 lg:overflow-y-auto lg:pr-1">
               {conversations.isLoading ? (
-                <p className="px-2 py-4 text-[13px] text-[#724060]">Loading…</p>
+                <p className="px-2 py-3 text-[13px] text-[#724060]">Loading…</p>
               ) : conversations.data?.length ? (
                 conversations.data.map(conversation => {
                   const isSelected = activeId === conversation.id;
@@ -222,7 +222,7 @@ export default function Chat() {
                         setPending(null);
                         setActiveId(conversation.id);
                       }}
-                      className={`w-full rounded-2xl px-3.5 py-3 text-left transition ${
+                      className={`min-w-[200px] shrink-0 lg:min-w-0 lg:w-full rounded-2xl px-3.5 py-2.5 lg:py-3 text-left transition ${
                         isSelected
                           ? "border border-[#724060]/25 bg-[#F8E7E7] shadow-2xs"
                           : "bg-[#FDF3F3]/60 hover:bg-[#FDF3F3]"
@@ -239,16 +239,16 @@ export default function Chat() {
                   );
                 })
               ) : (
-                <div className="px-3 py-8 text-center">
-                  <div className="mx-auto w-44 overflow-hidden rounded-2xl border border-[#724060]/12 bg-[#FDF3F3] shadow-2xs">
+                <div className="w-full px-3 py-3 lg:py-8 text-center">
+                  <div className="hidden lg:block mx-auto w-44 overflow-hidden rounded-2xl border border-[#724060]/12 bg-[#FDF3F3] shadow-2xs">
                     <img
                       src="/illustrations/ai-tutor-socratic.svg"
                       alt="AI Study Tutor"
                       className="h-28 w-full object-cover"
                     />
                   </div>
-                  <p className="mt-3 text-[12px] leading-5 text-[#724060]/80">
-                    Ask your first question on the right to start a saved study thread.
+                  <p className="lg:mt-3 text-[12px] leading-5 text-[#724060]/80">
+                    Ask a question below to start a saved study thread.
                   </p>
                 </div>
               )}
@@ -256,14 +256,14 @@ export default function Chat() {
           </aside>
 
           {/* Right Main Chat Area */}
-          <section className="min-w-0 flex flex-col rounded-[24px] border border-[#724060]/12 bg-white p-4 shadow-[0_12px_28px_rgba(114,64,96,0.06)]">
-            <div className="mb-3 flex items-center justify-between border-b border-[#F8E7E7] pb-3">
-              <div className="flex items-center gap-2.5">
-                <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#FDF3F3] text-[#724060]">
+          <section className="min-w-0 flex flex-col rounded-[24px] border border-[#724060]/12 bg-white p-3.5 sm:p-4 shadow-[0_12px_28px_rgba(114,64,96,0.06)]">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2.5 border-b border-[#F8E7E7] pb-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#FDF3F3] text-[#724060]">
                   <Sparkles className="h-4 w-4" />
                 </span>
-                <div>
-                  <p className="text-[14px] font-bold text-[#2D1826]">
+                <div className="min-w-0">
+                  <p className="truncate text-[14px] font-bold text-[#2D1826]">
                     {active.data?.conversation.title ?? "New study conversation"}
                   </p>
                   <p className="text-[11.5px] text-[#724060]/75">
@@ -272,7 +272,7 @@ export default function Chat() {
                 </div>
               </div>
               {active.data?.messages.some(message => message.role === "assistant") && (
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <MorphCopyButton
                     text={
                       [...(active.data?.messages ?? [])]
@@ -297,7 +297,7 @@ export default function Chat() {
               messages={displayMessages}
               onSendMessage={sendMessage}
               isLoading={send.isPending || regenerate.isPending}
-              height="calc(100vh - 300px)"
+              height="calc(100dvh - 320px)"
               placeholder="Ask about a concept, formula derivation, or practice question…"
               emptyStateMessage="Begin a focused study conversation"
               className="rounded-2xl border-[#F8E7E7] shadow-none"

@@ -383,10 +383,10 @@ export default function Documents() {
         )}
 
         {/* Filter Pills by Subject */}
-        <div className="mt-8 flex flex-wrap items-center gap-2">
+        <div className="mt-7 flex flex-nowrap sm:flex-wrap items-center gap-2 overflow-x-auto pb-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <button
             onClick={() => setSelectedSubjectFilter("all")}
-            className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-[12.5px] font-bold transition cursor-pointer ${
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-4 py-2 text-[12.5px] font-bold transition cursor-pointer ${
               selectedSubjectFilter === "all"
                 ? "bg-[#724060] text-white shadow-xs"
                 : "border border-[#F8E7E7] bg-white text-[#724060] hover:bg-[#F8E7E7]"
@@ -403,7 +403,7 @@ export default function Documents() {
               <button
                 key={sub.id}
                 onClick={() => setSelectedSubjectFilter(sub.id)}
-                className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-[12.5px] font-bold transition cursor-pointer ${
+                className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-4 py-2 text-[12.5px] font-bold transition cursor-pointer ${
                   isSelected
                     ? "bg-[#724060] text-white shadow-xs"
                     : "border border-[#F8E7E7] bg-white text-[#724060] hover:bg-[#F8E7E7]"

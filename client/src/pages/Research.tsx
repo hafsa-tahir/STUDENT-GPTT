@@ -545,16 +545,16 @@ export default function Research() {
                           {brief.researchQuestion}
                         </p>
                       </div>
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="grid grid-cols-1 sm:flex sm:flex-wrap items-stretch sm:items-center gap-2 w-full sm:w-auto">
                         <MorphCopyButton
                           text={speechText}
                           label="Copy Paper"
-                          className="h-10 px-4 text-[12px]"
+                          className="h-10 justify-center px-4 text-[12px]"
                         />
                         <button 
                           onClick={runSynthesis} 
                           disabled={synthesize.isPending || brief.status === "generating"} 
-                          className="inline-flex h-10 items-center gap-2 rounded-full bg-[#724060] px-4 text-[12px] font-bold text-white disabled:opacity-60 shadow-xs transition hover:bg-[#5a334c] cursor-pointer"
+                          className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-[#724060] px-4 text-[12px] font-bold text-white disabled:opacity-60 shadow-xs transition hover:bg-[#5a334c] cursor-pointer"
                         >
                           <Wand2 className="h-4 w-4" />
                           {synthesize.isPending ? "Synthesizing…" : "Deepen Paper"}
@@ -562,7 +562,7 @@ export default function Research() {
                         <button 
                           onClick={downloadCanvasImage} 
                           disabled={exportingCanvas || brief.status !== "ready"} 
-                          className="inline-flex h-10 items-center gap-2 rounded-full border border-[#724060]/15 bg-[#FDF3F3] px-4 text-[12px] font-bold text-[#724060] disabled:opacity-60 transition hover:bg-[#F8E7E7] cursor-pointer"
+                          className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-[#724060]/15 bg-[#FDF3F3] px-4 text-[12px] font-bold text-[#724060] disabled:opacity-60 transition hover:bg-[#F8E7E7] cursor-pointer"
                         >
                           <Download className="h-4 w-4" />
                           {exportingCanvas ? "Rendering Paper…" : "Download Paper Image"}
@@ -570,7 +570,7 @@ export default function Research() {
                         <button 
                           onClick={saveResearchDocument} 
                           disabled={exportDocument.isPending} 
-                          className="inline-flex h-10 items-center gap-2 rounded-full border border-[#724060]/15 bg-[#FDF3F3] px-4 text-[12px] font-bold text-[#724060] disabled:opacity-60 transition hover:bg-[#F8E7E7] cursor-pointer"
+                          className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-[#724060]/15 bg-[#FDF3F3] px-4 text-[12px] font-bold text-[#724060] disabled:opacity-60 transition hover:bg-[#F8E7E7] cursor-pointer"
                         >
                           <FileText className="h-4 w-4" />
                           {exportDocument.isPending ? "Preparing…" : "Download Research Paper (.md)"}
@@ -614,7 +614,7 @@ export default function Research() {
                   {brief.status === "ready" ? (
                     <div 
                       ref={canvasRef} 
-                      className="mt-6 overflow-hidden rounded-[14px] border-2 border-[#724060]/20 bg-[#FDFBFB] p-6 shadow-[0_20px_60px_rgba(114,64,96,.10)] sm:p-10 lg:p-12"
+                      className="mt-6 overflow-hidden rounded-[14px] border-2 border-[#724060]/20 bg-[#FDFBFB] p-4 shadow-[0_20px_60px_rgba(114,64,96,.10)] sm:p-10 lg:p-12"
                     >
                       {/* Paper Masthead */}
                       <header className="border-b-2 border-[#724060] pb-6">
@@ -631,7 +631,7 @@ export default function Research() {
                             AI-generated study guide · Check against sources
                           </span>
                         </div>
-                        <h2 className="mt-5 text-3xl font-extrabold tracking-[-.035em] text-[#724060] sm:text-4xl lg:text-5xl font-serif">
+                        <h2 className="mt-5 break-words text-2xl font-extrabold tracking-[-.035em] text-[#724060] sm:text-4xl lg:text-5xl font-serif">
                           {brief.title}
                         </h2>
                         <div className="mt-4 border-l-4 border-[#724060] bg-[#F8E7E7]/50 p-4">

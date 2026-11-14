@@ -113,7 +113,7 @@ export default function Practice() {
       });
       setQuiz(generated as unknown as Awaited<ReturnType<typeof generatePlaceholder>>);
       setAnswers({});
-    } catch {}
+    } catch { }
   }
 
   async function createCards(event: FormEvent) {
@@ -128,7 +128,7 @@ export default function Practice() {
         scopeType,
         scopeLabel: scope,
       });
-    } catch {}
+    } catch { }
   }
 
   function submitAnswers() {
@@ -177,9 +177,8 @@ export default function Practice() {
                     key={key}
                     type="button"
                     onClick={() => setTab(key)}
-                    className={`relative flex items-center gap-2 rounded-full px-4 py-2 text-[12.5px] font-bold transition-colors ${
-                      isActive ? "text-[#2D1826]" : "text-[#F8E7E7]/85 hover:text-white"
-                    }`}
+                    className={`relative flex items-center gap-2 rounded-full px-4 py-2 text-[12.5px] font-bold transition-colors ${isActive ? "text-[#2D1826]" : "text-[#F8E7E7]/85 hover:text-white"
+                      }`}
                   >
                     {isActive && (
                       <motion.span
@@ -206,14 +205,14 @@ export default function Practice() {
         <PracticeHistory />
 
         {/* Generator Control Bar */}
-        <section className="mt-5 rounded-[26px] border border-[#724060]/12 bg-white p-5 sm:p-6 shadow-[0_12px_30px_rgba(114,64,96,0.06)]">
+        <section className="mt-5 rounded-[26px] border border-[#724060]/12 bg-white p-4 sm:p-6 shadow-[0_12px_30px_rgba(114,64,96,0.06)]">
           <form onSubmit={tab === "quiz" ? createQuiz : createCards}>
-            <div className="grid gap-3 lg:grid-cols-[1.2fr_.85fr_.9fr_.7fr_.85fr]">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[1.2fr_.85fr_.9fr_.7fr_.85fr]">
               <input
                 value={topic}
                 onChange={event => setTopic(event.target.value)}
                 placeholder="Topic or concept you want to practice…"
-                className="h-11 min-w-0 rounded-xl border border-[#F8E7E7] bg-[#FDF3F3] px-3.5 text-sm text-[#2D1826] outline-none focus:border-[#724060]"
+                className="h-11 min-w-0 sm:col-span-2 lg:col-span-1 rounded-xl border border-[#F8E7E7] bg-[#FDF3F3] px-3.5 text-sm text-[#2D1826] outline-none focus:border-[#724060]"
                 required
               />
               <select
@@ -266,8 +265,8 @@ export default function Practice() {
                   scopeType === "chapter"
                     ? "e.g. Chapter 6"
                     : scopeType === "document"
-                    ? "Whole PDF"
-                    : "Exact scope"
+                      ? "Whole PDF"
+                      : "Exact scope"
                 }
                 className="h-11 min-w-0 rounded-xl border border-[#F8E7E7] bg-[#FDF3F3] px-3.5 text-sm text-[#2D1826] outline-none focus:border-[#724060]"
               />
@@ -294,11 +293,10 @@ export default function Practice() {
                           key={level}
                           type="button"
                           onClick={() => setDifficulty(level)}
-                          className={`rounded-full px-3 py-1 text-[11.5px] font-bold capitalize transition ${
-                            difficulty === level
-                              ? "bg-[#724060] text-white shadow-2xs"
-                              : "text-[#724060]/75 hover:text-[#2D1826]"
-                          }`}
+                          className={`rounded-full px-3 py-1 text-[11.5px] font-bold capitalize transition ${difficulty === level
+                            ? "bg-[#724060] text-white shadow-2xs"
+                            : "text-[#724060]/75 hover:text-[#2D1826]"
+                            }`}
                         >
                           {level}
                         </button>
@@ -310,7 +308,7 @@ export default function Practice() {
 
               <button
                 disabled={generateQuiz.isPending || generateCards.isPending}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#2D1826] via-[#724060] to-[#4A263D] px-6 text-[13px] font-bold text-white shadow-[0_6px_20px_rgba(114,64,96,0.25)] transition hover:scale-[1.01] disabled:opacity-50"
+                className="inline-flex h-11 w-full sm:w-auto items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#2D1826] via-[#724060] to-[#4A263D] px-6 text-[13px] font-bold text-white shadow-[0_6px_20px_rgba(114,64,96,0.25)] transition hover:scale-[1.01] disabled:opacity-50"
               >
                 {tab === "quiz" ? (
                   <BrainCircuit className="h-4 w-4" />
@@ -320,8 +318,8 @@ export default function Practice() {
                 {generateQuiz.isPending || generateCards.isPending
                   ? "Synthesizing Questions & Formulas…"
                   : tab === "quiz"
-                  ? "Generate Scoped Quiz"
-                  : "Generate 3D Flashcards"}
+                    ? "Generate Scoped Quiz"
+                    : "Generate 3D Flashcards"}
               </button>
             </div>
           </form>
@@ -386,11 +384,10 @@ export default function Practice() {
                           return (
                             <label
                               key={option}
-                              className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3.5 text-[13px] transition ${
-                                selected
-                                  ? "border-[#724060] bg-[#F8E7E7] font-semibold text-[#2D1826] shadow-2xs"
-                                  : "border-[#F8E7E7] bg-white hover:bg-[#FDF3F3] text-[#724060]"
-                              }`}
+                              className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3.5 text-[13px] transition ${selected
+                                ? "border-[#724060] bg-[#F8E7E7] font-semibold text-[#2D1826] shadow-2xs"
+                                : "border-[#F8E7E7] bg-white hover:bg-[#FDF3F3] text-[#724060]"
+                                }`}
                             >
                               <input
                                 type="radio"
@@ -442,7 +439,7 @@ export default function Practice() {
               <div className="rounded-[28px] border-2 border-dashed border-[#724060]/25 bg-white px-6 py-12 text-center shadow-xs">
                 <div className="mx-auto w-60 overflow-hidden rounded-2xl border border-[#724060]/12 bg-[#FDF3F3] shadow-xs">
                   <img
-                    src="/illustrations/flashcards-quiz-3d.svg"
+                    src="/illustrations/flashcards-quiz-3d.jpg"
                     alt="3D Quiz and Flashcards"
                     className="h-36 w-full object-cover"
                   />
@@ -466,20 +463,20 @@ export default function Practice() {
                 Loading flashcards…
               </div>
             ) : activeCard ? (
-              <div className="rounded-[28px] border border-[#724060]/12 bg-white p-6 sm:p-8 shadow-[0_14px_34px_rgba(114,64,96,0.08)]">
-                <div className="flex items-center justify-between text-[12.5px] text-[#724060]">
+              <div className="rounded-[28px] border border-[#724060]/12 bg-white p-4 sm:p-8 shadow-[0_14px_34px_rgba(114,64,96,0.08)]">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[12.5px] text-[#724060]">
                   <span className="font-bold text-[#2D1826]">
                     Card {cardIndex + 1} of {cards.data?.length}
                   </span>
-                  <span className="rounded-full bg-[#FDF3F3] px-3 py-1 text-[11.5px] font-bold text-[#724060]">
+                  <span className="rounded-full bg-[#FDF3F3] px-3 py-1 text-[11px] sm:text-[11.5px] font-bold text-[#724060]">
                     Bencho 3D Spaced Repetition Stack
                   </span>
                 </div>
 
                 {/* Bencho 3D Layered Card Stack */}
-                <div className="relative mx-auto mt-6 max-w-2xl pb-6">
-                  <div className="pointer-events-none absolute inset-x-10 -bottom-1 h-48 rounded-[26px] bg-[#522943] opacity-75 shadow-md" />
-                  <div className="pointer-events-none absolute inset-x-5 bottom-1.5 h-48 rounded-[26px] bg-[#A070A1] opacity-85 shadow-md" />
+                <div className="relative mx-auto mt-5 sm:mt-6 max-w-2xl pb-6">
+                  <div className="pointer-events-none absolute inset-x-6 sm:inset-x-10 -bottom-1 h-44 sm:h-48 rounded-[26px] bg-[#522943] opacity-75 shadow-md" />
+                  <div className="pointer-events-none absolute inset-x-3 sm:inset-x-5 bottom-1.5 h-44 sm:h-48 rounded-[26px] bg-[#A070A1] opacity-85 shadow-md" />
 
                   <motion.button
                     key={`${activeCard.id}-${revealed}`}
@@ -487,17 +484,17 @@ export default function Practice() {
                     animate={{ y: 0, scale: 1, opacity: 1 }}
                     transition={{ type: "spring", stiffness: 380, damping: 28 }}
                     onClick={() => setRevealed(!revealed)}
-                    className="relative flex min-h-[260px] w-full flex-col items-center justify-center rounded-[26px] border-2 border-[#724060]/20 bg-[#FDF3F3] p-8 text-center shadow-[0_14px_35px_rgba(114,64,96,0.12)] transition hover:bg-white cursor-pointer"
+                    className="relative flex min-h-[220px] sm:min-h-[260px] w-full flex-col items-center justify-center rounded-[26px] border-2 border-[#724060]/20 bg-[#FDF3F3] p-5 sm:p-8 text-center shadow-[0_14px_35px_rgba(114,64,96,0.12)] transition hover:bg-white cursor-pointer"
                   >
                     <span className="mb-3 rounded-full bg-white px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#A070A1] shadow-2xs">
                       {revealed ? "Answer & Explanation" : "Question Prompt"}
                     </span>
-                    <div className="max-w-xl text-[18px] sm:text-[21px] font-bold leading-relaxed text-[#2D1826]">
+                    <div className="max-w-xl text-[16px] sm:text-[21px] font-bold leading-relaxed text-[#2D1826]">
                       <MathRenderer
                         content={revealed ? activeCard.back : activeCard.front}
                       />
                     </div>
-                    <span className="mt-6 inline-flex items-center gap-1.5 rounded-full bg-[#724060] px-4 py-1.5 text-[12px] font-semibold text-white shadow-xs">
+                    <span className="mt-5 sm:mt-6 inline-flex items-center gap-1.5 rounded-full bg-[#724060] px-4 py-1.5 text-[12px] font-semibold text-white shadow-xs">
                       <Eye className="h-3.5 w-3.5" />
                       {revealed ? "Flip Back to Question" : "Tap Card to Reveal Answer"}
                     </span>
@@ -505,7 +502,7 @@ export default function Practice() {
                 </div>
 
                 {/* Spaced Repetition Outcome Buttons */}
-                <div className="mx-auto mt-4 grid max-w-xl grid-cols-4 gap-2.5">
+                <div className="mx-auto mt-4 grid max-w-xl grid-cols-2 sm:grid-cols-4 gap-2.5">
                   {(
                     [
                       ["again", "Again", "bg-rose-50 text-rose-700 border-rose-200"],
@@ -555,7 +552,7 @@ export default function Practice() {
               <div className="rounded-[28px] border-2 border-dashed border-[#724060]/25 bg-white px-6 py-12 text-center shadow-xs">
                 <div className="mx-auto w-60 overflow-hidden rounded-2xl border border-[#724060]/12 bg-[#FDF3F3] shadow-xs">
                   <img
-                    src="/illustrations/flashcards-quiz-3d.svg"
+                    src="/illustrations/flashcards-quiz-3d.jpg"
                     alt="3D Flashcards Stack"
                     className="h-36 w-full object-cover"
                   />

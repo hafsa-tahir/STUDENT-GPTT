@@ -626,7 +626,7 @@ export default function Notes() {
                 )}
               </div>
 
-              <div className="mt-3 max-h-[620px] space-y-2 overflow-y-auto pr-1">
+              <div className="mt-3 flex gap-2.5 overflow-x-auto pb-1.5 xl:block xl:max-h-[620px] xl:space-y-2 xl:overflow-y-auto xl:pr-1">
                 {mode === "notes" ? (
                   filteredNotes.length ? (
                     filteredNotes.map(item => {
@@ -637,7 +637,7 @@ export default function Notes() {
                           key={item.id}
                           type="button"
                           onClick={() => setSelectedNote(item.id)}
-                          className={`w-full rounded-2xl p-3 text-left transition ${
+                          className={`min-w-[235px] shrink-0 xl:min-w-0 xl:w-full rounded-2xl p-3 text-left transition ${
                             isSelected
                               ? "border border-[#A070A1] bg-[#F8E7E7] shadow-sm"
                               : "border border-transparent bg-[#FDF3F3]/60 hover:bg-[#FDF3F3]"
@@ -663,9 +663,9 @@ export default function Notes() {
                       );
                     })
                   ) : (
-                    <div className="px-4 py-12 text-center">
-                      <NotebookPen className="mx-auto h-8 w-8 text-[#A070A1]/60" />
-                      <p className="mt-3 text-[13px] font-semibold text-[#724060]">No notes found</p>
+                    <div className="w-full px-4 py-6 xl:py-12 text-center">
+                      <NotebookPen className="mx-auto h-7 w-7 xl:h-8 xl:w-8 text-[#A070A1]/60" />
+                      <p className="mt-2 xl:mt-3 text-[13px] font-semibold text-[#724060]">No notes found</p>
                       <p className="mt-1 text-[11.5px] text-[#A070A1]">
                         {filterSubjectId !== "all"
                           ? "No notes saved for this subject yet. Select a document below to generate notes."
@@ -683,7 +683,7 @@ export default function Notes() {
                           key={item.id}
                           type="button"
                           onClick={() => setSelectedRevisionId(item.id)}
-                          className={`w-full rounded-2xl p-3 text-left transition ${
+                          className={`min-w-[235px] shrink-0 xl:min-w-0 xl:w-full rounded-2xl p-3 text-left transition ${
                             isSelected
                               ? "border border-[#A070A1] bg-[#F8E7E7] shadow-sm"
                               : "border border-transparent bg-[#FDF3F3]/60 hover:bg-[#FDF3F3]"
@@ -709,9 +709,9 @@ export default function Notes() {
                       );
                     })
                   ) : (
-                    <div className="px-4 py-12 text-center">
-                      <RefreshCw className="mx-auto h-8 w-8 text-[#A070A1]/60" />
-                      <p className="mt-3 text-[13px] font-semibold text-[#724060]">No revision guides found</p>
+                    <div className="w-full px-4 py-6 xl:py-12 text-center">
+                      <RefreshCw className="mx-auto h-7 w-7 xl:h-8 xl:w-8 text-[#A070A1]/60" />
+                      <p className="mt-2 xl:mt-3 text-[13px] font-semibold text-[#724060]">No revision guides found</p>
                       <p className="mt-1 text-[11.5px] text-[#A070A1]">
                         {filterSubjectId !== "all"
                           ? "No revision guides saved for this subject yet."
@@ -820,15 +820,15 @@ export default function Notes() {
                   </label>
                 </div>
 
-                <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[#F8E7E7] pt-4">
-                  <p className="text-[12px] text-[#A070A1]">
+                <div className="mt-5 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-between gap-3 border-t border-[#F8E7E7] pt-4">
+                  <p className="text-[12px] text-[#A070A1] truncate">
                     Target title: <b>{payloadTitle}</b>
                   </p>
                   <button
                     type="button"
                     onClick={generate}
                     disabled={generateNotes.isPending || generateRevision.isPending}
-                    className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#724060] px-5 text-[13px] font-semibold text-[#FDF3F3] shadow-md transition hover:bg-[#5b324c] disabled:opacity-50"
+                    className="inline-flex h-11 w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-[#724060] px-5 text-[13px] font-semibold text-[#FDF3F3] shadow-md transition hover:bg-[#5b324c] disabled:opacity-50"
                   >
                     <Plus className="h-4 w-4" />
                     {generateNotes.isPending || generateRevision.isPending
@@ -1424,7 +1424,7 @@ export default function Notes() {
                     e.preventDefault();
                     handleAskDocument();
                   }}
-                  className="mt-4 flex gap-2"
+                  className="mt-4 flex flex-col sm:flex-row gap-2.5"
                 >
                   <input
                     value={qaInput}
@@ -1440,7 +1440,7 @@ export default function Notes() {
                   <button
                     type="submit"
                     disabled={askDocMutation.isPending || !qaInput.trim() || !currentDocId}
-                    className="inline-flex h-12 items-center gap-2 rounded-2xl bg-[#724060] px-6 text-[13px] font-semibold text-[#FDF3F3] shadow-md transition hover:bg-[#5b324c] disabled:opacity-40"
+                    className="inline-flex h-12 w-full sm:w-auto items-center justify-center gap-2 rounded-2xl bg-[#724060] px-6 text-[13px] font-semibold text-[#FDF3F3] shadow-md transition hover:bg-[#5b324c] disabled:opacity-40"
                   >
                     {askDocMutation.isPending ? (
                       <RefreshCw className="h-4 w-4 animate-spin" />
