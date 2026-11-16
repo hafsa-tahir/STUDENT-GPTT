@@ -501,56 +501,63 @@ async function withCustomGpuLock<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
+let hfSpaceUnreachableUntil = 0;
+
 async function callGradioZeroGpuSpace(
   rawUrl: string,
   messages: unknown,
   maxTokens: number,
   temperature: number
 ): Promise<InvokeResult | null> {
+  if (Date.now() < hfSpaceUnreachableUntil) {
+    return null;
+  }
   const baseUrl = rawUrl.replace(/\/v1\/chat\/completions$/, "").replace(/\/$/, "");
-  for (const prefix of ["/gradio_api/call/predict", "/call/predict"]) {
-    try {
-      const postResp = await fetch(`${baseUrl}${prefix}`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          data: [JSON.stringify(messages), maxTokens, temperature],
-        }),
-        signal: AbortSignal.timeout(15000),
-      });
-      if (!postResp.ok) continue;
-      const postJson = (await postResp.json()) as { event_id?: string };
-      if (!postJson?.event_id) continue;
+  const prefix = "/gradio_api/call/predict";
+  try {
+    const postResp = await fetch(`${baseUrl}${prefix}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        data: [JSON.stringify(messages), maxTokens, temperature],
+      }),
+      signal: AbortSignal.timeout(4500),
+    });
+    if (!postResp.ok) {
+      hfSpaceUnreachableUntil = Date.now() + 60_000;
+      return null;
+    }
+    const postJson = (await postResp.json()) as { event_id?: string };
+    if (!postJson?.event_id) return null;
 
-      const streamResp = await fetch(`${baseUrl}${prefix}/${postJson.event_id}`, {
-        signal: AbortSignal.timeout(95000),
-      });
-      if (!streamResp.ok) continue;
-      const sseText = await streamResp.text();
-      const lines = sseText.split("\n");
-      for (let i = 0; i < lines.length; i++) {
-        if (lines[i].startsWith("event: complete") && lines[i + 1]?.startsWith("data:")) {
-          const dataArr = JSON.parse(lines[i + 1].slice(5).trim());
-          const replyText = Array.isArray(dataArr) && typeof dataArr[0] === "string" ? dataArr[0] : "";
-          if (replyText) {
-            return {
-              id: `hf-zerogpu-${Date.now()}`,
-              created: Math.floor(Date.now() / 1000),
-              model: "StudentGPT-7B-ZeroGPU",
-              choices: [
-                {
-                  index: 0,
-                  message: { role: "assistant", content: replyText },
-                  finish_reason: "stop",
-                },
-              ],
-            };
-          }
+    const streamResp = await fetch(`${baseUrl}${prefix}/${postJson.event_id}`, {
+      signal: AbortSignal.timeout(65000),
+    });
+    if (!streamResp.ok) return null;
+    const sseText = await streamResp.text();
+    const lines = sseText.split("\n");
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].startsWith("event: complete") && lines[i + 1]?.startsWith("data:")) {
+        const dataArr = JSON.parse(lines[i + 1].slice(5).trim());
+        const replyText = Array.isArray(dataArr) && typeof dataArr[0] === "string" ? dataArr[0] : "";
+        if (replyText) {
+          return {
+            id: `hf-zerogpu-${Date.now()}`,
+            created: Math.floor(Date.now() / 1000),
+            model: "StudentGPT-7B-ZeroGPU",
+            choices: [
+              {
+                index: 0,
+                message: { role: "assistant", content: replyText },
+                finish_reason: "stop",
+              },
+            ],
+          };
         }
       }
-    } catch {
-      // try next prefix or fallback
     }
+  } catch {
+    hfSpaceUnreachableUntil = Date.now() + 60_000;
   }
   return null;
 }
