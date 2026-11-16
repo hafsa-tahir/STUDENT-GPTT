@@ -1617,30 +1617,30 @@ async function withCustomGpuLock(fn) {
     release();
   }
 }
-var hfSpaceUnreachableUntil = 0;
 async function callGradioZeroGpuSpace(rawUrl, messages2, maxTokens, temperature) {
-  if (Date.now() < hfSpaceUnreachableUntil) {
-    return null;
-  }
   const baseUrl = rawUrl.replace(/\/v1\/chat\/completions$/, "").replace(/\/$/, "");
   const prefix = "/gradio_api/call/predict";
   try {
+    const headers = { "content-type": "application/json" };
+    if (process.env.HF_TOKEN) {
+      headers["authorization"] = `Bearer ${process.env.HF_TOKEN.trim()}`;
+    }
     const postResp = await fetch(`${baseUrl}${prefix}`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers,
       body: JSON.stringify({
         data: [JSON.stringify(messages2), maxTokens, temperature]
       }),
-      signal: AbortSignal.timeout(4500)
+      signal: AbortSignal.timeout(12e3)
     });
     if (!postResp.ok) {
-      hfSpaceUnreachableUntil = Date.now() + 6e4;
       return null;
     }
     const postJson = await postResp.json();
     if (!postJson?.event_id) return null;
     const streamResp = await fetch(`${baseUrl}${prefix}/${postJson.event_id}`, {
-      signal: AbortSignal.timeout(65e3)
+      headers: process.env.HF_TOKEN ? { authorization: `Bearer ${process.env.HF_TOKEN.trim()}` } : void 0,
+      signal: AbortSignal.timeout(75e3)
     });
     if (!streamResp.ok) return null;
     const sseText = await streamResp.text();
@@ -1650,6 +1650,7 @@ async function callGradioZeroGpuSpace(rawUrl, messages2, maxTokens, temperature)
         const dataArr = JSON.parse(lines[i + 1].slice(5).trim());
         const replyText = Array.isArray(dataArr) && typeof dataArr[0] === "string" ? dataArr[0] : "";
         if (replyText) {
+          console.log(`[Custom ZeroGPU Model] Answered via ${baseUrl} (${replyText.length} chars)`);
           return {
             id: `hf-zerogpu-${Date.now()}`,
             created: Math.floor(Date.now() / 1e3),
@@ -1665,8 +1666,8 @@ async function callGradioZeroGpuSpace(rawUrl, messages2, maxTokens, temperature)
         }
       }
     }
-  } catch {
-    hfSpaceUnreachableUntil = Date.now() + 6e4;
+  } catch (err) {
+    console.warn(`[Custom ZeroGPU Model] Unreachable or timed out: ${err.message}`);
   }
   return null;
 }
@@ -1765,6 +1766,7 @@ async function invokeLLM(params) {
             return gradioData;
           }
         }
+        continue;
       }
       const doFetch = () => fetchWithBackoff(
         candidate.url,
