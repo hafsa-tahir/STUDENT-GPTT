@@ -26,14 +26,17 @@ export const MathRenderer: React.FC<MathRendererProps> = ({ content, className =
   const renderedOutput = useMemo(() => {
     if (!content || typeof content !== "string") return null;
 
-    // Check if entire content is a pure raw LaTeX equation without dollar delimiters
+    // Check if entire content is a pure raw LaTeX equation without dollar delimiters (and NOT an English sentence)
     const trimmed = content.trim();
+    const withoutLatexCommands = trimmed.replace(/\\[a-zA-Z]+/g, "");
+    const hasPlainEnglishWords = /\b[a-zA-Z]{4,}\s+[a-zA-Z]{3,}\b/.test(withoutLatexCommands) || trimmed.includes(": ");
     const isPureLatex =
       !trimmed.includes("$") &&
       !trimmed.includes("\\[") &&
+      !hasPlainEnglishWords &&
       (/(\\[a-zA-Z]+|\^|_|\{|\}|\\times|\\cdot|\\frac|\\tau|\\vec|\\pi|\\epsilon|\\sigma|\\theta|\\int|\\sum)/.test(trimmed) &&
         !trimmed.includes("\n") &&
-        trimmed.length < 300);
+        trimmed.length < 180);
 
     if (isPureLatex) {
       try {
@@ -289,34 +292,37 @@ export const MathRenderer: React.FC<MathRendererProps> = ({ content, className =
         return;
       }
 
-      // Headers
-      if (trimmed.startsWith("### ")) {
+      // Headers (# through ######)
+      const headerMatch = trimmed.match(/^(#{1,6})\s+(.+)$/);
+      if (headerMatch) {
         flushList();
-        blocks.push(
-          <h4 key={`h3-${lineIdx}`} className="mt-4 mb-2 text-[15px] font-bold text-inherit">
-            {renderInlineElements(trimmed.slice(4), `h3-inner-${lineIdx}`)}
-          </h4>
-        );
-        return;
-      }
-
-      if (trimmed.startsWith("## ")) {
-        flushList();
-        blocks.push(
-          <h3 key={`h2-${lineIdx}`} className="mt-5 mb-2 text-[17px] font-bold text-inherit">
-            {renderInlineElements(trimmed.slice(3), `h2-inner-${lineIdx}`)}
-          </h3>
-        );
-        return;
-      }
-
-      if (trimmed.startsWith("# ")) {
-        flushList();
-        blocks.push(
-          <h2 key={`h1-${lineIdx}`} className="mt-6 mb-3 text-[19px] font-extrabold text-inherit">
-            {renderInlineElements(trimmed.slice(2), `h1-inner-${lineIdx}`)}
-          </h2>
-        );
+        const level = headerMatch[1].length;
+        const headerText = headerMatch[2];
+        if (level === 1) {
+          blocks.push(
+            <h2 key={`h1-${lineIdx}`} className="mt-6 mb-3 text-[19px] font-extrabold text-inherit">
+              {renderInlineElements(headerText, `h1-inner-${lineIdx}`)}
+            </h2>
+          );
+        } else if (level === 2) {
+          blocks.push(
+            <h3 key={`h2-${lineIdx}`} className="mt-5 mb-2 text-[17px] font-bold text-inherit">
+              {renderInlineElements(headerText, `h2-inner-${lineIdx}`)}
+            </h3>
+          );
+        } else if (level === 3) {
+          blocks.push(
+            <h4 key={`h3-${lineIdx}`} className="mt-4 mb-2 text-[15px] font-bold text-inherit">
+              {renderInlineElements(headerText, `h3-inner-${lineIdx}`)}
+            </h4>
+          );
+        } else {
+          blocks.push(
+            <h5 key={`h4-${lineIdx}`} className="mt-3.5 mb-1.5 text-[14px] font-bold text-inherit">
+              {renderInlineElements(headerText, `h4-inner-${lineIdx}`)}
+            </h5>
+          );
+        }
         return;
       }
 

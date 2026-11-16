@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import { ENV } from "./env";
 
 export type Role = "system" | "user" | "assistant" | "tool" | "function";
@@ -320,7 +322,7 @@ const fetchWithBackoff = async (
     try {
       const response = await fetch(url, {
         ...init,
-        signal: init.signal || AbortSignal.timeout(45000),
+        signal: init.signal || AbortSignal.timeout(180000),
       });
       if (
         response.ok ||
@@ -372,14 +374,49 @@ type ProviderCandidate = {
   model: string;
 };
 
-function getProviderCandidates(requestedModel?: string): ProviderCandidate[] {
+let deadCustomUrl = "";
+
+function resolveCustomModelUrl(): string {
+  try {
+    const endpointFile = path.resolve(process.cwd(), "model-training", "active_endpoint.txt");
+    if (fs.existsSync(endpointFile)) {
+      const url = fs.readFileSync(endpointFile, "utf-8").trim();
+      if (url.startsWith("http")) {
+        const clean = url.replace(/\/$/, "");
+        const resolved = clean.endsWith("/v1/chat/completions") ? clean : `${clean}/v1/chat/completions`;
+        if (resolved !== deadCustomUrl) return resolved;
+      }
+    }
+  } catch {
+    // ignore file read error
+  }
+  if (ENV.customModelApiUrl && ENV.customModelApiUrl.trim().startsWith("http")) {
+    const clean = ENV.customModelApiUrl.trim().replace(/\/$/, "");
+    const resolved = clean.endsWith("/v1/chat/completions") ? clean : `${clean}/v1/chat/completions`;
+    if (resolved !== deadCustomUrl) return resolved;
+  }
+  return "";
+}
+
+function getProviderCandidates(requestedModel?: string, _isStructuredJson = false): ProviderCandidate[] {
   const candidates: ProviderCandidate[] = [];
 
-  // 1. Groq Keys & Models (Blazing fast, highly reliable)
+  // 0. Custom Fine-Tuned StudentGPT-7B LoRA Model (Primary #1 Priority when active_endpoint.txt is set!)
+  const customUrl = resolveCustomModelUrl();
+  if (customUrl) {
+    candidates.push({
+      name: "StudentGPT-7B-Academic-Tutor (Custom LoRA)",
+      url: customUrl,
+      key: ENV.customModelApiKey || "studentgpt-custom-lora",
+      model: "StudentGPT-7B-Academic-Tutor",
+    });
+  }
+
+  // 1. Groq Keys & Models (Blazing fast 0.6s response, 128K context window)
   if (ENV.groqApiKeys.length > 0) {
     const groqModels = requestedModel && (requestedModel.includes("qwen") || requestedModel.includes("gpt-oss") || requestedModel.includes("llama"))
       ? [requestedModel]
-      : ["qwen/qwen3.8-27b", "openai/gpt-oss-120b"];
+      : ["qwen/qwen3.8-27b", "openai/gpt-oss-120b", "openai/gpt-oss-20b"];
     for (const key of ENV.groqApiKeys) {
       for (const m of groqModels) {
         candidates.push({
@@ -392,19 +429,21 @@ function getProviderCandidates(requestedModel?: string): ProviderCandidate[] {
     }
   }
 
-  // 2. Gemini Keys (Google AI Studio - gemini-2.5-flash)
+  // 2. Gemini Keys (Google AI Studio - gemini-3-flash-preview, gemini-3.1-flash-lite-preview, gemma-4-31b-it)
   if (ENV.geminiApiKeys.length > 0) {
-    const geminiModel = requestedModel && requestedModel.includes("gemini")
-      ? requestedModel
-      : "gemini-3.8-flash";
+    const geminiModels = requestedModel && (requestedModel.includes("gemini") || requestedModel.includes("gemma"))
+      ? [requestedModel]
+      : ["gemini-3-flash-preview", "gemini-3.1-flash-lite-preview", "gemma-4-31b-it", "gemma-4-26b-a4b-it"];
     for (let index = 0; index < ENV.geminiApiKeys.length; index++) {
       const key = ENV.geminiApiKeys[index];
-      candidates.push({
-        name: `Gemini (Key #${index + 1} - ${geminiModel})`,
-        url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-        key,
-        model: geminiModel,
-      });
+      for (const gm of geminiModels) {
+        candidates.push({
+          name: `Gemini (Key #${index + 1} - ${gm})`,
+          url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+          key,
+          model: gm,
+        });
+      }
     }
   }
 
@@ -445,6 +484,76 @@ const assertApiKey = () => {
     throw new Error("No LLM API keys configured. Please add OPENROUTER_API_KEY, GROQ_API_KEYS, or GEMINI_API_KEYS to .env.");
   }
 };
+
+let customGpuLock: Promise<void> = Promise.resolve();
+
+async function withCustomGpuLock<T>(fn: () => Promise<T>): Promise<T> {
+  const prev = customGpuLock;
+  let release!: () => void;
+  customGpuLock = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  await prev;
+  try {
+    return await fn();
+  } finally {
+    release();
+  }
+}
+
+async function callGradioZeroGpuSpace(
+  rawUrl: string,
+  messages: unknown,
+  maxTokens: number,
+  temperature: number
+): Promise<InvokeResult | null> {
+  const baseUrl = rawUrl.replace(/\/v1\/chat\/completions$/, "").replace(/\/$/, "");
+  for (const prefix of ["/gradio_api/call/predict", "/call/predict"]) {
+    try {
+      const postResp = await fetch(`${baseUrl}${prefix}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          data: [JSON.stringify(messages), maxTokens, temperature],
+        }),
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!postResp.ok) continue;
+      const postJson = (await postResp.json()) as { event_id?: string };
+      if (!postJson?.event_id) continue;
+
+      const streamResp = await fetch(`${baseUrl}${prefix}/${postJson.event_id}`, {
+        signal: AbortSignal.timeout(95000),
+      });
+      if (!streamResp.ok) continue;
+      const sseText = await streamResp.text();
+      const lines = sseText.split("\n");
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].startsWith("event: complete") && lines[i + 1]?.startsWith("data:")) {
+          const dataArr = JSON.parse(lines[i + 1].slice(5).trim());
+          const replyText = Array.isArray(dataArr) && typeof dataArr[0] === "string" ? dataArr[0] : "";
+          if (replyText) {
+            return {
+              id: `hf-zerogpu-${Date.now()}`,
+              created: Math.floor(Date.now() / 1000),
+              model: "StudentGPT-7B-ZeroGPU",
+              choices: [
+                {
+                  index: 0,
+                  message: { role: "assistant", content: replyText },
+                  finish_reason: "stop",
+                },
+              ],
+            };
+          }
+        }
+      }
+    } catch {
+      // try next prefix or fallback
+    }
+  }
+  return null;
+}
 
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   assertApiKey();
@@ -506,7 +615,13 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     payload.response_format = normalizedResponseFormat;
   }
 
-  const candidates = getProviderCandidates(model);
+  const isStructuredJson = Boolean(
+    normalizedResponseFormat &&
+      (normalizedResponseFormat.type === "json_object" ||
+        normalizedResponseFormat.type === "json_schema")
+  );
+
+  const candidates = getProviderCandidates(model, isStructuredJson);
   let lastError = "LLM invoke failed";
 
   for (const candidate of candidates) {
@@ -518,24 +633,76 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
       delete requestPayload.reasoning;
       delete requestPayload.thinking;
     }
+    if (candidate.name.startsWith("Groq") || candidate.model.includes("gpt-oss") || candidate.model.includes("gemma-4")) {
+      delete requestPayload.response_format;
+      const requestedMax = typeof requestPayload.max_tokens === "number" ? requestPayload.max_tokens : 4096;
+      requestPayload.max_tokens = Math.max(requestedMax, 4096);
+    }
+    if (candidate.model.includes("StudentGPT")) {
+      const requestedMax = typeof requestPayload.max_tokens === "number" ? requestPayload.max_tokens : 1200;
+      requestPayload.max_tokens = Math.min(requestedMax, 1250);
+    }
 
     try {
-      const response = await fetchWithBackoff(
-        candidate.url,
-        {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-            authorization: `Bearer ${candidate.key}`,
+      if (candidate.url.includes(".hf.space")) {
+        const gradioData = await withCustomGpuLock(() =>
+          callGradioZeroGpuSpace(
+            candidate.url,
+            requestPayload.messages,
+            typeof requestPayload.max_tokens === "number" ? requestPayload.max_tokens : 1500,
+            typeof requestPayload.temperature === "number" ? requestPayload.temperature : 0.3
+          )
+        );
+        if (gradioData && gradioData.choices?.[0]?.message) {
+          if (isStructuredJson) {
+            const rawStr = typeof gradioData.choices[0].message.content === "string" ? gradioData.choices[0].message.content : "";
+            const parsedCheck = safeParseJSON<Record<string, unknown>>(rawStr, {});
+            if (parsedCheck && typeof parsedCheck === "object" && Object.keys(parsedCheck).length > 0) {
+              gradioData.choices[0].message.content = JSON.stringify(parsedCheck);
+              return gradioData;
+            }
+          } else {
+            return gradioData;
+          }
+        }
+      }
+
+      const doFetch = () =>
+        fetchWithBackoff(
+          candidate.url,
+          {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              authorization: `Bearer ${candidate.key}`,
+            },
+            body: JSON.stringify(requestPayload),
           },
-          body: JSON.stringify(requestPayload),
-        },
-        true
-      );
+          !candidate.model.includes("StudentGPT")
+        );
+
+      const response = candidate.model.includes("StudentGPT")
+        ? await withCustomGpuLock(doFetch)
+        : await doFetch();
 
       if (response.ok) {
         const data = (await response.json()) as InvokeResult;
         if (data && Array.isArray(data.choices) && data.choices.length > 0 && data.choices[0]?.message) {
+          if (typeof data.choices[0].message.content === "string") {
+            data.choices[0].message.content = data.choices[0].message.content
+              .replace(/<think>[\s\S]*?<\/think>/gi, "")
+              .replace(/<thought>[\s\S]*?<\/thought>/gi, "")
+              .trim();
+          }
+          if (isStructuredJson) {
+            const rawStr = typeof data.choices[0].message.content === "string" ? data.choices[0].message.content : "";
+            const parsedCheck = safeParseJSON<Record<string, unknown>>(rawStr, {});
+            if (!parsedCheck || (typeof parsedCheck === "object" && Object.keys(parsedCheck).length === 0)) {
+              console.warn(`Provider ${candidate.name} returned unparseable or empty JSON; trying next candidate...`);
+              continue;
+            }
+            data.choices[0].message.content = JSON.stringify(parsedCheck);
+          }
           return data;
         }
         console.warn(`Provider ${candidate.name} returned response without valid choices array.`);
@@ -545,6 +712,9 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
       lastError = `[${candidate.name}] failed: ${response.status} ${response.statusText} – ${errorText}`;
       console.warn(`Provider ${candidate.name} failed with ${response.status}; trying next provider candidate...`);
     } catch (err) {
+      if (candidate.model.includes("StudentGPT")) {
+        deadCustomUrl = candidate.url;
+      }
       lastError = `[${candidate.name}] error: ${(err as Error).message}`;
       console.warn(`Provider ${candidate.name} encountered error; trying next candidate...`);
     }
@@ -710,87 +880,42 @@ function buildFallbackResult(params: InvokeParams): InvokeResult {
     });
   } else if (jsonSchemaName === "revision_guide") {
     fallbackText = JSON.stringify({
-      overview: `High-yield comprehensive revision guide for ${topicName}. ${realSentences[0] || "Structured for active recall, mathematical derivations, and concept mastery."}`,
+      oneLineSummary: realSentences[0] || `High-yield synthesis of ${topicName} covering core definitions, principles, and key takeaways.`,
+      overview: `High-yield comprehensive revision guide for ${topicName}. ${realSentences.slice(0, 3).join(" ") || "Structured for active recall and concept mastery."}`,
+      keyDefinitions: realSentences.slice(0, 4).map((s, idx) => ({
+        term: `${topicName} — Concept ${idx + 1}`,
+        definition: s,
+        memoryTip: `Focus on the core mechanism described in ${topicName}.`
+      })),
+      formulaBank: [],
       blocks: [
         {
-          title: `Block 1: Foundational Principles & Definitions`,
-          focus: realSentences[1] || `Master fundamental terminology, physical rules, and baseline models`,
-          coreSummary: realSentences[0] || `${topicName} establishes foundational physical concepts governed by formal theoretical relations. Review the starting conditions and geometric definitions before working through mathematical derivations.`,
-          keyFormula: `$$\\vec{E} = \\frac{1}{4\\pi\\varepsilon_0} \\frac{q}{r^2} \\hat{r}$$`,
-          keyTakeaways: [
-            realSentences[2] || `Field lines originate on positive charges and terminate on negative charges.`,
-            realSentences[3] || `The local density of field lines is directly proportional to field magnitude.`,
-            `Field lines can never intersect at any point in space.`
-          ],
-          questions: [
-            {
-              question: realSentences[2] ? `What is the physical significance of: "${realSentences[2]}"?` : `Why can electric field lines never cross?`,
-              answer: `If two field lines crossed, the electric field vector at the intersection point would point in two different directions simultaneously, which is physically impossible. Therefore, the field at every point is unique and tangent to the field line.`,
-              examTrap: `Confusing field line density with the number of charges; field line density represents electric field strength E.`
-            },
-            {
-              question: realSentences[3] ? `How is "${realSentences[3].slice(0, 60)}..." derived and applied?` : `What is the electric dipole moment and its direction?`,
-              answer: `The electric dipole moment is defined as p = q * d, directed from the negative charge (-q) to the positive charge (+q). It quantifies the system's polarity and response to external fields.`,
-              examTrap: `In chemistry, dipole arrows often point from + to -, but in physics, the dipole moment vector p strictly points from negative to positive.`
-            }
-          ],
+          title: `Block 1: Foundational Principles of ${topicName}`,
+          focus: realSentences[1] || `Master fundamental terminology and baseline models in ${topicName}`,
+          coreSummary: realSentences.slice(0, 3).join(" ") || `${topicName} establishes foundational concepts governed by formal theoretical relations.`,
+          keyFormula: "",
+          keyTakeaways: getBullets(0, 4, topicName),
           commonMistakes: [
-            `Forgetting that field lines always meet conductive surfaces at right angles (90 degrees).`
-          ]
+            `Review all definitions and boundary conditions directly from ${topicName}.`
+          ],
+          mnemonic: `Connect each definition in ${topicName} to its practical application.`
         },
         {
-          title: `Block 2: Governing Equations & Quantitative Derivations`,
-          focus: realSentences[4] || `Derive and apply on-axis approximations and energy formulations`,
-          coreSummary: realSentences[4] || `For an electric dipole along its axis (z >> d), the electric field falls off as 1/z^3, which is significantly faster than the 1/r^2 inverse-square law for an isolated point charge.`,
-          keyFormula: `$$E_{\\text{axis}} \\approx \\frac{1}{4\\pi\\varepsilon_0} \\frac{2p}{z^3}, \\quad \\tau = \\vec{p} \\times \\vec{E}, \\quad U = -\\vec{p} \\cdot \\vec{E}$$`,
-          keyTakeaways: [
-            `On-axis dipole field magnitude is E = 2kp / z^3 for z >> d.`,
-            `External torque tau = p x E rotates the dipole into alignment with E.`,
-            `Potential energy is minimized at U = -pE when parallel (theta = 0).`
-          ],
-          questions: [
-            {
-              question: `How does the electric field of a dipole scale with distance z compared to a monopole?`,
-              answer: `A dipole field scales as 1/z^3 (inverse-cube), whereas a single charge field scales as 1/z^2. The opposite charges partially cancel each other at large distances, causing the field to decay more rapidly.`,
-              examTrap: `Applying the 1/r^2 formula to dipole problems instead of the 1/z^3 approximation.`
-            },
-            {
-              question: `What is the net force and net torque on an electric dipole in a uniform electric field?`,
-              answer: `Net force is zero because equal and opposite forces (+qE and -qE) cancel out. However, net torque is tau = p x E = p*E*sin(theta), causing rotation until aligned with the field.`,
-              examTrap: `Assuming net torque is zero just because net force is zero; equal and opposite forces create a couple.`
-            }
-          ],
+          title: `Block 2: Core Mechanisms & Analysis in ${topicName}`,
+          focus: realSentences[4] || `Analyze primary workflows and operational rules`,
+          coreSummary: realSentences.slice(3, 6).join(" ") || `Detailed breakdown of the primary mechanisms and analytical methods in ${topicName}.`,
+          keyFormula: "",
+          keyTakeaways: getBullets(4, 4, topicName),
           commonMistakes: [
-            `Neglecting the cross product in torque (tau = p x E); torque is a vector perpendicular to both p and E.`
-          ]
-        },
-        {
-          title: `Block 3: Practical Analysis & Boundary Conditions`,
-          focus: realSentences[7] || `Evaluate boundary behaviors, work done in rotation, and stability`,
-          coreSummary: realSentences[7] || `Work done by an external agent to rotate a dipole from theta_i to theta_f is W_ext = delta U = -pE(cos theta_f - cos theta_i). Stable equilibrium occurs at theta = 0, unstable at theta = 180 degrees.`,
-          keyFormula: `$$W = -\\Delta U = -(-pE\\cos\\theta_f - (-pE\\cos\\theta_i))$$`,
-          keyTakeaways: [
-            `Stable equilibrium: dipole is parallel to E (theta = 0, U = -pE).`,
-            `Unstable equilibrium: dipole is antiparallel to E (theta = 180 deg, U = +pE).`,
-            `Maximum torque occurs when dipole is perpendicular to field (theta = 90 deg, tau = pE).`
+            `Avoid skipping intermediate steps when analyzing problems in ${topicName}.`
           ],
-          questions: [
-            {
-              question: `How much work is required to rotate an electric dipole 180 degrees from stable to unstable equilibrium?`,
-              answer: `Work done W = U_final - U_initial = (+pE) - (-pE) = 2pE. The dipole moves against the restoring torque throughout the rotation.`,
-              examTrap: `Sign error: forgetting that U = -p . E has a negative sign in the definition.`
-            }
-          ],
-          commonMistakes: [
-            `Confusing stable equilibrium (minimum potential energy) with unstable equilibrium (maximum potential energy).`
-          ]
+          mnemonic: `Verify every step against the core principles of ${topicName}.`
         }
       ],
       selfCheck: [
-        `Can I state and sketch all 5 properties of electric field lines from memory?`,
-        `Can I derive why E drops off as 1/z^3 for an on-axis dipole using the binomial expansion?`,
-        `Can I calculate the torque and potential energy for any arbitrary angle theta?`,
-        `Can I explain why a dipole experiences zero net force but nonzero torque in a uniform field?`
+        `Can I define the primary concepts of ${topicName} from memory?`,
+        `Can I explain the main mechanisms and workflows covered in ${topicName}?`,
+        `Can I summarize the key takeaways of ${topicName} in my own words?`
       ]
     });
   } else {
@@ -922,9 +1047,75 @@ export async function listLLMModels(): Promise<ModelsResponse> {
   return (await response.json()) as ModelsResponse;
 }
 
+function sanitizeLatexAndNewlinesInJSON(input: string): string {
+  // Walk character by character: inside JSON strings ("..."), escape raw newlines/tabs and LaTeX backslashes
+  let out = "";
+  let inString = false;
+  let i = 0;
+  while (i < input.length) {
+    const ch = input[i];
+    if (!inString) {
+      if (ch === '"') {
+        inString = true;
+      }
+      out += ch;
+      i++;
+      continue;
+    }
+
+    // Inside a JSON string
+    if (ch === '"') {
+      inString = false;
+      out += ch;
+      i++;
+      continue;
+    }
+    if (ch === "\n") {
+      out += "\\n";
+      i++;
+      continue;
+    }
+    if (ch === "\r") {
+      i++;
+      continue;
+    }
+    if (ch === "\t") {
+      out += "\\t";
+      i++;
+      continue;
+    }
+    if (ch === "\\") {
+      const next = input[i + 1] || "";
+      const rest = input.slice(i + 1, i + 12);
+      // If followed by a common LaTeX command starting with f, t, b, n, r (e.g. \frac, \tau, \times, \text, \theta, \beta, \bar, \begin, \nabla, \neq, \nu, \rho, \right)
+      if (/^(frac|forall|tau|times|text|theta|tan|to\b|beta|bar|begin|bf\b|bm\b|nabla|neq|nu\b|not\b|rho|right|rightarrow|Rightarrow)/.test(rest)) {
+        out += "\\\\";
+        i++;
+        continue;
+      }
+      // Valid JSON escapes: ", \, /, b, f, n, r, t, uXXXX
+      if (next === '"' || next === "\\" || next === "/" || next === "b" || next === "f" || next === "n" || next === "r" || next === "t" || (next === "u" && /^[0-9a-fA-F]{4}/.test(input.slice(i + 2, i + 6)))) {
+        out += ch + next;
+        i += 2;
+        continue;
+      }
+      // Any other backslash (e.g. \vec, \pi, \epsilon, \sigma, \Delta, \int, \sum, \hat, \cdot, \approx) -> double it
+      out += "\\\\";
+      i++;
+      continue;
+    }
+    out += ch;
+    i++;
+  }
+  return out;
+}
+
 export function repairTruncatedJSON(jsonStr: string): string | null {
-  let str = jsonStr.trim();
+  let str = sanitizeLatexAndNewlinesInJSON(jsonStr.trim());
   if (!str.startsWith("{") && !str.startsWith("[")) return null;
+
+  // Strip trailing odd backslash before closing string
+  str = str.replace(/\\+$/, "");
 
   let inString = false;
   let isEscaped = false;
@@ -946,7 +1137,8 @@ export function repairTruncatedJSON(jsonStr: string): string | null {
 
   str = str.replace(/,\s*$/, "");
   str = str.replace(/:\s*$/, ': ""');
-  str = str.replace(/,\s*("[^"]*")?\s*$/, "");
+  str = str.replace(/,\s*("[^"]*")\s*$/, "");
+  str = str.replace(/\{\s*("[^"]*")\s*$/, '{$1: ""');
 
   const stack: string[] = [];
   inString = false;
@@ -989,17 +1181,19 @@ export function safeParseJSON<T>(raw: string, fallback?: Partial<T>): T {
     cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
   }
 
+  const sanitized = sanitizeLatexAndNewlinesInJSON(cleaned);
+
   try {
-    return JSON.parse(cleaned) as T;
+    return JSON.parse(sanitized) as T;
   } catch {
-    const firstBrace = cleaned.indexOf("{");
-    const lastBrace = cleaned.lastIndexOf("}");
-    const firstBracket = cleaned.indexOf("[");
-    const lastBracket = cleaned.lastIndexOf("]");
+    const firstBrace = sanitized.indexOf("{");
+    const lastBrace = sanitized.lastIndexOf("}");
+    const firstBracket = sanitized.indexOf("[");
+    const lastBracket = sanitized.lastIndexOf("]");
 
     if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
       try {
-        return JSON.parse(cleaned.slice(firstBrace, lastBrace + 1)) as T;
+        return JSON.parse(sanitized.slice(firstBrace, lastBrace + 1)) as T;
       } catch {
         // Fallthrough to repair
       }
@@ -1007,14 +1201,14 @@ export function safeParseJSON<T>(raw: string, fallback?: Partial<T>): T {
 
     if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
       try {
-        return JSON.parse(cleaned.slice(firstBracket, lastBracket + 1)) as T;
+        return JSON.parse(sanitized.slice(firstBracket, lastBracket + 1)) as T;
       } catch {
         // Fallthrough to repair
       }
     }
 
     if (firstBrace !== -1) {
-      const fragment = cleaned.slice(firstBrace);
+      const fragment = sanitized.slice(firstBrace);
       const repaired = repairTruncatedJSON(fragment);
       if (repaired) {
         try {

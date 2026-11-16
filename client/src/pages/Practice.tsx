@@ -65,7 +65,8 @@ export default function Practice() {
     onError: caught => setError(caught.message),
   });
   const generateCards = trpc.flashcards.generate.useMutation({
-    onSuccess: () => {
+    onSuccess: newCards => {
+      utils.flashcards.list.setData(undefined, newCards);
       utils.flashcards.list.invalidate();
       setCardIndex(0);
       setRevealed(false);
@@ -89,7 +90,17 @@ export default function Practice() {
     const params = new URLSearchParams(search);
     const sub = params.get("subjectId");
     if (sub) setSubjectId(sub);
-  }, [search]);
+    const docParam = params.get("documentId");
+    if (docParam) {
+      setDocumentId(docParam);
+      setScopeType("document");
+      const found = documents.data?.find(d => String(d.id) === docParam);
+      if (found) {
+        const cleanName = found.originalName.replace(/\.[^/.]+$/, "").replace(/[_-]+/g, " ").trim();
+        setTopic(cleanName);
+      }
+    }
+  }, [search, documents.data]);
 
   if (loading) return <AppLoading />;
   if (authError) return <AuthError message={authError} />;
@@ -99,14 +110,19 @@ export default function Practice() {
     event.preventDefault();
     setError(null);
     setResult(null);
-    const scope = scopeLabel.trim() || topic.trim();
+    const selectedDoc = documents.data?.find(d => String(d.id) === documentId);
+    const cleanDocTitle = selectedDoc
+      ? selectedDoc.originalName.replace(/\.[^/.]+$/, "").replace(/[_-]+/g, " ").trim()
+      : "";
+    const effectiveTopic = cleanDocTitle || topic.trim() || "Academic Practice";
+    const scope = scopeLabel.trim() || (selectedDoc ? "Complete Document" : effectiveTopic);
     try {
       const generated = await generateQuiz.mutateAsync({
-        title: `${scope} practice`,
-        topic,
+        title: `${cleanDocTitle || scope} practice`,
+        topic: effectiveTopic,
         subjectId: subjectId ? Number(subjectId) : null,
         documentId: documentId ? Number(documentId) : null,
-        scopeType,
+        scopeType: selectedDoc && !scopeLabel.trim() ? "document" : scopeType,
         scopeLabel: scope,
         questionCount: Math.max(3, Math.min(15, Number(questionCount) || 5)),
         difficulty,
@@ -119,13 +135,18 @@ export default function Practice() {
   async function createCards(event: FormEvent) {
     event.preventDefault();
     setError(null);
-    const scope = scopeLabel.trim() || topic.trim();
+    const selectedDoc = documents.data?.find(d => String(d.id) === documentId);
+    const cleanDocTitle = selectedDoc
+      ? selectedDoc.originalName.replace(/\.[^/.]+$/, "").replace(/[_-]+/g, " ").trim()
+      : "";
+    const effectiveTopic = cleanDocTitle || topic.trim() || "Academic Flashcards";
+    const scope = scopeLabel.trim() || (selectedDoc ? "Complete Document" : effectiveTopic);
     try {
       await generateCards.mutateAsync({
-        topic,
+        topic: effectiveTopic,
         subjectId: subjectId ? Number(subjectId) : null,
         documentId: documentId ? Number(documentId) : null,
-        scopeType,
+        scopeType: selectedDoc && !scopeLabel.trim() ? "document" : scopeType,
         scopeLabel: scope,
       });
     } catch { }
@@ -213,7 +234,7 @@ export default function Practice() {
                 onChange={event => setTopic(event.target.value)}
                 placeholder="Topic or concept you want to practice…"
                 className="h-11 w-full min-w-0 max-w-full sm:col-span-2 lg:col-span-1 rounded-xl border border-[#F8E7E7] bg-[#FDF3F3] px-3.5 text-sm text-[#2D1826] outline-none focus:border-[#724060]"
-                required
+                required={!documentId}
               />
               <select
                 value={subjectId}
@@ -233,7 +254,12 @@ export default function Practice() {
                   const docId = event.target.value;
                   setDocumentId(docId);
                   const found = documents.data?.find(d => String(d.id) === docId);
-                  if (found?.subjectId) setSubjectId(String(found.subjectId));
+                  if (found) {
+                    if (found.subjectId) setSubjectId(String(found.subjectId));
+                    const cleanName = found.originalName.replace(/\.[^/.]+$/, "").replace(/[_-]+/g, " ").trim();
+                    setTopic(cleanName);
+                    setScopeType("document");
+                  }
                 }}
                 className="h-11 w-full min-w-0 max-w-full truncate rounded-xl border border-[#F8E7E7] bg-[#FDF3F3] px-3 text-[12.5px] font-medium text-[#724060]"
               >

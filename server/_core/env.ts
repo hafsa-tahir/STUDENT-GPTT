@@ -26,5 +26,7 @@ export const ENV = {
     .filter(k => k.length > 10 && (k.startsWith("AIzaSy") || k.startsWith("AQ."))),
   serpApiKey: process.env.SERPAPI_KEY ?? "",
   youtubeApiKey: process.env.YOUTUBE_DATA_API_KEY ?? "",
+  customModelApiUrl: process.env.CUSTOM_MODEL_API_URL ?? "https://hafsatahir69-studentgpt-server.hf.space",
+  customModelApiKey: process.env.CUSTOM_MODEL_API_KEY ?? "studentgpt-custom-lora",
 };
 

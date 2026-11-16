@@ -35,18 +35,7 @@ export async function resolveOwnedSource(userId: number, input: SourceInput): Pr
   if (input.subjectId) await assertOwnedSubject(userId, input.subjectId);
   const db = database(await getDb());
 
-  let docId = input.documentId;
-  if (!docId) {
-    const latestDoc = await db
-      .select()
-      .from(documents)
-      .where(and(eq(documents.userId, userId), eq(documents.status, "ready")))
-      .orderBy(desc(documents.createdAt))
-      .limit(1);
-    if (latestDoc[0]) {
-      docId = latestDoc[0].id;
-    }
-  }
+  const docId = input.documentId;
 
   if (!docId) {
     const fallbackTopic = input.topic || input.scopeLabel || "Academic Subject";
@@ -61,30 +50,14 @@ export async function resolveOwnedSource(userId: number, input: SourceInput): Pr
     };
   }
 
-  let document = await db
+  const document = await db
     .select()
     .from(documents)
     .where(and(eq(documents.id, docId), eq(documents.userId, userId), eq(documents.status, "ready")))
     .limit(1);
-  if (!document[0]) {
-    document = await db
-      .select()
-      .from(documents)
-      .where(and(eq(documents.id, docId), eq(documents.status, "ready")))
-      .limit(1);
-  }
 
   if (!document[0]) {
-    const fallbackTopic = input.topic || input.scopeLabel || "Academic Subject";
-    return {
-      docId: null,
-      docName: fallbackTopic,
-      originalName: fallbackTopic,
-      scopeLabel: input.scopeLabel || fallbackTopic,
-      scopeType: input.scopeType,
-      fullText: "",
-      promptContext: `Student Topic: ${fallbackTopic}\nRequested Scope: ${input.scopeType} — ${input.scopeLabel}`
-    };
+    throw new Error("The selected PDF document could not be found or is not ready.");
   }
 
   const rawName = document[0].originalName || "Document";
@@ -144,19 +117,52 @@ export async function resolveOwnedSource(userId: number, input: SourceInput): Pr
     }
   }
 
-  let contentText = chunks.map(c => c.content).join("\n\n").trim();
-  if (!contentText) {
-    contentText = (document[0] as any).extractedText || "";
+  let contentText = "";
+  const fullExtracted = ((document[0] as any).extractedText || "").trim();
+
+  if (isWhole && fullExtracted.length > 100) {
+    // Use continuous, un-chopped extractedText for complete A-to-Z document coverage
+    contentText = fullExtracted;
+  } else {
+    // Merge chunks while stripping 180-char overlaps and broken leading mid-word fragments
+    const mergedParts: string[] = [];
+    for (let idx = 0; idx < chunks.length; idx++) {
+      let chunkStr = chunks[idx].content.trim();
+      if (idx > 0 && mergedParts.length > 0) {
+        const prev = mergedParts[mergedParts.length - 1];
+        const tail = prev.slice(-220);
+        const overlapCheck = chunkStr.slice(0, 60);
+        const overlapPos = tail.indexOf(overlapCheck.slice(0, 25));
+        if (overlapPos !== -1) {
+          const overlapLen = tail.length - overlapPos;
+          chunkStr = chunkStr.slice(overlapLen).trim();
+        } else if (/^[a-z]{1,6}\s+/.test(chunkStr)) {
+          // Strip broken mid-word fragment at start of chunk
+          chunkStr = chunkStr.replace(/^[a-z]{1,6}\s+/, "");
+        }
+      }
+      if (chunkStr) mergedParts.push(chunkStr);
+    }
+    contentText = mergedParts.join("\n\n").trim();
+    if (!contentText) contentText = fullExtracted;
   }
 
-  // Clean common scan/PDF headers
-  contentText = contentText.replace(/--\s*\d+\s*of\s*\d+\s*--/gi, "").trim();
+  // Clean common scan/PDF headers and spaced-out slide watermarks
+  contentText = contentText
+    .replace(/--\s*\d+\s*of\s*\d+\s*--/gi, "")
+    .replace(/\bD\s+E\s+F\s+I\s+N\s+I\s+T\s+I\s+O\s+N\b/g, "DEFINITION:")
+    .replace(/\bK\s+E\s+Y\s+F\s+O\s+R\s+M\s+U\s+L\s+A\b/g, "KEY FORMULA:")
+    .replace(/\bW\s+O\s+R\s+K\s+E\s+D\s+E\s+X\s+A\s+M\s+P\s+L\s+E\b/g, "WORKED EXAMPLE:")
+    .replace(/\bE\s+X\s+A\s+M\s+T\s+I\s+P\b/g, "EXAM TIP:")
+    .trim();
 
   const promptContext = `Document Name: ${document[0].originalName} (${cleanDocName})
-Requested Study Scope: ${input.scopeType} - ${isWhole ? "Complete Document (All Sections)" : input.scopeLabel}
+Requested Study Scope: ${input.scopeType} - ${isWhole ? "Complete Document From Start to Finish (A to Z)" : input.scopeLabel}
+
+STRICT BOUNDING RULE: You MUST generate notes ONLY from the provided document content below. Cover the ENTIRE document thoroughly from beginning to end (A to Z) without skipping any section, formula, derivation, or worked example. Do NOT invent outside topics.
 
 FULL DOCUMENT CONTENT (Read thoroughly from start to finish):
-${contentText.slice(0, 18000)}`;
+${contentText.slice(0, 32000)}`;
 
   return {
     docId,
@@ -216,12 +222,12 @@ function parseRealAcademicNotes(fullText: string, docName: string) {
   const sections: Array<{ heading: string; explanation: string; bullets: string[] }> = [];
   const seenSentences = new Set<string>();
 
-  for (let i = 0; i < Math.min(paragraphs.length, 7); i++) {
+  for (let i = 0; i < Math.min(paragraphs.length, 10); i++) {
     const p = paragraphs[i];
     const rawSentences = p
       .split(/(?<=[.!?])\s+/)
-      .map(s => s.trim())
-      .filter(s => s.length > 20 && !seenSentences.has(s.toLowerCase()));
+      .map(s => s.replace(/^[a-z]{1,6}\s+/, "").trim())
+      .filter(s => s.length > 25 && !seenSentences.has(s.toLowerCase()));
 
     if (rawSentences.length === 0) continue;
 
@@ -229,15 +235,17 @@ function parseRealAcademicNotes(fullText: string, docName: string) {
       seenSentences.add(s.toLowerCase());
     }
 
-    const titleCandidate = rawSentences[0].replace(/[.!?]+$/, "").slice(0, 50).trim();
-    const heading = titleCandidate.length > 10 ? titleCandidate : `${docName} - Concept ${i + 1}`;
+    const secHeadingMatch = p.match(/\b(\d+\.\d+\s+[A-Za-z][A-Za-z\s&'-]{3,45})/);
+    const heading = secHeadingMatch
+      ? secHeadingMatch[1].trim()
+      : `${docName} — Section ${sections.length + 1}`;
     const explanation = rawSentences[0];
-    const bullets = rawSentences.slice(1, 6);
+    const bullets = rawSentences.slice(1, 7);
 
     sections.push({
       heading,
-      explanation: explanation.slice(0, 350),
-      bullets: (bullets.length > 0 ? bullets : [explanation]).map(b => b.slice(0, 280))
+      explanation: explanation.slice(0, 450),
+      bullets: (bullets.length > 0 ? bullets : [explanation]).map(b => b.slice(0, 320))
     });
   }
 
@@ -342,7 +350,7 @@ function normalizeNotesContent(raw: unknown, source: ResolvedSource) {
   }
 
   // If LLM returned generic boilerplate or nothing, immediately use real parsed academic notes from source text!
-  if (sections.length < 3 && source.fullText) {
+  if (sections.length === 0 && source.fullText) {
     sections = parseRealAcademicNotes(source.fullText, docName);
   }
 
@@ -417,75 +425,98 @@ ${source.promptContext}`;
   let content;
   let modelUsed = "studentgpt-academic-engine";
 
-  try {
-    const response = await invokeLLM({
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
-      ],
-      response_format: {
-        type: "json_schema",
-        json_schema: {
-          name: "study_notes",
-          strict: true,
-          schema: {
-            type: "object",
-            properties: {
-              overview: { type: "string" },
-              sections: {
-                type: "array",
-                minItems: 4,
-                maxItems: 10,
-                items: {
-                  type: "object",
-                  properties: {
-                    heading: { type: "string" },
-                    explanation: { type: "string" },
-                    bullets: {
-                      type: "array",
-                      minItems: 2,
-                      maxItems: 8,
-                      items: { type: "string" }
-                    }
-                  },
-                  required: ["heading", "explanation", "bullets"],
-                  additionalProperties: false
-                }
-              },
-              revisionReminders: {
-                type: "array",
-                minItems: 3,
-                maxItems: 5,
-                items: { type: "string" }
-              }
-            },
-            required: ["overview", "sections", "revisionReminders"],
-            additionalProperties: false
+  const fullDocText = (source.fullText || "").trim();
+  const segmentSize = 3600;
+  const rawSegments: string[] = [];
+  if (fullDocText.length > segmentSize) {
+    for (let pos = 0; pos < Math.min(fullDocText.length, 25000); pos += segmentSize) {
+      const slice = fullDocText.slice(pos, pos + segmentSize).trim();
+      if (slice.length > 80) rawSegments.push(slice);
+    }
+  } else if (fullDocText.length > 0) {
+    rawSegments.push(fullDocText);
+  }
+
+  if (rawSegments.length > 1) {
+    const mergedSections: Array<{ heading: string; explanation: string; bullets: string[] }> = [];
+    const mergedReminders: string[] = [];
+    let combinedOverview = "";
+
+    for (let idx = 0; idx < rawSegments.length; idx++) {
+      const segText = rawSegments[idx];
+      const segPrompt = `Document Name: ${source.originalName} (${source.docName})
+Part ${idx + 1} of ${rawSegments.length} (Exhaustive Word-by-Word Section Coverage):
+Read this part of the document completely. Capture EVERY heading, definition, constant, formula ($...$ and $$...$$), step-by-step derivation, and worked example in this part. Do NOT summarize briefly—write detailed, textbook-quality notes!
+
+Return ONLY a valid JSON object with:
+- "overview": "${idx === 0 ? "Write a thorough 4-sentence academic overview of this document" : "Write a 2-sentence summary of this part"}"
+- "sections": Array of 2 to 4 exhaustive sections covering every topic in this part, each with:
+  * "heading": Specific section/topic title from the text
+  * "explanation": Detailed 4-to-6 sentence explanation explaining the theory, physical/logical intuition, and step-by-step derivations in this section
+  * "bullets": Array of 5 to 8 detailed, full-sentence bullet points containing every definition, formula, unit, worked example calculation, and exam tip from this section
+- "revisionReminders": Array of 2 active recall questions from this part
+
+DOCUMENT PART ${idx + 1} CONTENT:
+${segText}`;
+
+      try {
+        const segResp = await invokeLLM({
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: segPrompt }
+          ],
+          response_format: { type: "json_object" },
+          maxTokens: 1200
+        });
+        if (segResp?.model) modelUsed = segResp.model;
+        const parsedSeg = safeParseJSON<Record<string, any>>(text(segResp?.choices?.[0]?.message?.content), {});
+        const normalizedSeg = normalizeNotesContent(parsedSeg, source);
+        if (idx === 0 && normalizedSeg.overview) {
+          combinedOverview = normalizedSeg.overview;
+        }
+        for (const sec of normalizedSeg.sections) {
+          if (!mergedSections.some(existing => existing.heading.toLowerCase() === sec.heading.toLowerCase())) {
+            mergedSections.push(sec);
           }
         }
-      },
-      maxTokens: 3000
-    });
+        for (const rem of normalizedSeg.revisionReminders) {
+          if (mergedReminders.length < 6 && !mergedReminders.includes(rem)) {
+            mergedReminders.push(rem);
+          }
+        }
+      } catch (segErr) {
+        console.warn(`Segment ${idx + 1}/${rawSegments.length} failed in generateStudyNotes:`, segErr);
+      }
+    }
 
-    const parsedRaw = safeParseJSON<unknown>(text(response?.choices?.[0]?.message?.content), {});
-    content = normalizeNotesContent(parsedRaw, source);
-    if (response?.model) modelUsed = response.model;
-  } catch (err) {
-    console.warn("LLM invoke with json_schema failed in generateStudyNotes; retrying with standard JSON prompt:", err);
+    if (mergedSections.length > 0) {
+      content = {
+        overview: combinedOverview || `Exhaustive A-to-Z study notes for ${source.docName}, covering all ${rawSegments.length} parts of the document from start to finish.`,
+        sections: mergedSections,
+        revisionReminders: mergedReminders.length >= 2 ? mergedReminders : [
+          `Review all definitions, formulas, and derivations across ${source.docName}`,
+          `Re-work every solved problem from Part 1 through Part ${rawSegments.length} without looking at the solution`
+        ]
+      };
+    }
+  }
+
+  if (!content) {
     try {
-      const fallbackResponse = await invokeLLM({
+      const response = await invokeLLM({
         messages: [
-          { role: "system", content: `${systemPrompt}\n\nCRITICAL: Respond with a valid JSON object matching the requested schema.` },
+          { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
         ],
         response_format: { type: "json_object" },
-        maxTokens: 3000
+        maxTokens: 1250
       });
-      const parsedRaw = safeParseJSON<unknown>(text(fallbackResponse?.choices?.[0]?.message?.content), {});
+
+      const parsedRaw = safeParseJSON<unknown>(text(response?.choices?.[0]?.message?.content), {});
       content = normalizeNotesContent(parsedRaw, source);
-      if (fallbackResponse?.model) modelUsed = fallbackResponse.model;
-    } catch (secondErr) {
-      console.warn("Both LLM attempts failed in generateStudyNotes; using authentic document extractor:", secondErr);
+      if (response?.model) modelUsed = response.model;
+    } catch (err) {
+      console.warn("LLM invoke failed in generateStudyNotes; using authentic document extractor:", err);
       content = normalizeNotesContent({}, source);
     }
   }
@@ -542,104 +573,35 @@ export async function generateRevisionGuide(userId: number, input: SourceInput &
     cleanTitle = `${source.docName} — Revision Guide`;
   }
 
+  const revContext = source.promptContext.slice(0, 14000);
   const response = await invokeLLM({
     messages: [
       {
         role: "system",
-        content: `You are an elite academic revision specialist. Your job is to transform the document into an unforgettable, high-yield revision sheet.
-CRITICAL INSTRUCTION: Revision is NOT a quiz (questions belong on the Quiz page). Revision means summarizing the document with crystal clarity, extracting the governing definitions and master formulas, and creating high-impact mental models to help the student memorize and master the subject in minutes.
+        content: `You are an elite academic revision specialist. Transform the supplied document into a high-yield revision sheet strictly grounded ONLY in the provided document text. Do NOT mix in any outside topics or other documents.
 
-Provide:
-1. "oneLineSummary": A single, powerful, crystal-clear 1-sentence synthesis that captures the entire document in plain English (e.g. "Coulomb's Law quantifies the inverse-square electrostatic force between static point charges, governed by permittivity and charge polarity.").
-2. "overview": A concise 2 to 3 paragraph executive summary of the entire document.
-3. "keyDefinitions": 4 to 8 essential terms with exact, concise definitions and a short memory clue/cue.
-4. "formulaBank": All governing mathematical laws, equations, and rules in clean LaTeX ($inline$ and $$block$$), specifying every variable's meaning and units.
-5. "blocks": 3 to 6 high-yield revision blocks covering each topic/concept:
-   - "title": Clean descriptive title
+Return ONLY a valid JSON object with:
+1. "oneLineSummary": A single crystal-clear 1-sentence synthesis of the document.
+2. "overview": A thorough 2-paragraph executive summary of the document.
+3. "keyDefinitions": Array of 5 to 8 essential terms from the document, each with {"term", "definition", "memoryTip"}.
+4. "formulaBank": Array of governing formulas/rules from the document, each with {"name", "formula", "variables", "whenToUse"}.
+5. "blocks": Array of 4 to 6 high-yield revision blocks covering every major section of the document from start to finish, each with:
+   - "title": Section title from the document
    - "focus": What to master in this block
-   - "coreSummary": A crystal-clear conceptual synthesis (2-4 sentences) explaining the mechanism
-   - "keyFormula": Governing equation or primary rule in LaTeX
-   - "keyTakeaways": 2 to 4 must-memorize high-yield bullet takeaways
-   - "commonMistakes": 1 to 2 tricky exam pitfalls or traps students often fall into
-   - "mnemonic": A memory trick, rule of thumb, or mnemonic aid
-6. "selfCheck": 3 to 5 rapid self-verification prompts.`
+   - "coreSummary": Detailed 3-4 sentence conceptual synthesis
+   - "keyFormula": Primary equation or rule from this section
+   - "keyTakeaways": Array of 3 to 5 detailed bullet takeaways
+   - "commonMistakes": Array of 1 to 2 common exam pitfalls from this section
+   - "mnemonic": A memory cue or rule of thumb
+6. "selfCheck": Array of 4 rapid self-verification questions from the document.`
       },
       {
         role: "user",
-        content: `Create an authoritative revision guide titled '${cleanTitle}' for '${source.scopeLabel}'. Return a valid JSON object containing oneLineSummary, overview, keyDefinitions bank, formulaBank, 3 to 6 high-yield revision blocks (with title, focus, coreSummary, keyFormula, keyTakeaways, commonMistakes, mnemonic), and an end-of-session self-check checklist.\n\n${source.promptContext}`
+        content: `Create a complete, document-grounded revision guide titled '${cleanTitle}' strictly from the document below. Return ONLY a valid JSON object:\n\n${revContext}`
       }
     ],
-    response_format: {
-      type: "json_schema",
-      json_schema: {
-        name: "revision_guide",
-        strict: true,
-        schema: {
-          type: "object",
-          properties: {
-            oneLineSummary: { type: "string" },
-            overview: { type: "string" },
-            keyDefinitions: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  term: { type: "string" },
-                  definition: { type: "string" },
-                  memoryTip: { type: "string" }
-                },
-                required: ["term", "definition"],
-                additionalProperties: true
-              }
-            },
-            formulaBank: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  name: { type: "string" },
-                  formula: { type: "string" },
-                  variables: { type: "string" },
-                  whenToUse: { type: "string" }
-                },
-                required: ["name", "formula"],
-                additionalProperties: true
-              }
-            },
-            blocks: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  title: { type: "string" },
-                  focus: { type: "string" },
-                  coreSummary: { type: "string" },
-                  keyFormula: { type: "string" },
-                  keyTakeaways: {
-                    type: "array",
-                    items: { type: "string" }
-                  },
-                  commonMistakes: {
-                    type: "array",
-                    items: { type: "string" }
-                  },
-                  mnemonic: { type: "string" }
-                },
-                required: ["title"],
-                additionalProperties: true
-              }
-            },
-            selfCheck: {
-              type: "array",
-              items: { type: "string" }
-            }
-          },
-          required: ["oneLineSummary", "overview", "blocks"],
-          additionalProperties: true
-        }
-      }
-    },
-    maxTokens: 4000
+    response_format: { type: "json_object" },
+    maxTokens: 1250
   });
 
   const rawParsed = safeParseJSON<Record<string, any>>(text(response?.choices?.[0]?.message?.content), {});
@@ -706,7 +668,7 @@ Provide:
           ? q.answer
           : typeof q?.solution === "string" && q.solution.length > 5
             ? q.solution
-            : `Full Derivation & Solution: Apply Coulomb's Law and fundamental principles to solve for state variables systematically.`,
+            : `Apply the governing principles and definitions from ${topicName} to solve systematically.`,
         examTrap: typeof q?.examTrap === "string" ? q.examTrap : ""
       };
     });
@@ -724,43 +686,25 @@ Provide:
   });
 
   if (blocks.length === 0) {
-    blocks = [
-      {
-        title: `Block 1: Core Definitions & Physical Principles`,
-        focus: `Recall essential terminology, physical rules, and baseline models`,
-        coreSummary: `${topicName} introduces fundamental physical principles. Study the geometric configurations, sign conventions, and definition of state variables.`,
-        keyFormula: `$$\\vec{E} = \\frac{1}{4\\pi\\varepsilon_0}\\frac{q}{r^2}\\hat{r}$$`,
-        keyTakeaways: [
-          `Field lines begin on positive charges and end on negative charges.`,
-          `Density of field lines is proportional to field strength.`,
-          `Field lines can never cross at any point.`
-        ],
-        commonMistakes: [`Forgetting that field lines always meet a conductor perpendicular (90 degrees) to its surface.`],
-        mnemonic: `Lines originate on positive (+q) and terminate on negative (-q). Like charges repel, opposites attract.`
-      },
-      {
-        title: `Block 2: Governing Equations & Derivations`,
-        focus: `Derive on-axis approximations and energy formulations`,
-        coreSummary: `For an electric dipole at distances z much greater than separation d (z >> d), the on-axis electric field decays as 1/z^3 rather than the 1/r^2 dependence of a monopole.`,
-        keyFormula: `$$E_{\\text{axis}} \\approx \\frac{1}{4\\pi\\varepsilon_0}\\frac{2p}{z^3}, \\quad \\tau = \\vec{p} \\times \\vec{E}, \\quad U = -\\vec{p} \\cdot \\vec{E}$$`,
-        keyTakeaways: [
-          `Dipole field decreases as 1/z^3 at large distances.`,
-          `External torque rotates dipole to align with E field.`,
-          `Potential energy is minimum U = -pE when aligned with field.`
-        ],
-        commonMistakes: [`Neglecting the negative sign in potential energy U = -p . E.`],
-        mnemonic: `Dipole torque aligns with field; potential energy is lowest (most stable) when perfectly aligned.`
-      }
-    ];
+    const parsedFromDoc = parseRealAcademicNotes(source.fullText || "", topicName);
+    blocks = parsedFromDoc.map((sec, idx) => ({
+      title: sec.heading || `Block ${idx + 1}: ${topicName}`,
+      focus: `Master the core principles and mechanisms in ${sec.heading || topicName}`,
+      coreSummary: sec.explanation,
+      keyFormula: "",
+      keyTakeaways: sec.bullets,
+      commonMistakes: [`Verify all definitions, boundary conditions, and steps from ${sec.heading || topicName}.`],
+      mnemonic: `Connect ${sec.heading || topicName} directly to the worked examples in the document.`
+    }));
   }
 
   let selfCheck = Array.isArray(rawParsed.selfCheck) ? rawParsed.selfCheck.map(String).filter(Boolean) : [];
   if (selfCheck.length === 0) {
     selfCheck = [
       `Can I define the central concepts of ${topicName} without looking?`,
-      `Can I state and derive the governing equations and on-axis approximations?`,
-      `Can I state the key memory mnemonics and avoid common exam pitfalls?`,
-      `Can I summarize the entire topic in one clear sentence from memory?`
+      `Can I state and apply the governing rules and formulas from ${topicName}?`,
+      `Can I state the key memory mnemonics and avoid common exam pitfalls in ${topicName}?`,
+      `Can I summarize the entire ${topicName} document in my own words from memory?`
     ];
   }
 
@@ -803,6 +747,14 @@ export async function listRevisionGuides(userId: number, subjectId?: number | nu
     .from(revisionGuides)
     .where(and(...conditions))
     .orderBy(desc(revisionGuides.createdAt));
+}
+
+export async function deleteRevisionGuide(userId: number, revisionId: number) {
+  const db = database(await getDb());
+  await db
+    .delete(revisionGuides)
+    .where(and(eq(revisionGuides.id, revisionId), eq(revisionGuides.userId, userId)));
+  return { success: true } as const;
 }
 
 /**

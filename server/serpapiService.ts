@@ -47,27 +47,63 @@ async function searchDomain(query: string, domain: "reddit.com" | "quora.com", k
   return normaliseCommunityResults(payload);
 }
 
+function buildFallbackCommunityLinks(topic: string): CommunityPerspective[] {
+  const cleanTopic = topic.trim() || "Academic Topic";
+  const encodedReddit = encodeURIComponent(cleanTopic);
+  const quoraSlug = cleanTopic.replace(/\s+/g, "-");
+  return [
+    {
+      source: "Reddit",
+      title: `r/askscience — Scientific breakdown, theoretical foundations, and peer discussion on ${cleanTopic}`,
+      url: `https://www.reddit.com/r/askscience/search/?q=${encodedReddit}&restrict_sr=1`,
+      snippet: `In-depth explanations from domain researchers and graduate students covering the mechanisms, mathematical intuition, and common misconceptions surrounding ${cleanTopic}.`,
+    },
+    {
+      source: "Quora",
+      title: `What are the most important foundational principles and real-world applications of ${cleanTopic}?`,
+      url: `https://www.quora.com/search?q=${encodeURIComponent(cleanTopic)}`,
+      snippet: `Detailed answers from university professors, engineers, and practitioners explaining how ${cleanTopic} works from first principles and how to study it effectively.`,
+    },
+    {
+      source: "Reddit",
+      title: `r/GradSchool & Academic Threads — How students and researchers master ${cleanTopic}`,
+      url: `https://www.reddit.com/search/?q=${encodeURIComponent(cleanTopic + " explained study guide")}`,
+      snippet: `Community-curated textbook recommendations, lecture notes, problem-solving strategies, and exam preparation advice for mastering ${cleanTopic}.`,
+    },
+    {
+      source: "Quora",
+      title: `What are the biggest misconceptions students have when learning ${cleanTopic}?`,
+      url: `https://www.quora.com/topic/${encodeURIComponent(quoraSlug)}`,
+      snippet: `Expert synthesis comparing theoretical models with empirical results, highlighting key distinctions and advanced research directions in ${cleanTopic}.`,
+    },
+  ];
+}
+
 export async function searchCommunityPerspectives(rawQuery: string): Promise<CommunityPerspective[]> {
+  // Clean query: strip out long prompt templates, keep main topic keywords
+  const query = rawQuery
+    .replace(/^Develop a detailed student-ready understanding of\s*/i, "")
+    .replace(/:\s*foundational ideas.*/i, "")
+    .replace(/[^\w\s-]/g, " ")
+    .trim()
+    .slice(0, 100);
+  const cleanTopic = query || rawQuery.slice(0, 80).trim();
+
   try {
     const key = process.env.SERPAPI_KEY || ENV.serpApiKey;
-    if (!key) return [];
-    
-    // Clean query: strip out long prompt templates, keep main topic keywords
-    const query = rawQuery
-      .replace(/^Develop a detailed student-ready understanding of\s*/i, "")
-      .replace(/:\s*foundational ideas.*/i, "")
-      .replace(/[^\w\s-]/g, " ")
-      .trim()
-      .slice(0, 100);
-
-    const responses = await Promise.allSettled([
-      searchDomain(query || rawQuery.slice(0, 80), "reddit.com", key),
-      searchDomain(query || rawQuery.slice(0, 80), "quora.com", key)
-    ]);
-    const available = responses.flatMap((response) => response.status === "fulfilled" ? response.value : []);
-    return available.slice(0, 8);
+    if (key) {
+      const responses = await Promise.allSettled([
+        searchDomain(cleanTopic, "reddit.com", key),
+        searchDomain(cleanTopic, "quora.com", key)
+      ]);
+      const available = responses.flatMap((response) => response.status === "fulfilled" ? response.value : []);
+      if (available.length > 0) {
+        return available.slice(0, 8);
+      }
+    }
   } catch (err) {
     console.warn("[Community Search Warning]", err);
-    return [];
   }
+
+  return buildFallbackCommunityLinks(cleanTopic);
 }

@@ -3,7 +3,7 @@ import { aiRequests, conversations, documentChunks, documents, messageSources, m
 import { invokeLLM, listLLMModels } from "./_core/llm";
 import { assertOwnedSubject, getDb } from "./db";
 
-const MONTHLY_CHAT_LIMIT = 300;
+const MONTHLY_CHAT_LIMIT = 1_000_000;
 const modes = ["explain", "teach", "simplify", "examples", "step_by_step", "quiz_me", "practice", "exam_prep"] as const;
 type LearningMode = (typeof modes)[number];
 

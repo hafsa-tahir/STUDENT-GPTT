@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">
+  <rect width="800" height="450" fill="#ffffff" rx="16"/>
+  <rect x="65" y="50" width="695" height="330" fill="#FDF3F3" stroke="#E5D0D8" stroke-width="1.5" rx="8"/>
+  <text x="412" y="32" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="18" font-weight="bold" fill="#2D1826">StudentGPT QLoRA Fine-Tuning Loss Curve (Qwen2.5-7B-Instruct)</text>
+  <!-- Grid lines -->
+  <line x1="65" y1="116" x2="760" y2="116" stroke="#E5D0D8" stroke-dasharray="4,4"/>
+  <line x1="65" y1="182" x2="760" y2="182" stroke="#E5D0D8" stroke-dasharray="4,4"/>
+  <line x1="65" y1="248" x2="760" y2="248" stroke="#E5D0D8" stroke-dasharray="4,4"/>
+  <line x1="65" y1="314" x2="760" y2="314" stroke="#E5D0D8" stroke-dasharray="4,4"/>
+  <!-- Y-axis labels -->
+  <text x="55" y="55" text-anchor="end" font-family="Segoe UI, system-ui, sans-serif" font-size="12" fill="#724060">1.6</text>
+  <text x="55" y="120" text-anchor="end" font-family="Segoe UI, system-ui, sans-serif" font-size="12" fill="#724060">1.2</text>
+  <text x="55" y="186" text-anchor="end" font-family="Segoe UI, system-ui, sans-serif" font-size="12" fill="#724060">0.8</text>
+  <text x="55" y="252" text-anchor="end" font-family="Segoe UI, system-ui, sans-serif" font-size="12" fill="#724060">0.5</text>
+  <text x="55" y="318" text-anchor="end" font-family="Segoe UI, system-ui, sans-serif" font-size="12" fill="#724060">0.3</text>
+  <text x="55" y="380" text-anchor="end" font-family="Segoe UI, system-ui, sans-serif" font-size="12" fill="#724060">0.0</text>
+  <!-- X-axis labels -->
+  <text x="95" y="402" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="12" fill="#724060">5</text>
+  <text x="195" y="402" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="12" fill="#724060">10</text>
+  <text x="295" y="402" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="12" fill="#724060">15</text>
+  <text x="395" y="402" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="12" fill="#724060">20</text>
+  <text x="495" y="402" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="12" fill="#724060">25</text>
+  <text x="595" y="402" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="12" fill="#724060">30</text>
+  <text x="710" y="402" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="12" fill="#724060">35</text>
+  <text x="412" y="432" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="14" font-weight="bold" fill="#2D1826">Training Step</text>
+  <text x="20" y="215" text-anchor="middle" transform="rotate(-90 20 215)" font-family="Segoe UI, system-ui, sans-serif" font-size="14" font-weight="bold" fill="#2D1826">Cross-Entropy Loss</text>
+  <!-- Loss curve -->
+  <polyline fill="none" stroke="#724060" stroke-width="3.5" points="95,72 195,148 295,210 395,255 495,286 595,304 710,316"/>
+  <circle cx="95" cy="72" r="5.5" fill="#724060"/>
+  <circle cx="195" cy="148" r="5.5" fill="#724060"/>
+  <circle cx="295" cy="210" r="5.5" fill="#724060"/>
+  <circle cx="395" cy="255" r="5.5" fill="#724060"/>
+  <circle cx="495" cy="286" r="5.5" fill="#724060"/>
+  <circle cx="595" cy="304" r="5.5" fill="#724060"/>
+  <circle cx="710" cy="316" r="5.5" fill="#724060"/>
+</svg>
+

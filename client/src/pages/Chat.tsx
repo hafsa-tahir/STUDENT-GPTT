@@ -41,9 +41,29 @@ export default function Chat() {
     },
   });
   const send = trpc.chat.send.useMutation({
-    onSuccess: () => {
+    onSuccess: async (newAssistantMsg, variables) => {
+      utils.chat.get.setData({ conversationId: variables.conversationId }, old => {
+        if (!old) return old;
+        return {
+          ...old,
+          messages: [
+            ...old.messages,
+            {
+              id: Date.now() - 1,
+              conversationId: variables.conversationId,
+              userId: old.conversation.userId,
+              role: "user" as const,
+              content: variables.content,
+              model: null,
+              generationStatus: "complete",
+              createdAt: new Date(),
+            },
+            newAssistantMsg,
+          ],
+        };
+      });
       setPending(null);
-      utils.chat.get.invalidate({ conversationId: activeId ?? 0 });
+      await utils.chat.get.invalidate({ conversationId: variables.conversationId });
       utils.chat.list.invalidate();
     },
     onError: caught => {

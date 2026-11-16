@@ -247,16 +247,21 @@ type SynthesisResponse = {
   limitations?: string[];
 };
 
+function isTemplatePlaceholder(val: string): boolean {
+  const t = val.trim();
+  return /^<[^>]{8,}>$/.test(t) || t.includes("<2-3 sentences") || t.includes("<one of:");
+}
+
 function isValidSynthesis(data: unknown): data is Required<SynthesisResponse> {
   if (!data || typeof data !== "object") return false;
   const s = data as SynthesisResponse;
-  if (!s.topicType || typeof s.topicType !== "string" || s.topicType.includes("<")) return false;
-  if (!s.definition || typeof s.definition !== "string" || s.definition.length < 15 || s.definition.includes("<")) return false;
-  if (!s.overview || typeof s.overview !== "string" || s.overview.length < 40 || s.overview.includes("<")) return false;
-  if (!s.howItWorks || typeof s.howItWorks !== "string" || s.howItWorks.length < 15 || s.howItWorks.includes("<")) return false;
-  if (!s.pastSummary || typeof s.pastSummary !== "string" || s.pastSummary.length < 15 || s.pastSummary.includes("<")) return false;
-  if (!s.presentAndContributors || typeof s.presentAndContributors !== "string" || s.presentAndContributors.length < 15 || s.presentAndContributors.includes("<")) return false;
-  if (!s.futureOutlook || typeof s.futureOutlook !== "string" || s.futureOutlook.length < 15 || s.futureOutlook.includes("<")) return false;
+  if (!s.topicType || typeof s.topicType !== "string") s.topicType = "academic_field";
+  if (!s.definition || typeof s.definition !== "string" || s.definition.length < 10 || isTemplatePlaceholder(s.definition)) return false;
+  if (!s.overview || typeof s.overview !== "string" || s.overview.length < 25 || isTemplatePlaceholder(s.overview)) return false;
+  if (!s.howItWorks || typeof s.howItWorks !== "string" || s.howItWorks.length < 10 || isTemplatePlaceholder(s.howItWorks)) return false;
+  if (!s.pastSummary || typeof s.pastSummary !== "string" || s.pastSummary.length < 10 || isTemplatePlaceholder(s.pastSummary)) return false;
+  if (!s.presentAndContributors || typeof s.presentAndContributors !== "string" || s.presentAndContributors.length < 10 || isTemplatePlaceholder(s.presentAndContributors)) return false;
+  if (!s.futureOutlook || typeof s.futureOutlook !== "string" || s.futureOutlook.length < 10 || isTemplatePlaceholder(s.futureOutlook)) return false;
   if (!Array.isArray(s.keyConcepts) || s.keyConcepts.length === 0) return false;
   if (!Array.isArray(s.studyQuestions) || s.studyQuestions.length === 0) return false;
   if (!Array.isArray(s.actionPlan) || s.actionPlan.length === 0) return false;
@@ -279,26 +284,137 @@ export async function synthesizeResearchBrief(userId: number, briefId: number) {
     let modelUsed = "";
     let lastError = "";
 
-    // Retry loop: up to 2 attempts (initial + 1 automatic retry)
+    // 2-Pass Deep Academic Synthesis (Pass 1: Multi-Paragraph Keys for Deep Length; Pass 2: Structured Concepts & Methodology Board)
+    const pass1Prompt = `Research title: ${title}
+Research question: ${loaded.brief.researchQuestion}
+${sourceNotes}
+
+Write a deeply detailed, university-level academic research narrative for "${title}". Each paragraph key below MUST be 4 to 5 full, detailed academic sentences!
+Return ONLY a valid JSON object with these exact keys:
+{
+  "topicType": "physical_object_or_phenomenon | natural_process | academic_field | technology_or_system | historical_event | concept_or_theory",
+  "definition": "A rigorous 4-sentence formal academic definition of ${title}, including its governing laws, core classifications, and mathematical/theoretical scope.",
+  "overview_paragraph_1": "Paragraph 1 (Foundations): 5 detailed sentences explaining the fundamental theory, origins, and core principles of ${title}.",
+  "overview_paragraph_2": "Paragraph 2 (Architecture & Equations): 5 detailed sentences explaining the governing mathematical relationships, structural properties, and physical/system behavior of ${title}.",
+  "overview_paragraph_3": "Paragraph 3 (Impact & Context): 5 detailed sentences explaining the broader scientific significance, empirical evidence, and real-world impact of ${title}.",
+  "howItWorks_paragraph_1": "Part 1 (Core Mechanism): 5 detailed sentences explaining step-by-step how ${title} forms, operates, or functions at a fundamental level.",
+  "howItWorks_paragraph_2": "Part 2 (Governing Dynamics): 5 detailed sentences explaining the boundary conditions, mathematical dynamics, and internal processes of ${title}.",
+  "pastSummary_paragraph_1": "Early History: 4 detailed sentences naming the foundational pioneers, key years, and early theoretical or experimental milestones of ${title}.",
+  "pastSummary_paragraph_2": "Modern Evolution: 4 detailed sentences tracing how ${title} evolved through 20th and 21st century breakthroughs.",
+  "presentAndContributors_paragraph_1": "Current State of the Art: 4 detailed sentences on contemporary research, active observatories/laboratories, and leading institutions studying ${title}.",
+  "presentAndContributors_paragraph_2": "Recent Breakthroughs: 4 detailed sentences on recent empirical discoveries, modern instrumentation, and active collaborations in ${title}.",
+  "futureOutlook_paragraph_1": "Open Questions: 4 detailed sentences on unresolved theoretical paradoxes and current scientific limitations in ${title}.",
+  "futureOutlook_paragraph_2": "Future Horizon: 4 detailed sentences on upcoming experiments, next-generation technologies, and projected research directions for ${title}."
+}`;
+
+    const pass2Prompt = `Research title: ${title}
+Research question: ${loaded.brief.researchQuestion}
+${sourceNotes}
+
+Write the structured conceptual foundations, research methodology, and mastery roadmap for "${title}".
+Return ONLY a valid JSON object with these exact keys:
+{
+  "quote": {
+    "text": "A genuine, famous quote by a pioneering scientist or scholar about ${title}",
+    "author": "Full name of the scientist/scholar",
+    "context": "Their credentials and historical context"
+  },
+  "keyConcepts": [
+    { "name": "Core Concept 1 of ${title}", "explanation": "Detailed 3-sentence technical explanation with governing principles." },
+    { "name": "Core Concept 2 of ${title}", "explanation": "Detailed 3-sentence technical explanation with governing principles." },
+    { "name": "Core Concept 3 of ${title}", "explanation": "Detailed 3-sentence technical explanation with governing principles." },
+    { "name": "Core Concept 4 of ${title}", "explanation": "Detailed 3-sentence technical explanation with governing principles." },
+    { "name": "Core Concept 5 of ${title}", "explanation": "Detailed 3-sentence technical explanation with governing principles." }
+  ],
+  "studyQuestions": [
+    "Deep analytical research question 1 about ${title}",
+    "Deep analytical research question 2 about ${title}",
+    "Deep analytical research question 3 about ${title}",
+    "Deep analytical research question 4 about ${title}"
+  ],
+  "actionPlan": [
+    "Step 1: Concrete study and derivation milestone for mastering ${title}",
+    "Step 2: Concrete analytical and problem-solving milestone for ${title}",
+    "Step 3: Concrete primary literature and empirical verification milestone for ${title}",
+    "Step 4: Concrete synthesis and application milestone for ${title}"
+  ],
+  "boardContent": {
+    "projectFocus": "One clear sentence defining the core mastery goal for ${title}",
+    "objectives": [
+      { "title": "Theoretical Foundation", "description": "Master the core governing laws and formal definitions of ${title}." },
+      { "title": "Mechanism & Architecture", "description": "Analyze the step-by-step operational processes and mathematical derivations of ${title}." },
+      { "title": "Applied Synthesis", "description": "Evaluate real-world implementations, empirical evidence, and open frontiers in ${title}." }
+    ],
+    "methodology": [
+      "Primary theoretical derivation and mathematical modeling of ${title}",
+      "Comparative analysis of empirical datasets and peer-reviewed literature on ${title}",
+      "Case-study evaluation of real-world engineering and scientific systems using ${title}"
+    ],
+    "applications": [
+      "Detailed real-world scientific or industrial application 1 of ${title}",
+      "Detailed real-world scientific or industrial application 2 of ${title}",
+      "Detailed real-world scientific or industrial application 3 of ${title}"
+    ],
+    "misconceptions": [
+      "Common misconception 1 about ${title} — and the rigorous scientific correction",
+      "Common misconception 2 about ${title} — and the rigorous scientific correction",
+      "Common misconception 3 about ${title} — and the rigorous scientific correction"
+    ],
+    "verificationChecklist": [
+      "Verify core equations and definitions against university textbooks and peer-reviewed journals",
+      "Cross-check historical dates and experimental milestones against primary archive papers"
+    ]
+  },
+  "limitations": [
+    "Boundary conditions and theoretical assumptions that must be verified when applying ${title}"
+  ]
+}`;
+
     for (let attempt = 1; attempt <= 2; attempt++) {
       try {
-        const response = await invokeLLM({
+        const resp1 = await invokeLLM({
           messages: [
             { role: "system", content: RESEARCH_SYSTEM_PROMPT },
-            { role: "user", content: prompt }
+            { role: "user", content: pass1Prompt }
           ],
-          temperature: 0.3,
+          temperature: 0.25,
           responseFormat: { type: "json_object" },
-          maxTokens: 4000,
+          maxTokens: 1200,
         });
+        modelUsed = resp1.model;
+        const part1 = safeParseJSON<Record<string, any>>(content(resp1.choices[0]?.message.content), {});
 
-        modelUsed = response.model;
-        const rawContent = content(response.choices[0]?.message.content);
-        const cleanedRaw = rawContent.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
-        const candidate = safeParseJSON<SynthesisResponse>(cleanedRaw, {});
+        const resp2 = await invokeLLM({
+          messages: [
+            { role: "system", content: RESEARCH_SYSTEM_PROMPT },
+            { role: "user", content: pass2Prompt }
+          ],
+          temperature: 0.25,
+          responseFormat: { type: "json_object" },
+          maxTokens: 1200,
+        });
+        const part2 = safeParseJSON<Record<string, any>>(content(resp2.choices[0]?.message.content), {});
 
-        if (isValidSynthesis(candidate)) {
-          parsed = candidate;
+        const joinParas = (...items: unknown[]) =>
+          items
+            .filter((x): x is string => typeof x === "string" && x.trim().length > 0)
+            .map(x => x.trim())
+            .join("\n\n");
+
+        const combined: SynthesisResponse = {
+          ...part1,
+          ...part2,
+          topicType: part1.topicType || part2.topicType || "academic_field",
+          definition: part1.definition || part2.definition,
+          overview: joinParas(part1.overview_paragraph_1, part1.overview_paragraph_2, part1.overview_paragraph_3) || part1.overview || part2.overview,
+          howItWorks: joinParas(part1.howItWorks_paragraph_1, part1.howItWorks_paragraph_2) || part1.howItWorks || part2.howItWorks,
+          pastSummary: joinParas(part1.pastSummary_paragraph_1, part1.pastSummary_paragraph_2) || part1.pastSummary || part2.pastSummary,
+          presentAndContributors: joinParas(part1.presentAndContributors_paragraph_1, part1.presentAndContributors_paragraph_2) || part1.presentAndContributors || part2.presentAndContributors,
+          futureOutlook: joinParas(part1.futureOutlook_paragraph_1, part1.futureOutlook_paragraph_2) || part1.futureOutlook || part2.futureOutlook,
+        };
+
+        if (isValidSynthesis(combined)) {
+          parsed = combined;
           break;
         } else {
           lastError = `Validation failed on attempt ${attempt}: missing or invalid required research fields.`;

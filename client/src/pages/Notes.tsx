@@ -174,6 +174,15 @@ export default function Notes() {
     onError: caught => setError(caught.message)
   });
 
+  const deleteRevision = trpc.revision.delete.useMutation({
+    onSuccess: () => {
+      utils.revision.list.invalidate();
+      setSelectedRevisionId(null);
+      setError(null);
+    },
+    onError: caught => setError(caught.message)
+  });
+
   const addSticky = trpc.notes.addSticky.useMutation({
     onSuccess: () => {
       if (selectedNote) utils.notes.get.invalidate({ noteId: selectedNote });
@@ -212,9 +221,13 @@ export default function Notes() {
     }
   }, [filteredRevisions, selectedRevisionId]);
 
-  // Read URL query parameters for subjectId and mode
+  // Read URL query parameters for documentId, subjectId, and mode
   useEffect(() => {
     const params = new URLSearchParams(search);
+    const docParam = params.get("documentId");
+    if (docParam) {
+      setDocumentId(docParam);
+    }
     const sub = params.get("subjectId");
     if (sub) {
       setSubjectId(sub);
@@ -380,8 +393,11 @@ export default function Notes() {
     revision
   ]);
 
-  // Identify active document for grounded Q&A
-  const currentDocId = active?.documentId || (documentId ? Number(documentId) : null);
+  // Identify active document for grounded Q&A (strictly mode-aware so Revision never mixes with Notes!)
+  const currentDocId =
+    mode === "revision"
+      ? (activeRevision?.documentId || (documentId ? Number(documentId) : null))
+      : (active?.documentId || (documentId ? Number(documentId) : null));
   const currentDoc = documents.data?.find(d => d.id === currentDocId);
 
   // Formatting payloads
@@ -679,33 +695,48 @@ export default function Notes() {
                       const isSelected = item.id === selectedRevisionId;
                       const sub = item.subjectId ? subjectMap.get(item.subjectId) : null;
                       return (
-                        <button
+                        <div
                           key={item.id}
-                          type="button"
                           onClick={() => setSelectedRevisionId(item.id)}
-                          className={`w-full min-w-0 max-w-full overflow-hidden rounded-2xl p-3 text-left transition ${
+                          className={`group relative cursor-pointer w-full min-w-0 max-w-full overflow-hidden rounded-2xl p-3 text-left transition ${
                             isSelected
                               ? "border border-[#A070A1] bg-[#F8E7E7] shadow-sm"
                               : "border border-transparent bg-[#FDF3F3]/60 hover:bg-[#FDF3F3]"
                           }`}
                         >
-                          {sub && (
-                            <span
-                              className="mb-1.5 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9.5px] font-bold text-white shadow-2xs"
-                              style={{ backgroundColor: sub.color }}
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              {sub && (
+                                <span
+                                  className="mb-1.5 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9.5px] font-bold text-white shadow-2xs"
+                                  style={{ backgroundColor: sub.color }}
+                                >
+                                  <span className="h-1.5 w-1.5 rounded-full bg-white/70" />
+                                  {sub.name}
+                                </span>
+                              )}
+                              <p className="line-clamp-2 break-words text-[13px] font-semibold text-[#724060]">
+                                {item.title}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              title="Delete Revision Guide"
+                              onClick={e => {
+                                e.stopPropagation();
+                                deleteRevision.mutate({ revisionId: item.id });
+                              }}
+                              disabled={deleteRevision.isPending}
+                              className="shrink-0 rounded-lg p-1.5 text-rose-600 hover:bg-rose-100/80 transition"
                             >
-                              <span className="h-1.5 w-1.5 rounded-full bg-white/70" />
-                              {sub.name}
-                            </span>
-                          )}
-                          <p className="line-clamp-2 break-words text-[13px] font-semibold text-[#724060]">
-                            {item.title}
-                          </p>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                           <div className="mt-1.5 flex min-w-0 items-center justify-between gap-2 text-[11px] text-[#A070A1]">
                             <span className="shrink-0 capitalize">Revision Guide</span>
                             <span className="min-w-0 truncate">{item.scopeLabel}</span>
                           </div>
-                        </button>
+                        </div>
                       );
                     })
                   ) : (
@@ -1044,24 +1075,34 @@ export default function Notes() {
                       )}
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        generateRevision.mutate({
-                          title: activeRevision.title || payloadTitle,
-                          topic: null,
-                          subjectId: subjectId ? Number(subjectId) : null,
-                          documentId: activeRevision.documentId || (currentDocId ? Number(currentDocId) : null),
-                          scopeType: scopeType,
-                          scopeLabel: activeRevision.scopeLabel || scopeLabel || payloadTitle,
-                        });
-                      }}
-                      disabled={generateRevision.isPending}
-                      className="inline-flex h-9 w-full sm:w-auto items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#724060] to-[#8d4774] px-4 text-[12px] font-bold text-white shadow-sm transition hover:opacity-95 disabled:opacity-50"
-                    >
-                      <Zap className="h-3.5 w-3.5 shrink-0 fill-amber-300 text-amber-300" />
-                      <span className="truncate">{generateRevision.isPending ? "Synthesizing Full Solutions & Formulas…" : "Re-Generate High-Yield Revision Guide"}</span>
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <MorphCopyButton
+                        text={revisionSpeechText}
+                        label="Copy Guide"
+                      />
+                      <HoldToDeleteButton
+                        label="Hold to delete"
+                        onConfirm={() => deleteRevision.mutate({ revisionId: activeRevision.id })}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          generateRevision.mutate({
+                            title: activeRevision.title || payloadTitle,
+                            topic: null,
+                            subjectId: subjectId ? Number(subjectId) : null,
+                            documentId: activeRevision.documentId || (documentId ? Number(documentId) : null),
+                            scopeType: scopeType,
+                            scopeLabel: activeRevision.scopeLabel || scopeLabel || payloadTitle,
+                          });
+                        }}
+                        disabled={generateRevision.isPending}
+                        className="inline-flex h-9 w-full sm:w-auto items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#724060] to-[#8d4774] px-4 text-[12px] font-bold text-white shadow-sm transition hover:opacity-95 disabled:opacity-50"
+                      >
+                        <Zap className="h-3.5 w-3.5 shrink-0 fill-amber-300 text-amber-300" />
+                        <span className="truncate">{generateRevision.isPending ? "Synthesizing Full Solutions & Formulas…" : "Re-Generate High-Yield Revision Guide"}</span>
+                      </button>
+                    </div>
                   </div>
 
                   <h2 className="mt-4 break-words text-[22px] sm:text-[28px] font-bold tracking-tight text-[#724060]">

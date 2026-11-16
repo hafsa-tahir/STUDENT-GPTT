@@ -466,7 +466,9 @@ var ENV = {
   groqApiKeys: (process.env.GROQ_API_KEYS ?? process.env.GROQ_API_KEY ?? "").split(",").map((k) => k.trim()).filter(Boolean),
   geminiApiKeys: (process.env.GEMINI_API_KEYS ?? process.env.GEMINI_API_KEY ?? "").split(",").map((k) => k.trim()).filter((k) => k.length > 10 && (k.startsWith("AIzaSy") || k.startsWith("AQ."))),
   serpApiKey: process.env.SERPAPI_KEY ?? "",
-  youtubeApiKey: process.env.YOUTUBE_DATA_API_KEY ?? ""
+  youtubeApiKey: process.env.YOUTUBE_DATA_API_KEY ?? "",
+  customModelApiUrl: process.env.CUSTOM_MODEL_API_URL ?? "https://hafsatahir69-studentgpt-server.hf.space",
+  customModelApiKey: process.env.CUSTOM_MODEL_API_KEY ?? "studentgpt-custom-lora"
 };
 
 // server/db.ts
@@ -1364,6 +1366,8 @@ import { z as z3 } from "zod";
 import { and as and2, asc as asc2, desc as desc2, eq as eq2 } from "drizzle-orm";
 
 // server/_core/llm.ts
+import fs4 from "node:fs";
+import path5 from "node:path";
 var ensureArray = (value) => Array.isArray(value) ? value : [value];
 var normalizeContentPart = (part) => {
   if (typeof part === "string") {
@@ -1481,7 +1485,7 @@ var fetchWithBackoff = async (url, init, retryProviderErrors = true) => {
     try {
       const response = await fetch(url, {
         ...init,
-        signal: init.signal || AbortSignal.timeout(45e3)
+        signal: init.signal || AbortSignal.timeout(18e4)
       });
       if (response.ok || attempt === 2 || !retryProviderErrors || !shouldRetryProviderStatus(response.status)) {
         return response;
@@ -1510,10 +1514,40 @@ var fetchWithBackoff = async (url, init, retryProviderErrors = true) => {
   }
   throw lastError instanceof Error ? lastError : new Error("LLM request failed after exhausting retries");
 };
-function getProviderCandidates(requestedModel) {
+var deadCustomUrl = "";
+function resolveCustomModelUrl() {
+  try {
+    const endpointFile = path5.resolve(process.cwd(), "model-training", "active_endpoint.txt");
+    if (fs4.existsSync(endpointFile)) {
+      const url = fs4.readFileSync(endpointFile, "utf-8").trim();
+      if (url.startsWith("http")) {
+        const clean = url.replace(/\/$/, "");
+        const resolved = clean.endsWith("/v1/chat/completions") ? clean : `${clean}/v1/chat/completions`;
+        if (resolved !== deadCustomUrl) return resolved;
+      }
+    }
+  } catch {
+  }
+  if (ENV.customModelApiUrl && ENV.customModelApiUrl.trim().startsWith("http")) {
+    const clean = ENV.customModelApiUrl.trim().replace(/\/$/, "");
+    const resolved = clean.endsWith("/v1/chat/completions") ? clean : `${clean}/v1/chat/completions`;
+    if (resolved !== deadCustomUrl) return resolved;
+  }
+  return "";
+}
+function getProviderCandidates(requestedModel, _isStructuredJson = false) {
   const candidates = [];
+  const customUrl = resolveCustomModelUrl();
+  if (customUrl) {
+    candidates.push({
+      name: "StudentGPT-7B-Academic-Tutor (Custom LoRA)",
+      url: customUrl,
+      key: ENV.customModelApiKey || "studentgpt-custom-lora",
+      model: "StudentGPT-7B-Academic-Tutor"
+    });
+  }
   if (ENV.groqApiKeys.length > 0) {
-    const groqModels = requestedModel && (requestedModel.includes("qwen") || requestedModel.includes("gpt-oss") || requestedModel.includes("llama")) ? [requestedModel] : ["qwen/qwen3.8-27b", "openai/gpt-oss-120b"];
+    const groqModels = requestedModel && (requestedModel.includes("qwen") || requestedModel.includes("gpt-oss") || requestedModel.includes("llama")) ? [requestedModel] : ["qwen/qwen3.8-27b", "openai/gpt-oss-120b", "openai/gpt-oss-20b"];
     for (const key of ENV.groqApiKeys) {
       for (const m of groqModels) {
         candidates.push({
@@ -1526,15 +1560,17 @@ function getProviderCandidates(requestedModel) {
     }
   }
   if (ENV.geminiApiKeys.length > 0) {
-    const geminiModel = requestedModel && requestedModel.includes("gemini") ? requestedModel : "gemini-3.8-flash";
+    const geminiModels = requestedModel && (requestedModel.includes("gemini") || requestedModel.includes("gemma")) ? [requestedModel] : ["gemini-3-flash-preview", "gemini-3.1-flash-lite-preview", "gemma-4-31b-it", "gemma-4-26b-a4b-it"];
     for (let index2 = 0; index2 < ENV.geminiApiKeys.length; index2++) {
       const key = ENV.geminiApiKeys[index2];
-      candidates.push({
-        name: `Gemini (Key #${index2 + 1} - ${geminiModel})`,
-        url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-        key,
-        model: geminiModel
-      });
+      for (const gm of geminiModels) {
+        candidates.push({
+          name: `Gemini (Key #${index2 + 1} - ${gm})`,
+          url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+          key,
+          model: gm
+        });
+      }
     }
   }
   if (ENV.openrouterApiKey) {
@@ -1567,6 +1603,66 @@ var assertApiKey = () => {
     throw new Error("No LLM API keys configured. Please add OPENROUTER_API_KEY, GROQ_API_KEYS, or GEMINI_API_KEYS to .env.");
   }
 };
+var customGpuLock = Promise.resolve();
+async function withCustomGpuLock(fn) {
+  const prev = customGpuLock;
+  let release;
+  customGpuLock = new Promise((resolve) => {
+    release = resolve;
+  });
+  await prev;
+  try {
+    return await fn();
+  } finally {
+    release();
+  }
+}
+async function callGradioZeroGpuSpace(rawUrl, messages2, maxTokens, temperature) {
+  const baseUrl = rawUrl.replace(/\/v1\/chat\/completions$/, "").replace(/\/$/, "");
+  for (const prefix of ["/gradio_api/call/predict", "/call/predict"]) {
+    try {
+      const postResp = await fetch(`${baseUrl}${prefix}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          data: [JSON.stringify(messages2), maxTokens, temperature]
+        }),
+        signal: AbortSignal.timeout(15e3)
+      });
+      if (!postResp.ok) continue;
+      const postJson = await postResp.json();
+      if (!postJson?.event_id) continue;
+      const streamResp = await fetch(`${baseUrl}${prefix}/${postJson.event_id}`, {
+        signal: AbortSignal.timeout(95e3)
+      });
+      if (!streamResp.ok) continue;
+      const sseText = await streamResp.text();
+      const lines = sseText.split("\n");
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].startsWith("event: complete") && lines[i + 1]?.startsWith("data:")) {
+          const dataArr = JSON.parse(lines[i + 1].slice(5).trim());
+          const replyText = Array.isArray(dataArr) && typeof dataArr[0] === "string" ? dataArr[0] : "";
+          if (replyText) {
+            return {
+              id: `hf-zerogpu-${Date.now()}`,
+              created: Math.floor(Date.now() / 1e3),
+              model: "StudentGPT-7B-ZeroGPU",
+              choices: [
+                {
+                  index: 0,
+                  message: { role: "assistant", content: replyText },
+                  finish_reason: "stop"
+                }
+              ]
+            };
+          }
+        }
+      }
+    } catch {
+    }
+  }
+  return null;
+}
 async function invokeLLM(params) {
   assertApiKey();
   const {
@@ -1617,7 +1713,10 @@ async function invokeLLM(params) {
   if (normalizedResponseFormat) {
     payload.response_format = normalizedResponseFormat;
   }
-  const candidates = getProviderCandidates(model);
+  const isStructuredJson = Boolean(
+    normalizedResponseFormat && (normalizedResponseFormat.type === "json_object" || normalizedResponseFormat.type === "json_schema")
+  );
+  const candidates = getProviderCandidates(model, isStructuredJson);
   let lastError = "LLM invoke failed";
   for (const candidate of candidates) {
     const requestPayload = {
@@ -1628,8 +1727,39 @@ async function invokeLLM(params) {
       delete requestPayload.reasoning;
       delete requestPayload.thinking;
     }
+    if (candidate.name.startsWith("Groq") || candidate.model.includes("gpt-oss") || candidate.model.includes("gemma-4")) {
+      delete requestPayload.response_format;
+      const requestedMax = typeof requestPayload.max_tokens === "number" ? requestPayload.max_tokens : 4096;
+      requestPayload.max_tokens = Math.max(requestedMax, 4096);
+    }
+    if (candidate.model.includes("StudentGPT")) {
+      const requestedMax = typeof requestPayload.max_tokens === "number" ? requestPayload.max_tokens : 1200;
+      requestPayload.max_tokens = Math.min(requestedMax, 1250);
+    }
     try {
-      const response = await fetchWithBackoff(
+      if (candidate.url.includes(".hf.space")) {
+        const gradioData = await withCustomGpuLock(
+          () => callGradioZeroGpuSpace(
+            candidate.url,
+            requestPayload.messages,
+            typeof requestPayload.max_tokens === "number" ? requestPayload.max_tokens : 1500,
+            typeof requestPayload.temperature === "number" ? requestPayload.temperature : 0.3
+          )
+        );
+        if (gradioData && gradioData.choices?.[0]?.message) {
+          if (isStructuredJson) {
+            const rawStr = typeof gradioData.choices[0].message.content === "string" ? gradioData.choices[0].message.content : "";
+            const parsedCheck = safeParseJSON(rawStr, {});
+            if (parsedCheck && typeof parsedCheck === "object" && Object.keys(parsedCheck).length > 0) {
+              gradioData.choices[0].message.content = JSON.stringify(parsedCheck);
+              return gradioData;
+            }
+          } else {
+            return gradioData;
+          }
+        }
+      }
+      const doFetch = () => fetchWithBackoff(
         candidate.url,
         {
           method: "POST",
@@ -1639,11 +1769,24 @@ async function invokeLLM(params) {
           },
           body: JSON.stringify(requestPayload)
         },
-        true
+        !candidate.model.includes("StudentGPT")
       );
+      const response = candidate.model.includes("StudentGPT") ? await withCustomGpuLock(doFetch) : await doFetch();
       if (response.ok) {
         const data = await response.json();
         if (data && Array.isArray(data.choices) && data.choices.length > 0 && data.choices[0]?.message) {
+          if (typeof data.choices[0].message.content === "string") {
+            data.choices[0].message.content = data.choices[0].message.content.replace(/<think>[\s\S]*?<\/think>/gi, "").replace(/<thought>[\s\S]*?<\/thought>/gi, "").trim();
+          }
+          if (isStructuredJson) {
+            const rawStr = typeof data.choices[0].message.content === "string" ? data.choices[0].message.content : "";
+            const parsedCheck = safeParseJSON(rawStr, {});
+            if (!parsedCheck || typeof parsedCheck === "object" && Object.keys(parsedCheck).length === 0) {
+              console.warn(`Provider ${candidate.name} returned unparseable or empty JSON; trying next candidate...`);
+              continue;
+            }
+            data.choices[0].message.content = JSON.stringify(parsedCheck);
+          }
           return data;
         }
         console.warn(`Provider ${candidate.name} returned response without valid choices array.`);
@@ -1652,6 +1795,9 @@ async function invokeLLM(params) {
       lastError = `[${candidate.name}] failed: ${response.status} ${response.statusText} \u2013 ${errorText}`;
       console.warn(`Provider ${candidate.name} failed with ${response.status}; trying next provider candidate...`);
     } catch (err) {
+      if (candidate.model.includes("StudentGPT")) {
+        deadCustomUrl = candidate.url;
+      }
       lastError = `[${candidate.name}] error: ${err.message}`;
       console.warn(`Provider ${candidate.name} encountered error; trying next candidate...`);
     }
@@ -1765,87 +1911,42 @@ function buildFallbackResult(params) {
     });
   } else if (jsonSchemaName === "revision_guide") {
     fallbackText = JSON.stringify({
-      overview: `High-yield comprehensive revision guide for ${topicName}. ${realSentences[0] || "Structured for active recall, mathematical derivations, and concept mastery."}`,
+      oneLineSummary: realSentences[0] || `High-yield synthesis of ${topicName} covering core definitions, principles, and key takeaways.`,
+      overview: `High-yield comprehensive revision guide for ${topicName}. ${realSentences.slice(0, 3).join(" ") || "Structured for active recall and concept mastery."}`,
+      keyDefinitions: realSentences.slice(0, 4).map((s, idx) => ({
+        term: `${topicName} \u2014 Concept ${idx + 1}`,
+        definition: s,
+        memoryTip: `Focus on the core mechanism described in ${topicName}.`
+      })),
+      formulaBank: [],
       blocks: [
         {
-          title: `Block 1: Foundational Principles & Definitions`,
-          focus: realSentences[1] || `Master fundamental terminology, physical rules, and baseline models`,
-          coreSummary: realSentences[0] || `${topicName} establishes foundational physical concepts governed by formal theoretical relations. Review the starting conditions and geometric definitions before working through mathematical derivations.`,
-          keyFormula: `$$\\vec{E} = \\frac{1}{4\\pi\\varepsilon_0} \\frac{q}{r^2} \\hat{r}$$`,
-          keyTakeaways: [
-            realSentences[2] || `Field lines originate on positive charges and terminate on negative charges.`,
-            realSentences[3] || `The local density of field lines is directly proportional to field magnitude.`,
-            `Field lines can never intersect at any point in space.`
-          ],
-          questions: [
-            {
-              question: realSentences[2] ? `What is the physical significance of: "${realSentences[2]}"?` : `Why can electric field lines never cross?`,
-              answer: `If two field lines crossed, the electric field vector at the intersection point would point in two different directions simultaneously, which is physically impossible. Therefore, the field at every point is unique and tangent to the field line.`,
-              examTrap: `Confusing field line density with the number of charges; field line density represents electric field strength E.`
-            },
-            {
-              question: realSentences[3] ? `How is "${realSentences[3].slice(0, 60)}..." derived and applied?` : `What is the electric dipole moment and its direction?`,
-              answer: `The electric dipole moment is defined as p = q * d, directed from the negative charge (-q) to the positive charge (+q). It quantifies the system's polarity and response to external fields.`,
-              examTrap: `In chemistry, dipole arrows often point from + to -, but in physics, the dipole moment vector p strictly points from negative to positive.`
-            }
-          ],
+          title: `Block 1: Foundational Principles of ${topicName}`,
+          focus: realSentences[1] || `Master fundamental terminology and baseline models in ${topicName}`,
+          coreSummary: realSentences.slice(0, 3).join(" ") || `${topicName} establishes foundational concepts governed by formal theoretical relations.`,
+          keyFormula: "",
+          keyTakeaways: getBullets(0, 4, topicName),
           commonMistakes: [
-            `Forgetting that field lines always meet conductive surfaces at right angles (90 degrees).`
-          ]
+            `Review all definitions and boundary conditions directly from ${topicName}.`
+          ],
+          mnemonic: `Connect each definition in ${topicName} to its practical application.`
         },
         {
-          title: `Block 2: Governing Equations & Quantitative Derivations`,
-          focus: realSentences[4] || `Derive and apply on-axis approximations and energy formulations`,
-          coreSummary: realSentences[4] || `For an electric dipole along its axis (z >> d), the electric field falls off as 1/z^3, which is significantly faster than the 1/r^2 inverse-square law for an isolated point charge.`,
-          keyFormula: `$$E_{\\text{axis}} \\approx \\frac{1}{4\\pi\\varepsilon_0} \\frac{2p}{z^3}, \\quad \\tau = \\vec{p} \\times \\vec{E}, \\quad U = -\\vec{p} \\cdot \\vec{E}$$`,
-          keyTakeaways: [
-            `On-axis dipole field magnitude is E = 2kp / z^3 for z >> d.`,
-            `External torque tau = p x E rotates the dipole into alignment with E.`,
-            `Potential energy is minimized at U = -pE when parallel (theta = 0).`
-          ],
-          questions: [
-            {
-              question: `How does the electric field of a dipole scale with distance z compared to a monopole?`,
-              answer: `A dipole field scales as 1/z^3 (inverse-cube), whereas a single charge field scales as 1/z^2. The opposite charges partially cancel each other at large distances, causing the field to decay more rapidly.`,
-              examTrap: `Applying the 1/r^2 formula to dipole problems instead of the 1/z^3 approximation.`
-            },
-            {
-              question: `What is the net force and net torque on an electric dipole in a uniform electric field?`,
-              answer: `Net force is zero because equal and opposite forces (+qE and -qE) cancel out. However, net torque is tau = p x E = p*E*sin(theta), causing rotation until aligned with the field.`,
-              examTrap: `Assuming net torque is zero just because net force is zero; equal and opposite forces create a couple.`
-            }
-          ],
+          title: `Block 2: Core Mechanisms & Analysis in ${topicName}`,
+          focus: realSentences[4] || `Analyze primary workflows and operational rules`,
+          coreSummary: realSentences.slice(3, 6).join(" ") || `Detailed breakdown of the primary mechanisms and analytical methods in ${topicName}.`,
+          keyFormula: "",
+          keyTakeaways: getBullets(4, 4, topicName),
           commonMistakes: [
-            `Neglecting the cross product in torque (tau = p x E); torque is a vector perpendicular to both p and E.`
-          ]
-        },
-        {
-          title: `Block 3: Practical Analysis & Boundary Conditions`,
-          focus: realSentences[7] || `Evaluate boundary behaviors, work done in rotation, and stability`,
-          coreSummary: realSentences[7] || `Work done by an external agent to rotate a dipole from theta_i to theta_f is W_ext = delta U = -pE(cos theta_f - cos theta_i). Stable equilibrium occurs at theta = 0, unstable at theta = 180 degrees.`,
-          keyFormula: `$$W = -\\Delta U = -(-pE\\cos\\theta_f - (-pE\\cos\\theta_i))$$`,
-          keyTakeaways: [
-            `Stable equilibrium: dipole is parallel to E (theta = 0, U = -pE).`,
-            `Unstable equilibrium: dipole is antiparallel to E (theta = 180 deg, U = +pE).`,
-            `Maximum torque occurs when dipole is perpendicular to field (theta = 90 deg, tau = pE).`
+            `Avoid skipping intermediate steps when analyzing problems in ${topicName}.`
           ],
-          questions: [
-            {
-              question: `How much work is required to rotate an electric dipole 180 degrees from stable to unstable equilibrium?`,
-              answer: `Work done W = U_final - U_initial = (+pE) - (-pE) = 2pE. The dipole moves against the restoring torque throughout the rotation.`,
-              examTrap: `Sign error: forgetting that U = -p . E has a negative sign in the definition.`
-            }
-          ],
-          commonMistakes: [
-            `Confusing stable equilibrium (minimum potential energy) with unstable equilibrium (maximum potential energy).`
-          ]
+          mnemonic: `Verify every step against the core principles of ${topicName}.`
         }
       ],
       selfCheck: [
-        `Can I state and sketch all 5 properties of electric field lines from memory?`,
-        `Can I derive why E drops off as 1/z^3 for an on-axis dipole using the binomial expansion?`,
-        `Can I calculate the torque and potential energy for any arbitrary angle theta?`,
-        `Can I explain why a dipole experiences zero net force but nonzero torque in a uniform field?`
+        `Can I define the primary concepts of ${topicName} from memory?`,
+        `Can I explain the main mechanisms and workflows covered in ${topicName}?`,
+        `Can I summarize the key takeaways of ${topicName} in my own words?`
       ]
     });
   } else {
@@ -1960,9 +2061,66 @@ async function listLLMModels() {
   }
   return await response.json();
 }
+function sanitizeLatexAndNewlinesInJSON(input) {
+  let out = "";
+  let inString = false;
+  let i = 0;
+  while (i < input.length) {
+    const ch = input[i];
+    if (!inString) {
+      if (ch === '"') {
+        inString = true;
+      }
+      out += ch;
+      i++;
+      continue;
+    }
+    if (ch === '"') {
+      inString = false;
+      out += ch;
+      i++;
+      continue;
+    }
+    if (ch === "\n") {
+      out += "\\n";
+      i++;
+      continue;
+    }
+    if (ch === "\r") {
+      i++;
+      continue;
+    }
+    if (ch === "	") {
+      out += "\\t";
+      i++;
+      continue;
+    }
+    if (ch === "\\") {
+      const next = input[i + 1] || "";
+      const rest = input.slice(i + 1, i + 12);
+      if (/^(frac|forall|tau|times|text|theta|tan|to\b|beta|bar|begin|bf\b|bm\b|nabla|neq|nu\b|not\b|rho|right|rightarrow|Rightarrow)/.test(rest)) {
+        out += "\\\\";
+        i++;
+        continue;
+      }
+      if (next === '"' || next === "\\" || next === "/" || next === "b" || next === "f" || next === "n" || next === "r" || next === "t" || next === "u" && /^[0-9a-fA-F]{4}/.test(input.slice(i + 2, i + 6))) {
+        out += ch + next;
+        i += 2;
+        continue;
+      }
+      out += "\\\\";
+      i++;
+      continue;
+    }
+    out += ch;
+    i++;
+  }
+  return out;
+}
 function repairTruncatedJSON(jsonStr) {
-  let str = jsonStr.trim();
+  let str = sanitizeLatexAndNewlinesInJSON(jsonStr.trim());
   if (!str.startsWith("{") && !str.startsWith("[")) return null;
+  str = str.replace(/\\+$/, "");
   let inString = false;
   let isEscaped = false;
   for (let i = 0; i < str.length; i++) {
@@ -1981,7 +2139,8 @@ function repairTruncatedJSON(jsonStr) {
   }
   str = str.replace(/,\s*$/, "");
   str = str.replace(/:\s*$/, ': ""');
-  str = str.replace(/,\s*("[^"]*")?\s*$/, "");
+  str = str.replace(/,\s*("[^"]*")\s*$/, "");
+  str = str.replace(/\{\s*("[^"]*")\s*$/, '{$1: ""');
   const stack = [];
   inString = false;
   isEscaped = false;
@@ -2018,27 +2177,28 @@ function safeParseJSON(raw, fallback) {
   if (cleaned.startsWith("```")) {
     cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
   }
+  const sanitized = sanitizeLatexAndNewlinesInJSON(cleaned);
   try {
-    return JSON.parse(cleaned);
+    return JSON.parse(sanitized);
   } catch {
-    const firstBrace = cleaned.indexOf("{");
-    const lastBrace = cleaned.lastIndexOf("}");
-    const firstBracket = cleaned.indexOf("[");
-    const lastBracket = cleaned.lastIndexOf("]");
+    const firstBrace = sanitized.indexOf("{");
+    const lastBrace = sanitized.lastIndexOf("}");
+    const firstBracket = sanitized.indexOf("[");
+    const lastBracket = sanitized.lastIndexOf("]");
     if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
       try {
-        return JSON.parse(cleaned.slice(firstBrace, lastBrace + 1));
+        return JSON.parse(sanitized.slice(firstBrace, lastBrace + 1));
       } catch {
       }
     }
     if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
       try {
-        return JSON.parse(cleaned.slice(firstBracket, lastBracket + 1));
+        return JSON.parse(sanitized.slice(firstBracket, lastBracket + 1));
       } catch {
       }
     }
     if (firstBrace !== -1) {
-      const fragment = cleaned.slice(firstBrace);
+      const fragment = sanitized.slice(firstBrace);
       const repaired = repairTruncatedJSON(fragment);
       if (repaired) {
         try {
@@ -2053,7 +2213,7 @@ function safeParseJSON(raw, fallback) {
 }
 
 // server/chatService.ts
-var MONTHLY_CHAT_LIMIT = 300;
+var MONTHLY_CHAT_LIMIT = 1e6;
 function requireDatabase(database3) {
   if (!database3) throw new Error("The database connection is not available.");
   return database3;
@@ -2579,22 +2739,31 @@ function text2(value) {
 async function studySource(userId, topic, documentId, scopeLabel) {
   const db = dbOrThrow(await getDb());
   if (!documentId) return `Topic: ${topic}`;
-  let document = await db.select().from(documents).where(and4(eq4(documents.id, documentId), eq4(documents.userId, userId), eq4(documents.status, "ready"))).limit(1);
-  if (!document[0]) {
-    document = await db.select().from(documents).where(and4(eq4(documents.id, documentId), eq4(documents.status, "ready"))).limit(1);
-  }
-  if (!document[0]) throw new Error("Document not found.");
+  const document = await db.select().from(documents).where(and4(eq4(documents.id, documentId), eq4(documents.userId, userId), eq4(documents.status, "ready"))).limit(1);
+  if (!document[0]) throw new Error("The selected PDF document could not be found.");
   const cleanDocName = document[0].originalName.replace(/\.[^/.]+$/, "").replace(/[_-]+/g, " ").trim();
   const isWhole = !scopeLabel || scopeLabel.toLowerCase() === "whole" || scopeLabel.toLowerCase().includes("complete");
   const cleanScope = isWhole ? "Complete Document" : scopeLabel;
-  let chunks = await db.select().from(documentChunks).where(eq4(documentChunks.documentId, documentId)).orderBy(asc3(documentChunks.chunkIndex)).limit(35);
-  let text4 = chunks.map((chunk) => chunk.content).join("\n\n").trim();
-  if (!text4) text4 = document[0].extractedText || "";
+  let text4 = (document[0].extractedText || "").trim();
+  if (!text4 || text4.length < 100) {
+    let chunks = await db.select().from(documentChunks).where(eq4(documentChunks.documentId, documentId)).orderBy(asc3(documentChunks.chunkIndex)).limit(45);
+    text4 = chunks.map((chunk) => chunk.content).join("\n\n").trim();
+  }
   const cleanRealText = text4.replace(/--\s*\d+\s*of\s*\d+\s*--/gi, "").trim();
-  return `Document: ${document[0].originalName} (${cleanDocName})
+  let sampledText = cleanRealText;
+  if (cleanRealText.length > 1e4) {
+    const mid = Math.floor(cleanRealText.length / 2);
+    sampledText = [
+      cleanRealText.slice(0, 3800),
+      cleanRealText.slice(Math.max(0, mid - 1700), mid + 1700),
+      cleanRealText.slice(-3e3)
+    ].join("\n\n---\n\n");
+  }
+  return `STRICT SOURCE BOUNDING: Generate questions ONLY from this exact document. Do NOT use any other topic or outside subject.
+Document: ${document[0].originalName} (${cleanDocName})
 Requested scope: ${cleanScope}
 
-${cleanRealText.slice(0, 3e4)}`;
+${sampledText}`;
 }
 function normalizeQuizQuestions(raw) {
   if (!raw || typeof raw !== "object") return [];
@@ -2646,42 +2815,44 @@ async function generateQuiz(userId, input) {
     }
   }
   if (effectiveSubjectId) await assertOwnedSubject(userId, effectiveSubjectId);
-  const count = input.questionCount ?? 5;
+  const count = Math.max(3, Math.min(15, Number(input.questionCount) || 5));
   const scope = input.scopeLabel || input.topic;
   const source = await studySource(userId, input.topic, input.documentId ?? void 0, scope);
-  const response = await invokeLLM({
-    messages: [{ role: "system", content: "Create academically accurate quiz questions from the supplied study source. Return JSON with a 'questions' array. Each question must have 'prompt', 'options' (array of 4 strings), 'correctAnswer', and 'explanation'." }, { role: "user", content: `Difficulty: ${input.difficulty}
+  const questions = [];
+  const maxBatches = Math.ceil(count / 5) + 1;
+  for (let batchIdx = 0; batchIdx < maxBatches && questions.length < count; batchIdx++) {
+    const needed = Math.min(5, count - questions.length);
+    const existingPrompts = questions.map((q) => q.prompt).join(" | ");
+    const avoidClause = existingPrompts ? `
+Do NOT repeat these questions: ${existingPrompts}` : "";
+    const sysPrompt = `You are a rigorous university exam author. Create EXACTLY ${needed} multiple-choice quiz questions strictly from the supplied study source. NEVER invent questions from another subject or outside document. Return ONLY a JSON object with a "questions" array containing EXACTLY ${needed} items. Each item must have "prompt", "options" (array of 4 strings), "correctAnswer" (must match one of the 4 options), and "explanation".`;
+    const usrPrompt = `Difficulty: ${input.difficulty}
 Requested ${input.scopeType ?? "topic"}: ${scope}
-Create up to ${count} multiple-choice questions, each with four options, one exact correctAnswer, and a concise explanation.
+REQUIRED QUESTION COUNT: Generate EXACTLY ${needed} multiple-choice questions strictly from the study source below.${avoidClause}
 
-${source}` }],
-    response_format: { type: "json_schema", json_schema: { name: "quiz", strict: true, schema: { type: "object", properties: { questions: { type: "array", minItems: Math.min(count, 3), maxItems: count, items: { type: "object", properties: { prompt: { type: "string" }, options: { type: "array", minItems: 4, maxItems: 4, items: { type: "string" } }, correctAnswer: { type: "string" }, explanation: { type: "string" } }, required: ["prompt", "options", "correctAnswer", "explanation"], additionalProperties: false } } }, required: ["questions"], additionalProperties: false } } },
-    maxTokens: 5e3
-  });
-  const raw = text2(response.choices[0]?.message.content);
-  const parsedRaw = safeParseJSON(raw, { questions: [] });
-  const questions = normalizeQuizQuestions(parsedRaw);
-  if (questions.length === 0) {
-    questions.push(
-      {
-        prompt: `What is a primary characteristic of computer systems in Information and Communication Technologies?`,
-        options: ["Diligence and High Speed", "Emotional Empathy", "Human Intuition", "Unlimited Biological Creativity"],
-        correctAnswer: "Diligence and High Speed",
-        explanation: "Computers excel in processing data with high speed, accuracy, diligence, and vast storage capacity."
-      },
-      {
-        prompt: `Which supercomputer was recorded as the fastest supercomputer on Earth in November 2024?`,
-        options: ["HPE's El Capitan", "Frontier", "Fugaku", "Summit"],
-        correctAnswer: "HPE's El Capitan",
-        explanation: "El Capitan delivers 1.74 exaflops of peak performance powered by HPE Cray EX architecture."
-      },
-      {
-        prompt: `What limitation applies to artificial intelligence systems processing raw input data?`,
-        options: ["Garbage in, garbage out principle", "Instant human empathy", "Zero electrical power usage", "Hardware immunity to bugs"],
-        correctAnswer: "Garbage in, garbage out principle",
-        explanation: "AI and software systems depend strictly on quality training data and human programming."
+${source}`;
+    try {
+      const response = await invokeLLM({
+        messages: [
+          { role: "system", content: sysPrompt },
+          { role: "user", content: usrPrompt }
+        ],
+        response_format: { type: "json_object" },
+        maxTokens: 1150
+      });
+      const raw = text2(response.choices[0]?.message.content);
+      const batchQuestions = normalizeQuizQuestions(safeParseJSON(raw, { questions: [] }));
+      for (const bq of batchQuestions) {
+        if (questions.length < count && !questions.some((existing) => existing.prompt === bq.prompt)) {
+          questions.push(bq);
+        }
       }
-    );
+    } catch (e) {
+      console.warn(`Quiz batch ${batchIdx + 1} failed:`, e);
+    }
+  }
+  if (questions.length === 0) {
+    throw new Error("Could not generate quiz questions from the selected document. Please try again.");
   }
   const db = dbOrThrow(await getDb());
   const inserted = await db.insert(quizzes).values({ userId, subjectId: input.subjectId ?? null, documentId: input.documentId ?? null, title: input.title, difficulty: input.difficulty, sourceType: input.documentId ? "document" : "topic" });
@@ -2723,14 +2894,22 @@ async function generateFlashcards(userId, input) {
   }
   if (effectiveSubjectId) await assertOwnedSubject(userId, effectiveSubjectId);
   const source = await studySource(userId, input.topic, input.documentId ?? void 0, input.scopeLabel || input.topic);
-  const response = await invokeLLM({ messages: [{ role: "system", content: "Create concise, high-value academic flashcards from the supplied source. Return JSON with a 'cards' array." }, { role: "user", content: `Create 8 flashcards with a direct question on the front and a concise correct answer on the back.
+  const response = await invokeLLM({
+    messages: [
+      { role: "system", content: "You are an academic flashcard author. Create 8 high-yield flashcards STRICTLY from the supplied study source. NEVER include concepts from any other document or outside subject. Return ONLY a valid JSON object with a 'cards' array where each item has 'front' and 'back'." },
+      { role: "user", content: `Create 8 flashcards with a clear question/concept on 'front' and a concise, accurate answer on 'back', strictly from this source:
 
-${source}` }], response_format: { type: "json_schema", json_schema: { name: "flashcards", strict: true, schema: { type: "object", properties: { cards: { type: "array", minItems: 4, maxItems: 8, items: { type: "object", properties: { front: { type: "string" }, back: { type: "string" } }, required: ["front", "back"], additionalProperties: false } } }, required: ["cards"], additionalProperties: false } } }, maxTokens: 2500 });
+${source}` }
+    ],
+    response_format: { type: "json_object" },
+    maxTokens: 2500
+  });
   const raw = text2(response.choices[0]?.message.content);
   const parsedRaw = safeParseJSON(raw, { cards: [] });
   const cards = normalizeFlashcards(parsedRaw);
-  if (cards.length === 0) throw new Error("Could not generate flashcards from this topic. Please try again.");
+  if (cards.length === 0) throw new Error("Could not generate flashcards from this document. Please try again.");
   const db = dbOrThrow(await getDb());
+  await db.delete(flashcards).where(eq4(flashcards.userId, userId));
   const created = [];
   for (const card of cards) {
     const result = await db.insert(flashcards).values({ userId, subjectId: effectiveSubjectId ?? null, documentId: input.documentId ?? null, front: card.front, back: card.back, sourceType: input.documentId ? "document" : "topic" });
@@ -2799,21 +2978,56 @@ async function searchDomain(query, domain, key) {
   if (typeof payload.error === "string") return [];
   return normaliseCommunityResults(payload);
 }
+function buildFallbackCommunityLinks(topic) {
+  const cleanTopic = topic.trim() || "Academic Topic";
+  const encodedReddit = encodeURIComponent(cleanTopic);
+  const quoraSlug = cleanTopic.replace(/\s+/g, "-");
+  return [
+    {
+      source: "Reddit",
+      title: `r/askscience \u2014 Scientific breakdown, theoretical foundations, and peer discussion on ${cleanTopic}`,
+      url: `https://www.reddit.com/r/askscience/search/?q=${encodedReddit}&restrict_sr=1`,
+      snippet: `In-depth explanations from domain researchers and graduate students covering the mechanisms, mathematical intuition, and common misconceptions surrounding ${cleanTopic}.`
+    },
+    {
+      source: "Quora",
+      title: `What are the most important foundational principles and real-world applications of ${cleanTopic}?`,
+      url: `https://www.quora.com/search?q=${encodeURIComponent(cleanTopic)}`,
+      snippet: `Detailed answers from university professors, engineers, and practitioners explaining how ${cleanTopic} works from first principles and how to study it effectively.`
+    },
+    {
+      source: "Reddit",
+      title: `r/GradSchool & Academic Threads \u2014 How students and researchers master ${cleanTopic}`,
+      url: `https://www.reddit.com/search/?q=${encodeURIComponent(cleanTopic + " explained study guide")}`,
+      snippet: `Community-curated textbook recommendations, lecture notes, problem-solving strategies, and exam preparation advice for mastering ${cleanTopic}.`
+    },
+    {
+      source: "Quora",
+      title: `What are the biggest misconceptions students have when learning ${cleanTopic}?`,
+      url: `https://www.quora.com/topic/${encodeURIComponent(quoraSlug)}`,
+      snippet: `Expert synthesis comparing theoretical models with empirical results, highlighting key distinctions and advanced research directions in ${cleanTopic}.`
+    }
+  ];
+}
 async function searchCommunityPerspectives(rawQuery) {
+  const query = rawQuery.replace(/^Develop a detailed student-ready understanding of\s*/i, "").replace(/:\s*foundational ideas.*/i, "").replace(/[^\w\s-]/g, " ").trim().slice(0, 100);
+  const cleanTopic = query || rawQuery.slice(0, 80).trim();
   try {
     const key = process.env.SERPAPI_KEY || ENV.serpApiKey;
-    if (!key) return [];
-    const query = rawQuery.replace(/^Develop a detailed student-ready understanding of\s*/i, "").replace(/:\s*foundational ideas.*/i, "").replace(/[^\w\s-]/g, " ").trim().slice(0, 100);
-    const responses = await Promise.allSettled([
-      searchDomain(query || rawQuery.slice(0, 80), "reddit.com", key),
-      searchDomain(query || rawQuery.slice(0, 80), "quora.com", key)
-    ]);
-    const available = responses.flatMap((response) => response.status === "fulfilled" ? response.value : []);
-    return available.slice(0, 8);
+    if (key) {
+      const responses = await Promise.allSettled([
+        searchDomain(cleanTopic, "reddit.com", key),
+        searchDomain(cleanTopic, "quora.com", key)
+      ]);
+      const available = responses.flatMap((response) => response.status === "fulfilled" ? response.value : []);
+      if (available.length > 0) {
+        return available.slice(0, 8);
+      }
+    }
   } catch (err) {
     console.warn("[Community Search Warning]", err);
-    return [];
   }
+  return buildFallbackCommunityLinks(cleanTopic);
 }
 
 // server/youtubeService.ts
@@ -3087,16 +3301,20 @@ Write an accurate, student-ready research synthesis for "${title}". Return ONLY 
 
 QUOTE RULE: Only include a quote if you are certain it is genuine and correctly attributed. If you are not certain, set "quote" to null.`;
 }
+function isTemplatePlaceholder(val) {
+  const t2 = val.trim();
+  return /^<[^>]{8,}>$/.test(t2) || t2.includes("<2-3 sentences") || t2.includes("<one of:");
+}
 function isValidSynthesis(data) {
   if (!data || typeof data !== "object") return false;
   const s = data;
-  if (!s.topicType || typeof s.topicType !== "string" || s.topicType.includes("<")) return false;
-  if (!s.definition || typeof s.definition !== "string" || s.definition.length < 15 || s.definition.includes("<")) return false;
-  if (!s.overview || typeof s.overview !== "string" || s.overview.length < 40 || s.overview.includes("<")) return false;
-  if (!s.howItWorks || typeof s.howItWorks !== "string" || s.howItWorks.length < 15 || s.howItWorks.includes("<")) return false;
-  if (!s.pastSummary || typeof s.pastSummary !== "string" || s.pastSummary.length < 15 || s.pastSummary.includes("<")) return false;
-  if (!s.presentAndContributors || typeof s.presentAndContributors !== "string" || s.presentAndContributors.length < 15 || s.presentAndContributors.includes("<")) return false;
-  if (!s.futureOutlook || typeof s.futureOutlook !== "string" || s.futureOutlook.length < 15 || s.futureOutlook.includes("<")) return false;
+  if (!s.topicType || typeof s.topicType !== "string") s.topicType = "academic_field";
+  if (!s.definition || typeof s.definition !== "string" || s.definition.length < 10 || isTemplatePlaceholder(s.definition)) return false;
+  if (!s.overview || typeof s.overview !== "string" || s.overview.length < 25 || isTemplatePlaceholder(s.overview)) return false;
+  if (!s.howItWorks || typeof s.howItWorks !== "string" || s.howItWorks.length < 10 || isTemplatePlaceholder(s.howItWorks)) return false;
+  if (!s.pastSummary || typeof s.pastSummary !== "string" || s.pastSummary.length < 10 || isTemplatePlaceholder(s.pastSummary)) return false;
+  if (!s.presentAndContributors || typeof s.presentAndContributors !== "string" || s.presentAndContributors.length < 10 || isTemplatePlaceholder(s.presentAndContributors)) return false;
+  if (!s.futureOutlook || typeof s.futureOutlook !== "string" || s.futureOutlook.length < 10 || isTemplatePlaceholder(s.futureOutlook)) return false;
   if (!Array.isArray(s.keyConcepts) || s.keyConcepts.length === 0) return false;
   if (!Array.isArray(s.studyQuestions) || s.studyQuestions.length === 0) return false;
   if (!Array.isArray(s.actionPlan) || s.actionPlan.length === 0) return false;
@@ -3114,23 +3332,126 @@ ${source.note ?? ""}`).join("\n\n") : "";
     let parsed = null;
     let modelUsed = "";
     let lastError = "";
+    const pass1Prompt = `Research title: ${title}
+Research question: ${loaded.brief.researchQuestion}
+${sourceNotes}
+
+Write a deeply detailed, university-level academic research narrative for "${title}". Each paragraph key below MUST be 4 to 5 full, detailed academic sentences!
+Return ONLY a valid JSON object with these exact keys:
+{
+  "topicType": "physical_object_or_phenomenon | natural_process | academic_field | technology_or_system | historical_event | concept_or_theory",
+  "definition": "A rigorous 4-sentence formal academic definition of ${title}, including its governing laws, core classifications, and mathematical/theoretical scope.",
+  "overview_paragraph_1": "Paragraph 1 (Foundations): 5 detailed sentences explaining the fundamental theory, origins, and core principles of ${title}.",
+  "overview_paragraph_2": "Paragraph 2 (Architecture & Equations): 5 detailed sentences explaining the governing mathematical relationships, structural properties, and physical/system behavior of ${title}.",
+  "overview_paragraph_3": "Paragraph 3 (Impact & Context): 5 detailed sentences explaining the broader scientific significance, empirical evidence, and real-world impact of ${title}.",
+  "howItWorks_paragraph_1": "Part 1 (Core Mechanism): 5 detailed sentences explaining step-by-step how ${title} forms, operates, or functions at a fundamental level.",
+  "howItWorks_paragraph_2": "Part 2 (Governing Dynamics): 5 detailed sentences explaining the boundary conditions, mathematical dynamics, and internal processes of ${title}.",
+  "pastSummary_paragraph_1": "Early History: 4 detailed sentences naming the foundational pioneers, key years, and early theoretical or experimental milestones of ${title}.",
+  "pastSummary_paragraph_2": "Modern Evolution: 4 detailed sentences tracing how ${title} evolved through 20th and 21st century breakthroughs.",
+  "presentAndContributors_paragraph_1": "Current State of the Art: 4 detailed sentences on contemporary research, active observatories/laboratories, and leading institutions studying ${title}.",
+  "presentAndContributors_paragraph_2": "Recent Breakthroughs: 4 detailed sentences on recent empirical discoveries, modern instrumentation, and active collaborations in ${title}.",
+  "futureOutlook_paragraph_1": "Open Questions: 4 detailed sentences on unresolved theoretical paradoxes and current scientific limitations in ${title}.",
+  "futureOutlook_paragraph_2": "Future Horizon: 4 detailed sentences on upcoming experiments, next-generation technologies, and projected research directions for ${title}."
+}`;
+    const pass2Prompt = `Research title: ${title}
+Research question: ${loaded.brief.researchQuestion}
+${sourceNotes}
+
+Write the structured conceptual foundations, research methodology, and mastery roadmap for "${title}".
+Return ONLY a valid JSON object with these exact keys:
+{
+  "quote": {
+    "text": "A genuine, famous quote by a pioneering scientist or scholar about ${title}",
+    "author": "Full name of the scientist/scholar",
+    "context": "Their credentials and historical context"
+  },
+  "keyConcepts": [
+    { "name": "Core Concept 1 of ${title}", "explanation": "Detailed 3-sentence technical explanation with governing principles." },
+    { "name": "Core Concept 2 of ${title}", "explanation": "Detailed 3-sentence technical explanation with governing principles." },
+    { "name": "Core Concept 3 of ${title}", "explanation": "Detailed 3-sentence technical explanation with governing principles." },
+    { "name": "Core Concept 4 of ${title}", "explanation": "Detailed 3-sentence technical explanation with governing principles." },
+    { "name": "Core Concept 5 of ${title}", "explanation": "Detailed 3-sentence technical explanation with governing principles." }
+  ],
+  "studyQuestions": [
+    "Deep analytical research question 1 about ${title}",
+    "Deep analytical research question 2 about ${title}",
+    "Deep analytical research question 3 about ${title}",
+    "Deep analytical research question 4 about ${title}"
+  ],
+  "actionPlan": [
+    "Step 1: Concrete study and derivation milestone for mastering ${title}",
+    "Step 2: Concrete analytical and problem-solving milestone for ${title}",
+    "Step 3: Concrete primary literature and empirical verification milestone for ${title}",
+    "Step 4: Concrete synthesis and application milestone for ${title}"
+  ],
+  "boardContent": {
+    "projectFocus": "One clear sentence defining the core mastery goal for ${title}",
+    "objectives": [
+      { "title": "Theoretical Foundation", "description": "Master the core governing laws and formal definitions of ${title}." },
+      { "title": "Mechanism & Architecture", "description": "Analyze the step-by-step operational processes and mathematical derivations of ${title}." },
+      { "title": "Applied Synthesis", "description": "Evaluate real-world implementations, empirical evidence, and open frontiers in ${title}." }
+    ],
+    "methodology": [
+      "Primary theoretical derivation and mathematical modeling of ${title}",
+      "Comparative analysis of empirical datasets and peer-reviewed literature on ${title}",
+      "Case-study evaluation of real-world engineering and scientific systems using ${title}"
+    ],
+    "applications": [
+      "Detailed real-world scientific or industrial application 1 of ${title}",
+      "Detailed real-world scientific or industrial application 2 of ${title}",
+      "Detailed real-world scientific or industrial application 3 of ${title}"
+    ],
+    "misconceptions": [
+      "Common misconception 1 about ${title} \u2014 and the rigorous scientific correction",
+      "Common misconception 2 about ${title} \u2014 and the rigorous scientific correction",
+      "Common misconception 3 about ${title} \u2014 and the rigorous scientific correction"
+    ],
+    "verificationChecklist": [
+      "Verify core equations and definitions against university textbooks and peer-reviewed journals",
+      "Cross-check historical dates and experimental milestones against primary archive papers"
+    ]
+  },
+  "limitations": [
+    "Boundary conditions and theoretical assumptions that must be verified when applying ${title}"
+  ]
+}`;
     for (let attempt = 1; attempt <= 2; attempt++) {
       try {
-        const response = await invokeLLM({
+        const resp1 = await invokeLLM({
           messages: [
             { role: "system", content: RESEARCH_SYSTEM_PROMPT },
-            { role: "user", content: prompt }
+            { role: "user", content: pass1Prompt }
           ],
-          temperature: 0.3,
+          temperature: 0.25,
           responseFormat: { type: "json_object" },
-          maxTokens: 4e3
+          maxTokens: 1200
         });
-        modelUsed = response.model;
-        const rawContent = content(response.choices[0]?.message.content);
-        const cleanedRaw = rawContent.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
-        const candidate = safeParseJSON(cleanedRaw, {});
-        if (isValidSynthesis(candidate)) {
-          parsed = candidate;
+        modelUsed = resp1.model;
+        const part1 = safeParseJSON(content(resp1.choices[0]?.message.content), {});
+        const resp2 = await invokeLLM({
+          messages: [
+            { role: "system", content: RESEARCH_SYSTEM_PROMPT },
+            { role: "user", content: pass2Prompt }
+          ],
+          temperature: 0.25,
+          responseFormat: { type: "json_object" },
+          maxTokens: 1200
+        });
+        const part2 = safeParseJSON(content(resp2.choices[0]?.message.content), {});
+        const joinParas = (...items) => items.filter((x) => typeof x === "string" && x.trim().length > 0).map((x) => x.trim()).join("\n\n");
+        const combined = {
+          ...part1,
+          ...part2,
+          topicType: part1.topicType || part2.topicType || "academic_field",
+          definition: part1.definition || part2.definition,
+          overview: joinParas(part1.overview_paragraph_1, part1.overview_paragraph_2, part1.overview_paragraph_3) || part1.overview || part2.overview,
+          howItWorks: joinParas(part1.howItWorks_paragraph_1, part1.howItWorks_paragraph_2) || part1.howItWorks || part2.howItWorks,
+          pastSummary: joinParas(part1.pastSummary_paragraph_1, part1.pastSummary_paragraph_2) || part1.pastSummary || part2.pastSummary,
+          presentAndContributors: joinParas(part1.presentAndContributors_paragraph_1, part1.presentAndContributors_paragraph_2) || part1.presentAndContributors || part2.presentAndContributors,
+          futureOutlook: joinParas(part1.futureOutlook_paragraph_1, part1.futureOutlook_paragraph_2) || part1.futureOutlook || part2.futureOutlook
+        };
+        if (isValidSynthesis(combined)) {
+          parsed = combined;
           break;
         } else {
           lastError = `Validation failed on attempt ${attempt}: missing or invalid required research fields.`;
@@ -3303,13 +3624,7 @@ function text3(value) {
 async function resolveOwnedSource(userId, input) {
   if (input.subjectId) await assertOwnedSubject(userId, input.subjectId);
   const db = database2(await getDb());
-  let docId = input.documentId;
-  if (!docId) {
-    const latestDoc = await db.select().from(documents).where(and6(eq6(documents.userId, userId), eq6(documents.status, "ready"))).orderBy(desc5(documents.createdAt)).limit(1);
-    if (latestDoc[0]) {
-      docId = latestDoc[0].id;
-    }
-  }
+  const docId = input.documentId;
   if (!docId) {
     const fallbackTopic = input.topic || input.scopeLabel || "Academic Subject";
     return {
@@ -3323,22 +3638,9 @@ async function resolveOwnedSource(userId, input) {
 Requested Scope: ${input.scopeType} \u2014 ${input.scopeLabel}`
     };
   }
-  let document = await db.select().from(documents).where(and6(eq6(documents.id, docId), eq6(documents.userId, userId), eq6(documents.status, "ready"))).limit(1);
+  const document = await db.select().from(documents).where(and6(eq6(documents.id, docId), eq6(documents.userId, userId), eq6(documents.status, "ready"))).limit(1);
   if (!document[0]) {
-    document = await db.select().from(documents).where(and6(eq6(documents.id, docId), eq6(documents.status, "ready"))).limit(1);
-  }
-  if (!document[0]) {
-    const fallbackTopic = input.topic || input.scopeLabel || "Academic Subject";
-    return {
-      docId: null,
-      docName: fallbackTopic,
-      originalName: fallbackTopic,
-      scopeLabel: input.scopeLabel || fallbackTopic,
-      scopeType: input.scopeType,
-      fullText: "",
-      promptContext: `Student Topic: ${fallbackTopic}
-Requested Scope: ${input.scopeType} \u2014 ${input.scopeLabel}`
-    };
+    throw new Error("The selected PDF document could not be found or is not ready.");
   }
   const rawName = document[0].originalName || "Document";
   const cleanDocName = rawName.replace(/\.[^/.]+$/, "").replace(/[_-]+/g, " ").trim();
@@ -3367,16 +3669,39 @@ Requested Scope: ${input.scopeType} \u2014 ${input.scopeLabel}`
       }).from(documentChunks).where(eq6(documentChunks.documentId, docId)).orderBy(asc4(documentChunks.chunkIndex)).limit(30);
     }
   }
-  let contentText = chunks.map((c) => c.content).join("\n\n").trim();
-  if (!contentText) {
-    contentText = document[0].extractedText || "";
+  let contentText = "";
+  const fullExtracted = (document[0].extractedText || "").trim();
+  if (isWhole && fullExtracted.length > 100) {
+    contentText = fullExtracted;
+  } else {
+    const mergedParts = [];
+    for (let idx = 0; idx < chunks.length; idx++) {
+      let chunkStr = chunks[idx].content.trim();
+      if (idx > 0 && mergedParts.length > 0) {
+        const prev = mergedParts[mergedParts.length - 1];
+        const tail = prev.slice(-220);
+        const overlapCheck = chunkStr.slice(0, 60);
+        const overlapPos = tail.indexOf(overlapCheck.slice(0, 25));
+        if (overlapPos !== -1) {
+          const overlapLen = tail.length - overlapPos;
+          chunkStr = chunkStr.slice(overlapLen).trim();
+        } else if (/^[a-z]{1,6}\s+/.test(chunkStr)) {
+          chunkStr = chunkStr.replace(/^[a-z]{1,6}\s+/, "");
+        }
+      }
+      if (chunkStr) mergedParts.push(chunkStr);
+    }
+    contentText = mergedParts.join("\n\n").trim();
+    if (!contentText) contentText = fullExtracted;
   }
-  contentText = contentText.replace(/--\s*\d+\s*of\s*\d+\s*--/gi, "").trim();
+  contentText = contentText.replace(/--\s*\d+\s*of\s*\d+\s*--/gi, "").replace(/\bD\s+E\s+F\s+I\s+N\s+I\s+T\s+I\s+O\s+N\b/g, "DEFINITION:").replace(/\bK\s+E\s+Y\s+F\s+O\s+R\s+M\s+U\s+L\s+A\b/g, "KEY FORMULA:").replace(/\bW\s+O\s+R\s+K\s+E\s+D\s+E\s+X\s+A\s+M\s+P\s+L\s+E\b/g, "WORKED EXAMPLE:").replace(/\bE\s+X\s+A\s+M\s+T\s+I\s+P\b/g, "EXAM TIP:").trim();
   const promptContext = `Document Name: ${document[0].originalName} (${cleanDocName})
-Requested Study Scope: ${input.scopeType} - ${isWhole ? "Complete Document (All Sections)" : input.scopeLabel}
+Requested Study Scope: ${input.scopeType} - ${isWhole ? "Complete Document From Start to Finish (A to Z)" : input.scopeLabel}
+
+STRICT BOUNDING RULE: You MUST generate notes ONLY from the provided document content below. Cover the ENTIRE document thoroughly from beginning to end (A to Z) without skipping any section, formula, derivation, or worked example. Do NOT invent outside topics.
 
 FULL DOCUMENT CONTENT (Read thoroughly from start to finish):
-${contentText.slice(0, 18e3)}`;
+${contentText.slice(0, 32e3)}`;
   return {
     docId,
     docName: cleanDocName,
@@ -3407,21 +3732,21 @@ function parseRealAcademicNotes(fullText, docName) {
   const paragraphs = clean.split(/\n\s*\n/).map((p) => p.replace(/\s+/g, " ").trim()).filter((p) => p.length > 35 && !p.toLowerCase().includes("student notes") && !/^\d+$/.test(p));
   const sections = [];
   const seenSentences = /* @__PURE__ */ new Set();
-  for (let i = 0; i < Math.min(paragraphs.length, 7); i++) {
+  for (let i = 0; i < Math.min(paragraphs.length, 10); i++) {
     const p = paragraphs[i];
-    const rawSentences = p.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter((s) => s.length > 20 && !seenSentences.has(s.toLowerCase()));
+    const rawSentences = p.split(/(?<=[.!?])\s+/).map((s) => s.replace(/^[a-z]{1,6}\s+/, "").trim()).filter((s) => s.length > 25 && !seenSentences.has(s.toLowerCase()));
     if (rawSentences.length === 0) continue;
     for (const s of rawSentences) {
       seenSentences.add(s.toLowerCase());
     }
-    const titleCandidate = rawSentences[0].replace(/[.!?]+$/, "").slice(0, 50).trim();
-    const heading = titleCandidate.length > 10 ? titleCandidate : `${docName} - Concept ${i + 1}`;
+    const secHeadingMatch = p.match(/\b(\d+\.\d+\s+[A-Za-z][A-Za-z\s&'-]{3,45})/);
+    const heading = secHeadingMatch ? secHeadingMatch[1].trim() : `${docName} \u2014 Section ${sections.length + 1}`;
     const explanation = rawSentences[0];
-    const bullets = rawSentences.slice(1, 6);
+    const bullets = rawSentences.slice(1, 7);
     sections.push({
       heading,
-      explanation: explanation.slice(0, 350),
-      bullets: (bullets.length > 0 ? bullets : [explanation]).map((b) => b.slice(0, 280))
+      explanation: explanation.slice(0, 450),
+      bullets: (bullets.length > 0 ? bullets : [explanation]).map((b) => b.slice(0, 320))
     });
   }
   if (sections.length < 3) {
@@ -3474,7 +3799,7 @@ function normalizeNotesContent(raw, source) {
       }
     }
   }
-  if (sections.length < 3 && source.fullText) {
+  if (sections.length === 0 && source.fullText) {
     sections = parseRealAcademicNotes(source.fullText, docName);
   }
   let revisionReminders = [];
@@ -3533,76 +3858,92 @@ Make sure every heading, definition, formula, and conceptual mechanism from the 
 ${source.promptContext}`;
   let content2;
   let modelUsed = "studentgpt-academic-engine";
-  try {
-    const response = await invokeLLM({
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
-      ],
-      response_format: {
-        type: "json_schema",
-        json_schema: {
-          name: "study_notes",
-          strict: true,
-          schema: {
-            type: "object",
-            properties: {
-              overview: { type: "string" },
-              sections: {
-                type: "array",
-                minItems: 4,
-                maxItems: 10,
-                items: {
-                  type: "object",
-                  properties: {
-                    heading: { type: "string" },
-                    explanation: { type: "string" },
-                    bullets: {
-                      type: "array",
-                      minItems: 2,
-                      maxItems: 8,
-                      items: { type: "string" }
-                    }
-                  },
-                  required: ["heading", "explanation", "bullets"],
-                  additionalProperties: false
-                }
-              },
-              revisionReminders: {
-                type: "array",
-                minItems: 3,
-                maxItems: 5,
-                items: { type: "string" }
-              }
-            },
-            required: ["overview", "sections", "revisionReminders"],
-            additionalProperties: false
+  const fullDocText = (source.fullText || "").trim();
+  const segmentSize = 3600;
+  const rawSegments = [];
+  if (fullDocText.length > segmentSize) {
+    for (let pos = 0; pos < Math.min(fullDocText.length, 25e3); pos += segmentSize) {
+      const slice = fullDocText.slice(pos, pos + segmentSize).trim();
+      if (slice.length > 80) rawSegments.push(slice);
+    }
+  } else if (fullDocText.length > 0) {
+    rawSegments.push(fullDocText);
+  }
+  if (rawSegments.length > 1) {
+    const mergedSections = [];
+    const mergedReminders = [];
+    let combinedOverview = "";
+    for (let idx = 0; idx < rawSegments.length; idx++) {
+      const segText = rawSegments[idx];
+      const segPrompt = `Document Name: ${source.originalName} (${source.docName})
+Part ${idx + 1} of ${rawSegments.length} (Exhaustive Word-by-Word Section Coverage):
+Read this part of the document completely. Capture EVERY heading, definition, constant, formula ($...$ and $$...$$), step-by-step derivation, and worked example in this part. Do NOT summarize briefly\u2014write detailed, textbook-quality notes!
+
+Return ONLY a valid JSON object with:
+- "overview": "${idx === 0 ? "Write a thorough 4-sentence academic overview of this document" : "Write a 2-sentence summary of this part"}"
+- "sections": Array of 2 to 4 exhaustive sections covering every topic in this part, each with:
+  * "heading": Specific section/topic title from the text
+  * "explanation": Detailed 4-to-6 sentence explanation explaining the theory, physical/logical intuition, and step-by-step derivations in this section
+  * "bullets": Array of 5 to 8 detailed, full-sentence bullet points containing every definition, formula, unit, worked example calculation, and exam tip from this section
+- "revisionReminders": Array of 2 active recall questions from this part
+
+DOCUMENT PART ${idx + 1} CONTENT:
+${segText}`;
+      try {
+        const segResp = await invokeLLM({
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: segPrompt }
+          ],
+          response_format: { type: "json_object" },
+          maxTokens: 1200
+        });
+        if (segResp?.model) modelUsed = segResp.model;
+        const parsedSeg = safeParseJSON(text3(segResp?.choices?.[0]?.message?.content), {});
+        const normalizedSeg = normalizeNotesContent(parsedSeg, source);
+        if (idx === 0 && normalizedSeg.overview) {
+          combinedOverview = normalizedSeg.overview;
+        }
+        for (const sec of normalizedSeg.sections) {
+          if (!mergedSections.some((existing) => existing.heading.toLowerCase() === sec.heading.toLowerCase())) {
+            mergedSections.push(sec);
           }
         }
-      },
-      maxTokens: 3e3
-    });
-    const parsedRaw = safeParseJSON(text3(response?.choices?.[0]?.message?.content), {});
-    content2 = normalizeNotesContent(parsedRaw, source);
-    if (response?.model) modelUsed = response.model;
-  } catch (err) {
-    console.warn("LLM invoke with json_schema failed in generateStudyNotes; retrying with standard JSON prompt:", err);
+        for (const rem of normalizedSeg.revisionReminders) {
+          if (mergedReminders.length < 6 && !mergedReminders.includes(rem)) {
+            mergedReminders.push(rem);
+          }
+        }
+      } catch (segErr) {
+        console.warn(`Segment ${idx + 1}/${rawSegments.length} failed in generateStudyNotes:`, segErr);
+      }
+    }
+    if (mergedSections.length > 0) {
+      content2 = {
+        overview: combinedOverview || `Exhaustive A-to-Z study notes for ${source.docName}, covering all ${rawSegments.length} parts of the document from start to finish.`,
+        sections: mergedSections,
+        revisionReminders: mergedReminders.length >= 2 ? mergedReminders : [
+          `Review all definitions, formulas, and derivations across ${source.docName}`,
+          `Re-work every solved problem from Part 1 through Part ${rawSegments.length} without looking at the solution`
+        ]
+      };
+    }
+  }
+  if (!content2) {
     try {
-      const fallbackResponse = await invokeLLM({
+      const response = await invokeLLM({
         messages: [
-          { role: "system", content: `${systemPrompt}
-
-CRITICAL: Respond with a valid JSON object matching the requested schema.` },
+          { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
         ],
         response_format: { type: "json_object" },
-        maxTokens: 3e3
+        maxTokens: 1250
       });
-      const parsedRaw = safeParseJSON(text3(fallbackResponse?.choices?.[0]?.message?.content), {});
+      const parsedRaw = safeParseJSON(text3(response?.choices?.[0]?.message?.content), {});
       content2 = normalizeNotesContent(parsedRaw, source);
-      if (fallbackResponse?.model) modelUsed = fallbackResponse.model;
-    } catch (secondErr) {
-      console.warn("Both LLM attempts failed in generateStudyNotes; using authentic document extractor:", secondErr);
+      if (response?.model) modelUsed = response.model;
+    } catch (err) {
+      console.warn("LLM invoke failed in generateStudyNotes; using authentic document extractor:", err);
       content2 = normalizeNotesContent({}, source);
     }
   }
@@ -3646,106 +3987,37 @@ async function generateRevisionGuide(userId, input) {
   if (!cleanTitle || cleanTitle.toLowerCase() === "revision: whole" || cleanTitle.includes(": whole")) {
     cleanTitle = `${source.docName} \u2014 Revision Guide`;
   }
+  const revContext = source.promptContext.slice(0, 14e3);
   const response = await invokeLLM({
     messages: [
       {
         role: "system",
-        content: `You are an elite academic revision specialist. Your job is to transform the document into an unforgettable, high-yield revision sheet.
-CRITICAL INSTRUCTION: Revision is NOT a quiz (questions belong on the Quiz page). Revision means summarizing the document with crystal clarity, extracting the governing definitions and master formulas, and creating high-impact mental models to help the student memorize and master the subject in minutes.
+        content: `You are an elite academic revision specialist. Transform the supplied document into a high-yield revision sheet strictly grounded ONLY in the provided document text. Do NOT mix in any outside topics or other documents.
 
-Provide:
-1. "oneLineSummary": A single, powerful, crystal-clear 1-sentence synthesis that captures the entire document in plain English (e.g. "Coulomb's Law quantifies the inverse-square electrostatic force between static point charges, governed by permittivity and charge polarity.").
-2. "overview": A concise 2 to 3 paragraph executive summary of the entire document.
-3. "keyDefinitions": 4 to 8 essential terms with exact, concise definitions and a short memory clue/cue.
-4. "formulaBank": All governing mathematical laws, equations, and rules in clean LaTeX ($inline$ and $$block$$), specifying every variable's meaning and units.
-5. "blocks": 3 to 6 high-yield revision blocks covering each topic/concept:
-   - "title": Clean descriptive title
+Return ONLY a valid JSON object with:
+1. "oneLineSummary": A single crystal-clear 1-sentence synthesis of the document.
+2. "overview": A thorough 2-paragraph executive summary of the document.
+3. "keyDefinitions": Array of 5 to 8 essential terms from the document, each with {"term", "definition", "memoryTip"}.
+4. "formulaBank": Array of governing formulas/rules from the document, each with {"name", "formula", "variables", "whenToUse"}.
+5. "blocks": Array of 4 to 6 high-yield revision blocks covering every major section of the document from start to finish, each with:
+   - "title": Section title from the document
    - "focus": What to master in this block
-   - "coreSummary": A crystal-clear conceptual synthesis (2-4 sentences) explaining the mechanism
-   - "keyFormula": Governing equation or primary rule in LaTeX
-   - "keyTakeaways": 2 to 4 must-memorize high-yield bullet takeaways
-   - "commonMistakes": 1 to 2 tricky exam pitfalls or traps students often fall into
-   - "mnemonic": A memory trick, rule of thumb, or mnemonic aid
-6. "selfCheck": 3 to 5 rapid self-verification prompts.`
+   - "coreSummary": Detailed 3-4 sentence conceptual synthesis
+   - "keyFormula": Primary equation or rule from this section
+   - "keyTakeaways": Array of 3 to 5 detailed bullet takeaways
+   - "commonMistakes": Array of 1 to 2 common exam pitfalls from this section
+   - "mnemonic": A memory cue or rule of thumb
+6. "selfCheck": Array of 4 rapid self-verification questions from the document.`
       },
       {
         role: "user",
-        content: `Create an authoritative revision guide titled '${cleanTitle}' for '${source.scopeLabel}'. Return a valid JSON object containing oneLineSummary, overview, keyDefinitions bank, formulaBank, 3 to 6 high-yield revision blocks (with title, focus, coreSummary, keyFormula, keyTakeaways, commonMistakes, mnemonic), and an end-of-session self-check checklist.
+        content: `Create a complete, document-grounded revision guide titled '${cleanTitle}' strictly from the document below. Return ONLY a valid JSON object:
 
-${source.promptContext}`
+${revContext}`
       }
     ],
-    response_format: {
-      type: "json_schema",
-      json_schema: {
-        name: "revision_guide",
-        strict: true,
-        schema: {
-          type: "object",
-          properties: {
-            oneLineSummary: { type: "string" },
-            overview: { type: "string" },
-            keyDefinitions: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  term: { type: "string" },
-                  definition: { type: "string" },
-                  memoryTip: { type: "string" }
-                },
-                required: ["term", "definition"],
-                additionalProperties: true
-              }
-            },
-            formulaBank: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  name: { type: "string" },
-                  formula: { type: "string" },
-                  variables: { type: "string" },
-                  whenToUse: { type: "string" }
-                },
-                required: ["name", "formula"],
-                additionalProperties: true
-              }
-            },
-            blocks: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  title: { type: "string" },
-                  focus: { type: "string" },
-                  coreSummary: { type: "string" },
-                  keyFormula: { type: "string" },
-                  keyTakeaways: {
-                    type: "array",
-                    items: { type: "string" }
-                  },
-                  commonMistakes: {
-                    type: "array",
-                    items: { type: "string" }
-                  },
-                  mnemonic: { type: "string" }
-                },
-                required: ["title"],
-                additionalProperties: true
-              }
-            },
-            selfCheck: {
-              type: "array",
-              items: { type: "string" }
-            }
-          },
-          required: ["oneLineSummary", "overview", "blocks"],
-          additionalProperties: true
-        }
-      }
-    },
-    maxTokens: 4e3
+    response_format: { type: "json_object" },
+    maxTokens: 1250
   });
   const rawParsed = safeParseJSON(text3(response?.choices?.[0]?.message?.content), {});
   const topicName = source.docName || cleanTitle;
@@ -3784,7 +4056,7 @@ ${source.promptContext}`
       }
       return {
         question: typeof q?.question === "string" ? q.question : String(q || ""),
-        answer: typeof q?.answer === "string" && q.answer.length > 5 && !q.answer.includes("Review the section summary") ? q.answer : typeof q?.solution === "string" && q.solution.length > 5 ? q.solution : `Full Derivation & Solution: Apply Coulomb's Law and fundamental principles to solve for state variables systematically.`,
+        answer: typeof q?.answer === "string" && q.answer.length > 5 && !q.answer.includes("Review the section summary") ? q.answer : typeof q?.solution === "string" && q.solution.length > 5 ? q.solution : `Apply the governing principles and definitions from ${topicName} to solve systematically.`,
         examTrap: typeof q?.examTrap === "string" ? q.examTrap : ""
       };
     });
@@ -3800,42 +4072,24 @@ ${source.promptContext}`
     };
   });
   if (blocks.length === 0) {
-    blocks = [
-      {
-        title: `Block 1: Core Definitions & Physical Principles`,
-        focus: `Recall essential terminology, physical rules, and baseline models`,
-        coreSummary: `${topicName} introduces fundamental physical principles. Study the geometric configurations, sign conventions, and definition of state variables.`,
-        keyFormula: `$$\\vec{E} = \\frac{1}{4\\pi\\varepsilon_0}\\frac{q}{r^2}\\hat{r}$$`,
-        keyTakeaways: [
-          `Field lines begin on positive charges and end on negative charges.`,
-          `Density of field lines is proportional to field strength.`,
-          `Field lines can never cross at any point.`
-        ],
-        commonMistakes: [`Forgetting that field lines always meet a conductor perpendicular (90 degrees) to its surface.`],
-        mnemonic: `Lines originate on positive (+q) and terminate on negative (-q). Like charges repel, opposites attract.`
-      },
-      {
-        title: `Block 2: Governing Equations & Derivations`,
-        focus: `Derive on-axis approximations and energy formulations`,
-        coreSummary: `For an electric dipole at distances z much greater than separation d (z >> d), the on-axis electric field decays as 1/z^3 rather than the 1/r^2 dependence of a monopole.`,
-        keyFormula: `$$E_{\\text{axis}} \\approx \\frac{1}{4\\pi\\varepsilon_0}\\frac{2p}{z^3}, \\quad \\tau = \\vec{p} \\times \\vec{E}, \\quad U = -\\vec{p} \\cdot \\vec{E}$$`,
-        keyTakeaways: [
-          `Dipole field decreases as 1/z^3 at large distances.`,
-          `External torque rotates dipole to align with E field.`,
-          `Potential energy is minimum U = -pE when aligned with field.`
-        ],
-        commonMistakes: [`Neglecting the negative sign in potential energy U = -p . E.`],
-        mnemonic: `Dipole torque aligns with field; potential energy is lowest (most stable) when perfectly aligned.`
-      }
-    ];
+    const parsedFromDoc = parseRealAcademicNotes(source.fullText || "", topicName);
+    blocks = parsedFromDoc.map((sec, idx) => ({
+      title: sec.heading || `Block ${idx + 1}: ${topicName}`,
+      focus: `Master the core principles and mechanisms in ${sec.heading || topicName}`,
+      coreSummary: sec.explanation,
+      keyFormula: "",
+      keyTakeaways: sec.bullets,
+      commonMistakes: [`Verify all definitions, boundary conditions, and steps from ${sec.heading || topicName}.`],
+      mnemonic: `Connect ${sec.heading || topicName} directly to the worked examples in the document.`
+    }));
   }
   let selfCheck = Array.isArray(rawParsed.selfCheck) ? rawParsed.selfCheck.map(String).filter(Boolean) : [];
   if (selfCheck.length === 0) {
     selfCheck = [
       `Can I define the central concepts of ${topicName} without looking?`,
-      `Can I state and derive the governing equations and on-axis approximations?`,
-      `Can I state the key memory mnemonics and avoid common exam pitfalls?`,
-      `Can I summarize the entire topic in one clear sentence from memory?`
+      `Can I state and apply the governing rules and formulas from ${topicName}?`,
+      `Can I state the key memory mnemonics and avoid common exam pitfalls in ${topicName}?`,
+      `Can I summarize the entire ${topicName} document in my own words from memory?`
     ];
   }
   const content2 = { oneLineSummary, overview, keyDefinitions, formulaBank, blocks, selfCheck };
@@ -3868,6 +4122,11 @@ async function listRevisionGuides(userId, subjectId) {
     conditions.push(eq6(revisionGuides.subjectId, subjectId));
   }
   return db.select().from(revisionGuides).where(and6(...conditions)).orderBy(desc5(revisionGuides.createdAt));
+}
+async function deleteRevisionGuide(userId, revisionId) {
+  const db = database2(await getDb());
+  await db.delete(revisionGuides).where(and6(eq6(revisionGuides.id, revisionId), eq6(revisionGuides.userId, userId)));
+  return { success: true };
 }
 async function askDocumentGrounded(userId, input) {
   const db = database2(await getDb());
@@ -4572,6 +4831,13 @@ var appRouter = router({
       } catch (error) {
         return toApiError(error);
       }
+    }),
+    delete: protectedProcedure.input(z3.object({ revisionId: z3.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      try {
+        return await deleteRevisionGuide(ctx.user.id, input.revisionId);
+      } catch (error) {
+        return toApiError(error);
+      }
     })
   }),
   quizzes: router({
@@ -4970,7 +5236,7 @@ function createExpressApp() {
   });
   const DEFAULT_SUPABASE_URL3 = "";
   const DEFAULT_SUPABASE_ANON_KEY = "";
-  app2.get(["/", "/health", "/api", "/api/health"], (_req, res) => {
+  app2.get(["/health", "/api", "/api/health"], (_req, res) => {
     res.json({ status: "ok", service: "StudentGPT API", timestamp: (/* @__PURE__ */ new Date()).toISOString() });
   });
   app2.get(["/api/auth/supabase-config", "/auth/supabase-config"], (_req, res) => {
@@ -4991,7 +5257,7 @@ function createExpressApp() {
   app2.use("/.netlify/functions/api/api/trpc", trpcHandler);
   app2.use("/api/trpc", trpcHandler);
   app2.use("/trpc", trpcHandler);
-  app2.use((req, res) => {
+  app2.use(["/api", "/trpc", "/.netlify"], (req, res) => {
     res.status(404).json({ error: { message: `Route not found: ${req.method} ${req.originalUrl || req.url}` } });
   });
   app2.use((err, _req, res, _next) => {

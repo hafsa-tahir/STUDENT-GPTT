@@ -214,7 +214,7 @@ export function createExpressApp() {
   const DEFAULT_SUPABASE_URL = "";
   const DEFAULT_SUPABASE_ANON_KEY = "";
 
-  app.get(["/", "/health", "/api", "/api/health"], (_req, res) => {
+  app.get(["/health", "/api", "/api/health"], (_req, res) => {
     res.json({ status: "ok", service: "StudentGPT API", timestamp: new Date().toISOString() });
   });
 
@@ -242,7 +242,7 @@ export function createExpressApp() {
   app.use("/trpc", trpcHandler);
 
   // Catch-all JSON fallback for any unhandled API requests
-  app.use((req, res) => {
+  app.use(["/api", "/trpc", "/.netlify"], (req, res) => {
     res.status(404).json({ error: { message: `Route not found: ${req.method} ${req.originalUrl || req.url}` } });
   });
 

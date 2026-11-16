@@ -6,7 +6,7 @@ import { generateFlashcards, generateQuiz, getQuiz, listFlashcardReviewHistory, 
 import { addResearchSource, createResearchBrief, createResearchBriefFromTopic, exportResearchBrief, getResearchBrief, getResearchExportDownload, listResearchBriefs, listResearchExports, summarizeSourceUrl, synthesizeResearchBrief } from "./researchService";
 import { searchResearchVideos } from "./youtubeService";
 import { searchCommunityPerspectives } from "./serpapiService";
-import { addStickyNote, askDocumentGrounded, deleteStudyNote, generateRevisionGuide, generateStudyNotes, getStudyNote, listRevisionGuides, listStudyNotes } from "./notesService";
+import { addStickyNote, askDocumentGrounded, deleteRevisionGuide, deleteStudyNote, generateRevisionGuide, generateStudyNotes, getStudyNote, listRevisionGuides, listStudyNotes } from "./notesService";
 import { COOKIE_NAME } from "../shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
@@ -144,6 +144,7 @@ export const appRouter = router({
         }
       }),
     generate: protectedProcedure.input(z.object({ title: z.string().trim().min(3).max(260), topic: z.string().trim().max(6000).nullable().optional(), subjectId: z.number().int().positive().nullable().optional(), documentId: z.number().int().positive().nullable().optional(), scopeType: z.enum(["topic", "chapter", "section", "range", "document"]), scopeLabel: z.string().trim().min(2).max(300) })).mutation(async ({ ctx, input }) => { try { return await generateRevisionGuide(ctx.user.id, input); } catch (error) { return toApiError(error); } }),
+    delete: protectedProcedure.input(z.object({ revisionId: z.number().int().positive() })).mutation(async ({ ctx, input }) => { try { return await deleteRevisionGuide(ctx.user.id, input.revisionId); } catch (error) { return toApiError(error); } }),
   }),
   quizzes: router({
     generate: protectedProcedure.input(quizGenerationInput).mutation(async ({ ctx, input }) => { try { return await generateQuiz(ctx.user.id, input); } catch (error) { return toApiError(error); } }),

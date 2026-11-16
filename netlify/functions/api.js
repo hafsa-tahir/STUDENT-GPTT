@@ -249,14 +249,14 @@ var require_get_framework = __commonJS({
 var require_clean_up_event = __commonJS({
   "node_modules/.pnpm/serverless-http@4.0.0/node_modules/serverless-http/lib/provider/aws/clean-up-event.js"(exports2, module2) {
     "use strict";
-    function removeBasePath(path3 = "/", basePath) {
+    function removeBasePath(path4 = "/", basePath) {
       if (basePath) {
-        const basePathIndex = path3.indexOf(basePath);
+        const basePathIndex = path4.indexOf(basePath);
         if (basePathIndex > -1) {
-          return path3.substr(basePathIndex + basePath.length) || "/";
+          return path4.substr(basePathIndex + basePath.length) || "/";
         }
       }
-      return path3;
+      return path4;
     }
     function isString2(value) {
       return typeof value === "string" || value instanceof String;
@@ -2113,8 +2113,8 @@ var require_node = __commonJS({
           }
           break;
         case "FILE":
-          var fs3 = require("fs");
-          stream5 = new fs3.SyncWriteStream(fd2, { autoClose: false });
+          var fs4 = require("fs");
+          stream5 = new fs4.SyncWriteStream(fd2, { autoClose: false });
           stream5._type = "fs";
           break;
         case "PIPE":
@@ -14901,11 +14901,11 @@ var require_mime_types = __commonJS({
       }
       return exts[0];
     }
-    function lookup(path3) {
-      if (!path3 || typeof path3 !== "string") {
+    function lookup(path4) {
+      if (!path4 || typeof path4 !== "string") {
         return false;
       }
-      var extension2 = extname("x." + path3).toLowerCase().substr(1);
+      var extension2 = extname("x." + path4).toLowerCase().substr(1);
       if (!extension2) {
         return false;
       }
@@ -18292,7 +18292,7 @@ var require_path_to_regexp = __commonJS({
   "node_modules/.pnpm/path-to-regexp@0.1.12/node_modules/path-to-regexp/index.js"(exports2, module2) {
     module2.exports = pathToRegexp;
     var MATCHING_GROUP_REGEXP = /\\.|\((?:\?<(.*?)>)?(?!\?)/g;
-    function pathToRegexp(path3, keys, options) {
+    function pathToRegexp(path4, keys, options) {
       options = options || {};
       keys = keys || [];
       var strict = options.strict;
@@ -18306,8 +18306,8 @@ var require_path_to_regexp = __commonJS({
       var pos = 0;
       var backtrack = "";
       var m;
-      if (path3 instanceof RegExp) {
-        while (m = MATCHING_GROUP_REGEXP.exec(path3.source)) {
+      if (path4 instanceof RegExp) {
+        while (m = MATCHING_GROUP_REGEXP.exec(path4.source)) {
           if (m[0][0] === "\\") continue;
           keys.push({
             name: m[1] || name++,
@@ -18315,18 +18315,18 @@ var require_path_to_regexp = __commonJS({
             offset: m.index
           });
         }
-        return path3;
+        return path4;
       }
-      if (Array.isArray(path3)) {
-        path3 = path3.map(function(value) {
+      if (Array.isArray(path4)) {
+        path4 = path4.map(function(value) {
           return pathToRegexp(value, keys, options).source;
         });
-        return new RegExp(path3.join("|"), flags);
+        return new RegExp(path4.join("|"), flags);
       }
-      if (typeof path3 !== "string") {
+      if (typeof path4 !== "string") {
         throw new TypeError("path must be a string, array of strings, or regular expression");
       }
-      path3 = path3.replace(
+      path4 = path4.replace(
         /\\.|(\/)?(\.)?:(\w+)(\(.*?\))?(\*)?(\?)?|[.*]|\/\(/g,
         function(match, slash, format, key, capture, star, optional2, offset) {
           if (match[0] === "\\") {
@@ -18343,7 +18343,7 @@ var require_path_to_regexp = __commonJS({
           if (slash || format) {
             backtrack = "";
           } else {
-            backtrack += path3.slice(pos, offset);
+            backtrack += path4.slice(pos, offset);
           }
           pos = offset + match.length;
           if (match === "*") {
@@ -18371,7 +18371,7 @@ var require_path_to_regexp = __commonJS({
           return result;
         }
       );
-      while (m = MATCHING_GROUP_REGEXP.exec(path3)) {
+      while (m = MATCHING_GROUP_REGEXP.exec(path4)) {
         if (m[0][0] === "\\") continue;
         if (keysOffset + i === keys.length || keys[keysOffset + i].offset > m.index) {
           keys.splice(keysOffset + i, 0, {
@@ -18383,13 +18383,13 @@ var require_path_to_regexp = __commonJS({
         }
         i++;
       }
-      path3 += strict ? "" : path3[path3.length - 1] === "/" ? "?" : "/?";
+      path4 += strict ? "" : path4[path4.length - 1] === "/" ? "?" : "/?";
       if (end) {
-        path3 += "$";
-      } else if (path3[path3.length - 1] !== "/") {
-        path3 += lookahead ? "(?=/|$)" : "(?:/|$)";
+        path4 += "$";
+      } else if (path4[path4.length - 1] !== "/") {
+        path4 += lookahead ? "(?=/|$)" : "(?:/|$)";
       }
-      return new RegExp("^" + path3, flags);
+      return new RegExp("^" + path4, flags);
     }
   }
 });
@@ -18402,19 +18402,19 @@ var require_layer = __commonJS({
     var debug = require_src()("express:router:layer");
     var hasOwnProperty2 = Object.prototype.hasOwnProperty;
     module2.exports = Layer;
-    function Layer(path3, options, fn) {
+    function Layer(path4, options, fn) {
       if (!(this instanceof Layer)) {
-        return new Layer(path3, options, fn);
+        return new Layer(path4, options, fn);
       }
-      debug("new %o", path3);
+      debug("new %o", path4);
       var opts = options || {};
       this.handle = fn;
       this.name = fn.name || "<anonymous>";
       this.params = void 0;
       this.path = void 0;
-      this.regexp = pathRegexp(path3, this.keys = [], opts);
-      this.regexp.fast_star = path3 === "*";
-      this.regexp.fast_slash = path3 === "/" && opts.end === false;
+      this.regexp = pathRegexp(path4, this.keys = [], opts);
+      this.regexp.fast_star = path4 === "*";
+      this.regexp.fast_slash = path4 === "/" && opts.end === false;
     }
     Layer.prototype.handle_error = function handle_error(error46, req, res, next) {
       var fn = this.handle;
@@ -18438,20 +18438,20 @@ var require_layer = __commonJS({
         next(err);
       }
     };
-    Layer.prototype.match = function match(path3) {
+    Layer.prototype.match = function match(path4) {
       var match2;
-      if (path3 != null) {
+      if (path4 != null) {
         if (this.regexp.fast_slash) {
           this.params = {};
           this.path = "";
           return true;
         }
         if (this.regexp.fast_star) {
-          this.params = { "0": decode_param(path3) };
-          this.path = path3;
+          this.params = { "0": decode_param(path4) };
+          this.path = path4;
           return true;
         }
-        match2 = this.regexp.exec(path3);
+        match2 = this.regexp.exec(path4);
       }
       if (!match2) {
         this.params = void 0;
@@ -18544,10 +18544,10 @@ var require_route = __commonJS({
     var slice = Array.prototype.slice;
     var toString3 = Object.prototype.toString;
     module2.exports = Route;
-    function Route(path3) {
-      this.path = path3;
+    function Route(path4) {
+      this.path = path4;
       this.stack = [];
-      debug("new %o", path3);
+      debug("new %o", path4);
       this.methods = {};
     }
     Route.prototype._handles_method = function _handles_method(method) {
@@ -18759,8 +18759,8 @@ var require_router = __commonJS({
         if (++sync > 100) {
           return setImmediate(next, err);
         }
-        var path3 = getPathname(req);
-        if (path3 == null) {
+        var path4 = getPathname(req);
+        if (path4 == null) {
           return done(layerError);
         }
         var layer;
@@ -18768,7 +18768,7 @@ var require_router = __commonJS({
         var route;
         while (match !== true && idx < stack.length) {
           layer = stack[idx++];
-          match = matchLayer(layer, path3);
+          match = matchLayer(layer, path4);
           route = layer.route;
           if (typeof match !== "boolean") {
             layerError = layerError || match;
@@ -18806,18 +18806,18 @@ var require_router = __commonJS({
           } else if (route) {
             layer.handle_request(req, res, next);
           } else {
-            trim_prefix(layer, layerError, layerPath, path3);
+            trim_prefix(layer, layerError, layerPath, path4);
           }
           sync = 0;
         });
       }
-      function trim_prefix(layer, layerError, layerPath, path3) {
+      function trim_prefix(layer, layerError, layerPath, path4) {
         if (layerPath.length !== 0) {
-          if (layerPath !== path3.slice(0, layerPath.length)) {
+          if (layerPath !== path4.slice(0, layerPath.length)) {
             next(layerError);
             return;
           }
-          var c = path3[layerPath.length];
+          var c = path4[layerPath.length];
           if (c && c !== "/" && c !== ".") return next(layerError);
           debug("trim prefix (%s) from url %s", layerPath, req.url);
           removed = layerPath;
@@ -18895,7 +18895,7 @@ var require_router = __commonJS({
     };
     proto.use = function use(fn) {
       var offset = 0;
-      var path3 = "/";
+      var path4 = "/";
       if (typeof fn !== "function") {
         var arg = fn;
         while (Array.isArray(arg) && arg.length !== 0) {
@@ -18903,7 +18903,7 @@ var require_router = __commonJS({
         }
         if (typeof arg !== "function") {
           offset = 1;
-          path3 = fn;
+          path4 = fn;
         }
       }
       var callbacks = flatten(slice.call(arguments, offset));
@@ -18915,8 +18915,8 @@ var require_router = __commonJS({
         if (typeof fn !== "function") {
           throw new TypeError("Router.use() requires a middleware function but got a " + gettype(fn));
         }
-        debug("use %o %s", path3, fn.name || "<anonymous>");
-        var layer = new Layer(path3, {
+        debug("use %o %s", path4, fn.name || "<anonymous>");
+        var layer = new Layer(path4, {
           sensitive: this.caseSensitive,
           strict: false,
           end: false
@@ -18926,9 +18926,9 @@ var require_router = __commonJS({
       }
       return this;
     };
-    proto.route = function route(path3) {
-      var route2 = new Route(path3);
-      var layer = new Layer(path3, {
+    proto.route = function route(path4) {
+      var route2 = new Route(path4);
+      var layer = new Layer(path4, {
         sensitive: this.caseSensitive,
         strict: this.strict,
         end: true
@@ -18938,8 +18938,8 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      proto[method] = function(path3) {
-        var route = this.route(path3);
+      proto[method] = function(path4) {
+        var route = this.route(path4);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
       };
@@ -18975,9 +18975,9 @@ var require_router = __commonJS({
       }
       return toString3.call(obj).replace(objectRegExp, "$1");
     }
-    function matchLayer(layer, path3) {
+    function matchLayer(layer, path4) {
       try {
-        return layer.match(path3);
+        return layer.match(path4);
       } catch (err) {
         return err;
       }
@@ -19095,13 +19095,13 @@ var require_view = __commonJS({
   "node_modules/.pnpm/express@4.21.2/node_modules/express/lib/view.js"(exports2, module2) {
     "use strict";
     var debug = require_src()("express:view");
-    var path3 = require("path");
-    var fs3 = require("fs");
-    var dirname = path3.dirname;
-    var basename = path3.basename;
-    var extname = path3.extname;
-    var join = path3.join;
-    var resolve = path3.resolve;
+    var path4 = require("path");
+    var fs4 = require("fs");
+    var dirname = path4.dirname;
+    var basename = path4.basename;
+    var extname = path4.extname;
+    var join = path4.join;
+    var resolve = path4.resolve;
     module2.exports = View2;
     function View2(name, options) {
       var opts = options || {};
@@ -19130,17 +19130,17 @@ var require_view = __commonJS({
       this.path = this.lookup(fileName);
     }
     View2.prototype.lookup = function lookup(name) {
-      var path4;
+      var path5;
       var roots = [].concat(this.root);
       debug('lookup "%s"', name);
-      for (var i = 0; i < roots.length && !path4; i++) {
+      for (var i = 0; i < roots.length && !path5; i++) {
         var root = roots[i];
         var loc = resolve(root, name);
         var dir = dirname(loc);
         var file2 = basename(loc);
-        path4 = this.resolve(dir, file2);
+        path5 = this.resolve(dir, file2);
       }
-      return path4;
+      return path5;
     };
     View2.prototype.render = function render(options, callback) {
       debug('render "%s"', this.path);
@@ -19148,21 +19148,21 @@ var require_view = __commonJS({
     };
     View2.prototype.resolve = function resolve2(dir, file2) {
       var ext = this.ext;
-      var path4 = join(dir, file2);
-      var stat = tryStat(path4);
+      var path5 = join(dir, file2);
+      var stat = tryStat(path5);
       if (stat && stat.isFile()) {
-        return path4;
+        return path5;
       }
-      path4 = join(dir, basename(file2, ext), "index" + ext);
-      stat = tryStat(path4);
+      path5 = join(dir, basename(file2, ext), "index" + ext);
+      stat = tryStat(path5);
       if (stat && stat.isFile()) {
-        return path4;
+        return path5;
       }
     };
-    function tryStat(path4) {
-      debug('stat "%s"', path4);
+    function tryStat(path5) {
+      debug('stat "%s"', path5);
       try {
-        return fs3.statSync(path4);
+        return fs4.statSync(path5);
       } catch (e) {
         return void 0;
       }
@@ -19530,8 +19530,8 @@ var require_types = __commonJS({
 // node_modules/.pnpm/mime@1.6.0/node_modules/mime/mime.js
 var require_mime = __commonJS({
   "node_modules/.pnpm/mime@1.6.0/node_modules/mime/mime.js"(exports2, module2) {
-    var path3 = require("path");
-    var fs3 = require("fs");
+    var path4 = require("path");
+    var fs4 = require("fs");
     function Mime() {
       this.types = /* @__PURE__ */ Object.create(null);
       this.extensions = /* @__PURE__ */ Object.create(null);
@@ -19552,7 +19552,7 @@ var require_mime = __commonJS({
     };
     Mime.prototype.load = function(file2) {
       this._loading = file2;
-      var map2 = {}, content2 = fs3.readFileSync(file2, "ascii"), lines = content2.split(/[\r\n]+/);
+      var map2 = {}, content2 = fs4.readFileSync(file2, "ascii"), lines = content2.split(/[\r\n]+/);
       lines.forEach(function(line) {
         var fields = line.replace(/\s*#.*|^\s*|\s*$/g, "").split(/\s+/);
         map2[fields.shift()] = fields;
@@ -19560,8 +19560,8 @@ var require_mime = __commonJS({
       this.define(map2);
       this._loading = null;
     };
-    Mime.prototype.lookup = function(path4, fallback) {
-      var ext = path4.replace(/^.*[\.\/\\]/, "").toLowerCase();
+    Mime.prototype.lookup = function(path5, fallback) {
+      var ext = path5.replace(/^.*[\.\/\\]/, "").toLowerCase();
       return this.types[ext] || fallback || this.default_type;
     };
     Mime.prototype.extension = function(mimeType) {
@@ -19790,33 +19790,33 @@ var require_send = __commonJS({
     var escapeHtml = require_escape_html();
     var etag = require_etag();
     var fresh = require_fresh();
-    var fs3 = require("fs");
+    var fs4 = require("fs");
     var mime = require_mime();
     var ms = require_ms2();
     var onFinished = require_on_finished();
     var parseRange = require_range_parser();
-    var path3 = require("path");
+    var path4 = require("path");
     var statuses = require_statuses();
     var Stream = require("stream");
     var util3 = require("util");
-    var extname = path3.extname;
-    var join = path3.join;
-    var normalize = path3.normalize;
-    var resolve = path3.resolve;
-    var sep = path3.sep;
+    var extname = path4.extname;
+    var join = path4.join;
+    var normalize = path4.normalize;
+    var resolve = path4.resolve;
+    var sep = path4.sep;
     var BYTES_RANGE_REGEXP = /^ *bytes=/;
     var MAX_MAXAGE = 60 * 60 * 24 * 365 * 1e3;
     var UP_PATH_REGEXP = /(?:^|[\\/])\.\.(?:[\\/]|$)/;
     module2.exports = send;
     module2.exports.mime = mime;
-    function send(req, path4, options) {
-      return new SendStream(req, path4, options);
+    function send(req, path5, options) {
+      return new SendStream(req, path5, options);
     }
-    function SendStream(req, path4, options) {
+    function SendStream(req, path5, options) {
       Stream.call(this);
       var opts = options || {};
       this.options = opts;
-      this.path = path4;
+      this.path = path5;
       this.req = req;
       this._acceptRanges = opts.acceptRanges !== void 0 ? Boolean(opts.acceptRanges) : true;
       this._cacheControl = opts.cacheControl !== void 0 ? Boolean(opts.cacheControl) : true;
@@ -19862,8 +19862,8 @@ var require_send = __commonJS({
       this._index = index3;
       return this;
     }, "send.index: pass index as option");
-    SendStream.prototype.root = function root(path4) {
-      this._root = resolve(String(path4));
+    SendStream.prototype.root = function root(path5) {
+      this._root = resolve(String(path5));
       debug("root %s", this._root);
       return this;
     };
@@ -19976,10 +19976,10 @@ var require_send = __commonJS({
       var lastModified = this.res.getHeader("Last-Modified");
       return parseHttpDate(lastModified) <= parseHttpDate(ifRange);
     };
-    SendStream.prototype.redirect = function redirect(path4) {
+    SendStream.prototype.redirect = function redirect(path5) {
       var res = this.res;
       if (hasListeners(this, "directory")) {
-        this.emit("directory", res, path4);
+        this.emit("directory", res, path5);
         return;
       }
       if (this.hasTrailingSlash()) {
@@ -19999,42 +19999,42 @@ var require_send = __commonJS({
     SendStream.prototype.pipe = function pipe2(res) {
       var root = this._root;
       this.res = res;
-      var path4 = decode4(this.path);
-      if (path4 === -1) {
+      var path5 = decode4(this.path);
+      if (path5 === -1) {
         this.error(400);
         return res;
       }
-      if (~path4.indexOf("\0")) {
+      if (~path5.indexOf("\0")) {
         this.error(400);
         return res;
       }
       var parts;
       if (root !== null) {
-        if (path4) {
-          path4 = normalize("." + sep + path4);
+        if (path5) {
+          path5 = normalize("." + sep + path5);
         }
-        if (UP_PATH_REGEXP.test(path4)) {
-          debug('malicious path "%s"', path4);
+        if (UP_PATH_REGEXP.test(path5)) {
+          debug('malicious path "%s"', path5);
           this.error(403);
           return res;
         }
-        parts = path4.split(sep);
-        path4 = normalize(join(root, path4));
+        parts = path5.split(sep);
+        path5 = normalize(join(root, path5));
       } else {
-        if (UP_PATH_REGEXP.test(path4)) {
-          debug('malicious path "%s"', path4);
+        if (UP_PATH_REGEXP.test(path5)) {
+          debug('malicious path "%s"', path5);
           this.error(403);
           return res;
         }
-        parts = normalize(path4).split(sep);
-        path4 = resolve(path4);
+        parts = normalize(path5).split(sep);
+        path5 = resolve(path5);
       }
       if (containsDotFile(parts)) {
         var access = this._dotfiles;
         if (access === void 0) {
           access = parts[parts.length - 1][0] === "." ? this._hidden ? "allow" : "ignore" : "allow";
         }
-        debug('%s dotfile "%s"', access, path4);
+        debug('%s dotfile "%s"', access, path5);
         switch (access) {
           case "allow":
             break;
@@ -20048,13 +20048,13 @@ var require_send = __commonJS({
         }
       }
       if (this._index.length && this.hasTrailingSlash()) {
-        this.sendIndex(path4);
+        this.sendIndex(path5);
         return res;
       }
-      this.sendFile(path4);
+      this.sendFile(path5);
       return res;
     };
-    SendStream.prototype.send = function send2(path4, stat) {
+    SendStream.prototype.send = function send2(path5, stat) {
       var len = stat.size;
       var options = this.options;
       var opts = {};
@@ -20066,9 +20066,9 @@ var require_send = __commonJS({
         this.headersAlreadySent();
         return;
       }
-      debug('pipe "%s"', path4);
-      this.setHeader(path4, stat);
-      this.type(path4);
+      debug('pipe "%s"', path5);
+      this.setHeader(path5, stat);
+      this.type(path5);
       if (this.isConditionalGET()) {
         if (this.isPreconditionFailure()) {
           this.error(412);
@@ -20117,28 +20117,28 @@ var require_send = __commonJS({
         res.end();
         return;
       }
-      this.stream(path4, opts);
+      this.stream(path5, opts);
     };
-    SendStream.prototype.sendFile = function sendFile(path4) {
+    SendStream.prototype.sendFile = function sendFile(path5) {
       var i = 0;
       var self2 = this;
-      debug('stat "%s"', path4);
-      fs3.stat(path4, function onstat(err, stat) {
-        if (err && err.code === "ENOENT" && !extname(path4) && path4[path4.length - 1] !== sep) {
+      debug('stat "%s"', path5);
+      fs4.stat(path5, function onstat(err, stat) {
+        if (err && err.code === "ENOENT" && !extname(path5) && path5[path5.length - 1] !== sep) {
           return next(err);
         }
         if (err) return self2.onStatError(err);
-        if (stat.isDirectory()) return self2.redirect(path4);
-        self2.emit("file", path4, stat);
-        self2.send(path4, stat);
+        if (stat.isDirectory()) return self2.redirect(path5);
+        self2.emit("file", path5, stat);
+        self2.send(path5, stat);
       });
       function next(err) {
         if (self2._extensions.length <= i) {
           return err ? self2.onStatError(err) : self2.error(404);
         }
-        var p = path4 + "." + self2._extensions[i++];
+        var p = path5 + "." + self2._extensions[i++];
         debug('stat "%s"', p);
-        fs3.stat(p, function(err2, stat) {
+        fs4.stat(p, function(err2, stat) {
           if (err2) return next(err2);
           if (stat.isDirectory()) return next();
           self2.emit("file", p, stat);
@@ -20146,7 +20146,7 @@ var require_send = __commonJS({
         });
       }
     };
-    SendStream.prototype.sendIndex = function sendIndex(path4) {
+    SendStream.prototype.sendIndex = function sendIndex(path5) {
       var i = -1;
       var self2 = this;
       function next(err) {
@@ -20154,9 +20154,9 @@ var require_send = __commonJS({
           if (err) return self2.onStatError(err);
           return self2.error(404);
         }
-        var p = join(path4, self2._index[i]);
+        var p = join(path5, self2._index[i]);
         debug('stat "%s"', p);
-        fs3.stat(p, function(err2, stat) {
+        fs4.stat(p, function(err2, stat) {
           if (err2) return next(err2);
           if (stat.isDirectory()) return next();
           self2.emit("file", p, stat);
@@ -20165,10 +20165,10 @@ var require_send = __commonJS({
       }
       next();
     };
-    SendStream.prototype.stream = function stream4(path4, options) {
+    SendStream.prototype.stream = function stream4(path5, options) {
       var self2 = this;
       var res = this.res;
-      var stream5 = fs3.createReadStream(path4, options);
+      var stream5 = fs4.createReadStream(path5, options);
       this.emit("stream", stream5);
       stream5.pipe(res);
       function cleanup() {
@@ -20183,10 +20183,10 @@ var require_send = __commonJS({
         self2.emit("end");
       });
     };
-    SendStream.prototype.type = function type(path4) {
+    SendStream.prototype.type = function type(path5) {
       var res = this.res;
       if (res.getHeader("Content-Type")) return;
-      var type2 = mime.lookup(path4);
+      var type2 = mime.lookup(path5);
       if (!type2) {
         debug("no content-type");
         return;
@@ -20195,9 +20195,9 @@ var require_send = __commonJS({
       debug("content-type %s", type2);
       res.setHeader("Content-Type", type2 + (charset ? "; charset=" + charset : ""));
     };
-    SendStream.prototype.setHeader = function setHeader2(path4, stat) {
+    SendStream.prototype.setHeader = function setHeader2(path5, stat) {
       var res = this.res;
-      this.emit("headers", res, path4, stat);
+      this.emit("headers", res, path5, stat);
       if (this._acceptRanges && !res.getHeader("Accept-Ranges")) {
         debug("accept ranges");
         res.setHeader("Accept-Ranges", "bytes");
@@ -20256,9 +20256,9 @@ var require_send = __commonJS({
       }
       return err instanceof Error ? createError(status, err, { expose: false }) : createError(status, err);
     }
-    function decode4(path4) {
+    function decode4(path5) {
       try {
-        return decodeURIComponent(path4);
+        return decodeURIComponent(path5);
       } catch (err) {
         return -1;
       }
@@ -21167,10 +21167,10 @@ var require_utils2 = __commonJS({
     var querystring = require("querystring");
     exports2.etag = createETagGenerator({ weak: false });
     exports2.wetag = createETagGenerator({ weak: true });
-    exports2.isAbsolute = function(path3) {
-      if ("/" === path3[0]) return true;
-      if (":" === path3[1] && ("\\" === path3[2] || "/" === path3[2])) return true;
-      if ("\\\\" === path3.substring(0, 2)) return true;
+    exports2.isAbsolute = function(path4) {
+      if ("/" === path4[0]) return true;
+      if (":" === path4[1] && ("\\" === path4[2] || "/" === path4[2])) return true;
+      if ("\\\\" === path4.substring(0, 2)) return true;
     };
     exports2.flatten = deprecate.function(
       flatten,
@@ -21381,7 +21381,7 @@ var require_application = __commonJS({
     };
     app2.use = function use(fn) {
       var offset = 0;
-      var path3 = "/";
+      var path4 = "/";
       if (typeof fn !== "function") {
         var arg = fn;
         while (Array.isArray(arg) && arg.length !== 0) {
@@ -21389,7 +21389,7 @@ var require_application = __commonJS({
         }
         if (typeof arg !== "function") {
           offset = 1;
-          path3 = fn;
+          path4 = fn;
         }
       }
       var fns = flatten(slice.call(arguments, offset));
@@ -21400,12 +21400,12 @@ var require_application = __commonJS({
       var router2 = this._router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router2.use(path3, fn2);
+          return router2.use(path4, fn2);
         }
-        debug(".use app under %s", path3);
-        fn2.mountpath = path3;
+        debug(".use app under %s", path4);
+        fn2.mountpath = path4;
         fn2.parent = this;
-        router2.use(path3, function mounted_app(req, res, next) {
+        router2.use(path4, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             setPrototypeOf(req, orig.request);
@@ -21417,9 +21417,9 @@ var require_application = __commonJS({
       }, this);
       return this;
     };
-    app2.route = function route(path3) {
+    app2.route = function route(path4) {
       this.lazyrouter();
-      return this._router.route(path3);
+      return this._router.route(path4);
     };
     app2.engine = function engine(ext, fn) {
       if (typeof fn !== "function") {
@@ -21470,7 +21470,7 @@ var require_application = __commonJS({
       }
       return this;
     };
-    app2.path = function path3() {
+    app2.path = function path4() {
       return this.parent ? this.parent.path() + this.mountpath : "";
     };
     app2.enabled = function enabled(setting) {
@@ -21486,19 +21486,19 @@ var require_application = __commonJS({
       return this.set(setting, false);
     };
     methods.forEach(function(method) {
-      app2[method] = function(path3) {
+      app2[method] = function(path4) {
         if (method === "get" && arguments.length === 1) {
-          return this.set(path3);
+          return this.set(path4);
         }
         this.lazyrouter();
-        var route = this._router.route(path3);
+        var route = this._router.route(path4);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
       };
     });
-    app2.all = function all3(path3) {
+    app2.all = function all3(path4) {
       this.lazyrouter();
-      var route = this._router.route(path3);
+      var route = this._router.route(path4);
       var args = slice.call(arguments, 1);
       for (var i = 0; i < methods.length; i++) {
         route[methods[i]].apply(route, args);
@@ -22257,7 +22257,7 @@ var require_request2 = __commonJS({
       var subdomains2 = !isIP(hostname3) ? hostname3.split(".").reverse() : [hostname3];
       return subdomains2.slice(offset);
     });
-    defineGetter(req, "path", function path3() {
+    defineGetter(req, "path", function path4() {
       return parse3(this).pathname;
     });
     defineGetter(req, "hostname", function hostname3() {
@@ -22578,7 +22578,7 @@ var require_response2 = __commonJS({
     var http2 = require("http");
     var isAbsolute = require_utils2().isAbsolute;
     var onFinished = require_on_finished();
-    var path3 = require("path");
+    var path4 = require("path");
     var statuses = require_statuses();
     var merge3 = require_utils_merge();
     var sign = require_cookie_signature().sign;
@@ -22587,9 +22587,9 @@ var require_response2 = __commonJS({
     var setCharset = require_utils2().setCharset;
     var cookie = require_cookie();
     var send = require_send();
-    var extname = path3.extname;
+    var extname = path4.extname;
     var mime = send.mime;
-    var resolve = path3.resolve;
+    var resolve = path4.resolve;
     var vary = require_vary();
     var res = Object.create(http2.ServerResponse.prototype);
     module2.exports = res;
@@ -22766,26 +22766,26 @@ var require_response2 = __commonJS({
       this.type("txt");
       return this.send(body);
     };
-    res.sendFile = function sendFile(path4, options, callback) {
+    res.sendFile = function sendFile(path5, options, callback) {
       var done = callback;
       var req = this.req;
       var res2 = this;
       var next = req.next;
       var opts = options || {};
-      if (!path4) {
+      if (!path5) {
         throw new TypeError("path argument is required to res.sendFile");
       }
-      if (typeof path4 !== "string") {
+      if (typeof path5 !== "string") {
         throw new TypeError("path must be a string to res.sendFile");
       }
       if (typeof options === "function") {
         done = options;
         opts = {};
       }
-      if (!opts.root && !isAbsolute(path4)) {
+      if (!opts.root && !isAbsolute(path5)) {
         throw new TypeError("path must be absolute or specify root to res.sendFile");
       }
-      var pathname = encodeURI(path4);
+      var pathname = encodeURI(path5);
       var file2 = send(req, pathname, opts);
       sendfile(res2, file2, opts, function(err) {
         if (done) return done(err);
@@ -22795,7 +22795,7 @@ var require_response2 = __commonJS({
         }
       });
     };
-    res.sendfile = function(path4, options, callback) {
+    res.sendfile = function(path5, options, callback) {
       var done = callback;
       var req = this.req;
       var res2 = this;
@@ -22805,7 +22805,7 @@ var require_response2 = __commonJS({
         done = options;
         opts = {};
       }
-      var file2 = send(req, path4, opts);
+      var file2 = send(req, path5, opts);
       sendfile(res2, file2, opts, function(err) {
         if (done) return done(err);
         if (err && err.code === "EISDIR") return next();
@@ -22818,7 +22818,7 @@ var require_response2 = __commonJS({
       res.sendfile,
       "res.sendfile: Use res.sendFile instead"
     );
-    res.download = function download(path4, filename, options, callback) {
+    res.download = function download(path5, filename, options, callback) {
       var done = callback;
       var name = filename;
       var opts = options || null;
@@ -22835,7 +22835,7 @@ var require_response2 = __commonJS({
         opts = filename;
       }
       var headers = {
-        "Content-Disposition": contentDisposition(name || path4)
+        "Content-Disposition": contentDisposition(name || path5)
       };
       if (opts && opts.headers) {
         var keys = Object.keys(opts.headers);
@@ -22848,7 +22848,7 @@ var require_response2 = __commonJS({
       }
       opts = Object.create(opts);
       opts.headers = headers;
-      var fullPath = !opts.root ? resolve(path4) : path4;
+      var fullPath = !opts.root ? resolve(path5) : path5;
       return this.sendFile(fullPath, opts, done);
     };
     res.contentType = res.type = function contentType(type) {
@@ -23149,11 +23149,11 @@ var require_serve_static = __commonJS({
         }
         var forwardError = !fallthrough;
         var originalUrl = parseUrl.original(req);
-        var path3 = parseUrl(req).pathname;
-        if (path3 === "/" && originalUrl.pathname.substr(-1) !== "/") {
-          path3 = "";
+        var path4 = parseUrl(req).pathname;
+        if (path4 === "/" && originalUrl.pathname.substr(-1) !== "/") {
+          path4 = "";
         }
-        var stream4 = send(req, path3, opts);
+        var stream4 = send(req, path4, opts);
         stream4.on("directory", onDirectory);
         if (setHeaders) {
           stream4.on("headers", setHeaders);
@@ -38413,12 +38413,12 @@ var require_query3 = __commonJS({
         this._fields.push([]);
         return this.readField;
       }
-      _streamLocalInfile(connection, path3) {
+      _streamLocalInfile(connection, path4) {
         if (this._streamFactory) {
-          this._localStream = this._streamFactory(path3);
+          this._localStream = this._streamFactory(path4);
         } else {
           this._localStreamError = new Error(
-            `As a result of LOCAL INFILE command server wants to read ${path3} file, but as of v2.0 you must provide streamFactory option returning ReadStream.`
+            `As a result of LOCAL INFILE command server wants to read ${path4} file, but as of v2.0 you must provide streamFactory option returning ReadStream.`
           );
           connection.writePacket(EmptyPacket);
           return this.infileOk;
@@ -43064,8 +43064,8 @@ var require_package2 = __commonJS({
 // node_modules/.pnpm/dotenv@17.2.3/node_modules/dotenv/lib/main.js
 var require_main = __commonJS({
   "node_modules/.pnpm/dotenv@17.2.3/node_modules/dotenv/lib/main.js"(exports2, module2) {
-    var fs3 = require("fs");
-    var path3 = require("path");
+    var fs4 = require("fs");
+    var path4 = require("path");
     var os3 = require("os");
     var crypto4 = require("crypto");
     var packageJson = require_package2();
@@ -43206,7 +43206,7 @@ var require_main = __commonJS({
       if (options && options.path && options.path.length > 0) {
         if (Array.isArray(options.path)) {
           for (const filepath of options.path) {
-            if (fs3.existsSync(filepath)) {
+            if (fs4.existsSync(filepath)) {
               possibleVaultPath = filepath.endsWith(".vault") ? filepath : `${filepath}.vault`;
             }
           }
@@ -43214,15 +43214,15 @@ var require_main = __commonJS({
           possibleVaultPath = options.path.endsWith(".vault") ? options.path : `${options.path}.vault`;
         }
       } else {
-        possibleVaultPath = path3.resolve(process.cwd(), ".env.vault");
+        possibleVaultPath = path4.resolve(process.cwd(), ".env.vault");
       }
-      if (fs3.existsSync(possibleVaultPath)) {
+      if (fs4.existsSync(possibleVaultPath)) {
         return possibleVaultPath;
       }
       return null;
     }
     function _resolveHome(envPath) {
-      return envPath[0] === "~" ? path3.join(os3.homedir(), envPath.slice(1)) : envPath;
+      return envPath[0] === "~" ? path4.join(os3.homedir(), envPath.slice(1)) : envPath;
     }
     function _configVault(options) {
       const debug = parseBoolean(process.env.DOTENV_CONFIG_DEBUG || options && options.debug);
@@ -43239,7 +43239,7 @@ var require_main = __commonJS({
       return { parsed };
     }
     function configDotenv(options) {
-      const dotenvPath = path3.resolve(process.cwd(), ".env");
+      const dotenvPath = path4.resolve(process.cwd(), ".env");
       let encoding = "utf8";
       let processEnv = process.env;
       if (options && options.processEnv != null) {
@@ -43267,13 +43267,13 @@ var require_main = __commonJS({
       }
       let lastError;
       const parsedAll = {};
-      for (const path4 of optionPaths) {
+      for (const path5 of optionPaths) {
         try {
-          const parsed = DotenvModule.parse(fs3.readFileSync(path4, { encoding }));
+          const parsed = DotenvModule.parse(fs4.readFileSync(path5, { encoding }));
           DotenvModule.populate(parsedAll, parsed, options);
         } catch (e) {
           if (debug) {
-            _debug(`Failed to load ${path4} ${e.message}`);
+            _debug(`Failed to load ${path5} ${e.message}`);
           }
           lastError = e;
         }
@@ -43286,7 +43286,7 @@ var require_main = __commonJS({
         const shortPaths = [];
         for (const filePath of optionPaths) {
           try {
-            const relative = path3.relative(process.cwd(), filePath);
+            const relative = path4.relative(process.cwd(), filePath);
             shortPaths.push(relative);
           } catch (e) {
             if (debug) {
@@ -43967,11 +43967,11 @@ var require_form_data = __commonJS({
     "use strict";
     var CombinedStream = require_combined_stream();
     var util3 = require("util");
-    var path3 = require("path");
+    var path4 = require("path");
     var http2 = require("http");
     var https2 = require("https");
     var parseUrl = require("url").parse;
-    var fs3 = require("fs");
+    var fs4 = require("fs");
     var Stream = require("stream").Stream;
     var crypto4 = require("crypto");
     var mime = require_mime_types();
@@ -44038,7 +44038,7 @@ var require_form_data = __commonJS({
         if (value.end != void 0 && value.end != Infinity && value.start != void 0) {
           callback(null, value.end + 1 - (value.start ? value.start : 0));
         } else {
-          fs3.stat(value.path, function(err, stat) {
+          fs4.stat(value.path, function(err, stat) {
             if (err) {
               callback(err);
               return;
@@ -44095,11 +44095,11 @@ var require_form_data = __commonJS({
     FormData3.prototype._getContentDisposition = function(value, options) {
       var filename;
       if (typeof options.filepath === "string") {
-        filename = path3.normalize(options.filepath).replace(/\\/g, "/");
+        filename = path4.normalize(options.filepath).replace(/\\/g, "/");
       } else if (options.filename || value && (value.name || value.path)) {
-        filename = path3.basename(options.filename || value && (value.name || value.path));
+        filename = path4.basename(options.filename || value && (value.name || value.path));
       } else if (value && value.readable && hasOwn(value, "httpVersion")) {
-        filename = path3.basename(value.client._httpMessage.path || "");
+        filename = path4.basename(value.client._httpMessage.path || "");
       }
       if (filename) {
         return 'filename="' + filename + '"';
@@ -45827,13 +45827,13 @@ function __disposeResources(env) {
   }
   return next();
 }
-function __rewriteRelativeImportExtension(path3, preserveJsx) {
-  if (typeof path3 === "string" && /^\.\.?\//.test(path3)) {
-    return path3.replace(/\.(tsx)$|((?:\.d)?)((?:\.[^./]+?)?)\.([cm]?)ts$/i, function(m, tsx, d, ext, cm) {
+function __rewriteRelativeImportExtension(path4, preserveJsx) {
+  if (typeof path4 === "string" && /^\.\.?\//.test(path4)) {
+    return path4.replace(/\.(tsx)$|((?:\.d)?)((?:\.[^./]+?)?)\.([cm]?)ts$/i, function(m, tsx, d, ext, cm) {
       return tsx ? preserveJsx ? ".jsx" : ".js" : d && (!ext || !cm) ? m : d + ext + "." + cm.toLowerCase() + "js";
     });
   }
-  return path3;
+  return path4;
 }
 var extendStatics, __assign, __createBinding, __setModuleDefault, ownKeys, _SuppressedError, tslib_es6_default;
 var init_tslib_es6 = __esm({
@@ -51335,9 +51335,9 @@ var require_helpers2 = __commonJS({
       const fragment = hashIndex === -1 ? "" : redirectTo.slice(hashIndex);
       const queryIndex = base.indexOf("?");
       if (queryIndex !== -1) {
-        const path3 = base.slice(0, queryIndex);
+        const path4 = base.slice(0, queryIndex);
         const remaining = base.slice(queryIndex + 1).split("&").filter((pair) => pair !== "" && pair !== constants_1.PKCE_FLOW_ID_PARAM && !pair.startsWith(`${constants_1.PKCE_FLOW_ID_PARAM}=`));
-        base = remaining.length > 0 ? `${path3}?${remaining.join("&")}` : path3;
+        base = remaining.length > 0 ? `${path4}?${remaining.join("&")}` : path4;
       }
       const separator = base.includes("?") ? "&" : "?";
       return `${base}${separator}${constants_1.PKCE_FLOW_ID_PARAM}=${encodeURIComponent(flowId)}${fragment}`;
@@ -59795,8 +59795,8 @@ function wrapReason(ex) {
   return new UnknownErrorException(ex.message, ex.toString());
 }
 async function node_utils_fetchData(url3) {
-  const fs3 = process.getBuiltinModule("fs");
-  const data = await fs3.promises.readFile(url3);
+  const fs4 = process.getBuiltinModule("fs");
+  const data = await fs4.promises.readFile(url3);
   return new Uint8Array(data);
 }
 function expandBBox(array2, index2, minX, minY, maxX, maxY) {
@@ -71723,11 +71723,11 @@ var init_pdf = __esm({
         } catch (ex) {
           warn(`getPathGenerator - ignoring character: "${ex}".`);
         }
-        const path3 = new Path2D(cmds || "");
+        const path4 = new Path2D(cmds || "");
         if (!this.fontExtraProperties) {
           objs.delete(objId);
         }
-        return this.compiledGlyphs[character] = path3;
+        return this.compiledGlyphs[character] = path4;
       }
       get black() {
         return this.#fontData.black;
@@ -74272,47 +74272,47 @@ var init_pdf = __esm({
         this._cachedGetSinglePixelWidth = null;
       }
       constructPath(opIdx, op, data, minMax) {
-        let [path3] = data;
+        let [path4] = data;
         if (!minMax) {
-          path3 ||= data[0] = new Path2D();
-          this[op](opIdx, path3);
+          path4 ||= data[0] = new Path2D();
+          this[op](opIdx, path4);
           return;
         }
         if (this.dependencyTracker !== null) {
           const outerExtraSize = op === OPS.stroke ? this.current.lineWidth / 2 : 0;
           this.dependencyTracker.resetBBox(opIdx).recordBBox(opIdx, this.ctx, minMax[0] - outerExtraSize, minMax[2] + outerExtraSize, minMax[1] - outerExtraSize, minMax[3] + outerExtraSize).recordDependencies(opIdx, ["transform"]);
         }
-        if (!(path3 instanceof Path2D)) {
+        if (!(path4 instanceof Path2D)) {
           const path2d = data[0] = new Path2D();
-          for (let i = 0, ii = path3.length; i < ii; ) {
-            switch (path3[i++]) {
+          for (let i = 0, ii = path4.length; i < ii; ) {
+            switch (path4[i++]) {
               case DrawOPS.moveTo:
-                path2d.moveTo(path3[i++], path3[i++]);
+                path2d.moveTo(path4[i++], path4[i++]);
                 break;
               case DrawOPS.lineTo:
-                path2d.lineTo(path3[i++], path3[i++]);
+                path2d.lineTo(path4[i++], path4[i++]);
                 break;
               case DrawOPS.curveTo:
-                path2d.bezierCurveTo(path3[i++], path3[i++], path3[i++], path3[i++], path3[i++], path3[i++]);
+                path2d.bezierCurveTo(path4[i++], path4[i++], path4[i++], path4[i++], path4[i++], path4[i++]);
                 break;
               case DrawOPS.closePath:
                 path2d.closePath();
                 break;
               default:
-                warn(`Unrecognized drawing path operator: ${path3[i - 1]}`);
+                warn(`Unrecognized drawing path operator: ${path4[i - 1]}`);
                 break;
             }
           }
-          path3 = path2d;
+          path4 = path2d;
         }
         Util.axialAlignedBoundingBox(minMax, getCurrentTransform(this.ctx), this.current.minMax);
-        this[op](opIdx, path3);
+        this[op](opIdx, path4);
         this._pathStartIdx = opIdx;
       }
       closePath(opIdx) {
         this.ctx.closePath();
       }
-      stroke(opIdx, path3, consumePath = true) {
+      stroke(opIdx, path4, consumePath = true) {
         const ctx = this.ctx;
         const strokeColor = this.current.strokeColor;
         ctx.globalAlpha = this.current.strokeAlpha;
@@ -74323,25 +74323,25 @@ var init_pdf = __esm({
             ctx.strokeStyle = strokeColor.getPattern(ctx, this, getCurrentTransformInverse(ctx), PathType.STROKE, opIdx);
             if (baseTransform) {
               const newPath = new Path2D();
-              newPath.addPath(path3, ctx.getTransform().invertSelf().multiplySelf(baseTransform));
-              path3 = newPath;
+              newPath.addPath(path4, ctx.getTransform().invertSelf().multiplySelf(baseTransform));
+              path4 = newPath;
             }
-            this.rescaleAndStroke(path3, false);
+            this.rescaleAndStroke(path4, false);
             ctx.restore();
           } else {
-            this.rescaleAndStroke(path3, true);
+            this.rescaleAndStroke(path4, true);
           }
         }
         this.dependencyTracker?.recordDependencies(opIdx, Dependencies.stroke);
         if (consumePath) {
-          this.consumePath(opIdx, path3, this.current.getClippedPathBoundingBox(PathType.STROKE, getCurrentTransform(this.ctx)));
+          this.consumePath(opIdx, path4, this.current.getClippedPathBoundingBox(PathType.STROKE, getCurrentTransform(this.ctx)));
         }
         ctx.globalAlpha = this.current.fillAlpha;
       }
-      closeStroke(opIdx, path3) {
-        this.stroke(opIdx, path3);
+      closeStroke(opIdx, path4) {
+        this.stroke(opIdx, path4);
       }
-      fill(opIdx, path3, consumePath = true) {
+      fill(opIdx, path4, consumePath = true) {
         const ctx = this.ctx;
         const fillColor = this.current.fillColor;
         const isPatternFill = this.current.patternFill;
@@ -74353,18 +74353,18 @@ var init_pdf = __esm({
           ctx.fillStyle = fillColor.getPattern(ctx, this, getCurrentTransformInverse(ctx), PathType.FILL, opIdx);
           if (baseTransform) {
             const newPath = new Path2D();
-            newPath.addPath(path3, ctx.getTransform().invertSelf().multiplySelf(baseTransform));
-            path3 = newPath;
+            newPath.addPath(path4, ctx.getTransform().invertSelf().multiplySelf(baseTransform));
+            path4 = newPath;
           }
           needRestore = true;
         }
         const intersect2 = this.current.getClippedPathBoundingBox();
         if (this.contentVisible && intersect2 !== null) {
           if (this.pendingEOFill) {
-            ctx.fill(path3, "evenodd");
+            ctx.fill(path4, "evenodd");
             this.pendingEOFill = false;
           } else {
-            ctx.fill(path3);
+            ctx.fill(path4);
           }
         }
         this.dependencyTracker?.recordDependencies(opIdx, Dependencies.fill);
@@ -74373,34 +74373,34 @@ var init_pdf = __esm({
           this.dependencyTracker?.restore(opIdx);
         }
         if (consumePath) {
-          this.consumePath(opIdx, path3, intersect2);
+          this.consumePath(opIdx, path4, intersect2);
         }
       }
-      eoFill(opIdx, path3) {
+      eoFill(opIdx, path4) {
         this.pendingEOFill = true;
-        this.fill(opIdx, path3);
+        this.fill(opIdx, path4);
       }
-      fillStroke(opIdx, path3) {
-        this.fill(opIdx, path3, false);
-        this.stroke(opIdx, path3, false);
-        this.consumePath(opIdx, path3);
+      fillStroke(opIdx, path4) {
+        this.fill(opIdx, path4, false);
+        this.stroke(opIdx, path4, false);
+        this.consumePath(opIdx, path4);
       }
-      eoFillStroke(opIdx, path3) {
+      eoFillStroke(opIdx, path4) {
         this.pendingEOFill = true;
-        this.fillStroke(opIdx, path3);
+        this.fillStroke(opIdx, path4);
       }
-      closeFillStroke(opIdx, path3) {
-        this.fillStroke(opIdx, path3);
+      closeFillStroke(opIdx, path4) {
+        this.fillStroke(opIdx, path4);
       }
-      closeEOFillStroke(opIdx, path3) {
+      closeEOFillStroke(opIdx, path4) {
         this.pendingEOFill = true;
-        this.fillStroke(opIdx, path3);
+        this.fillStroke(opIdx, path4);
       }
-      endPath(opIdx, path3) {
-        this.consumePath(opIdx, path3);
+      endPath(opIdx, path4) {
+        this.consumePath(opIdx, path4);
       }
-      rawFillPath(opIdx, path3) {
-        this.ctx.fill(path3);
+      rawFillPath(opIdx, path4) {
+        this.ctx.fill(path4);
         this.dependencyTracker?.recordDependencies(opIdx, Dependencies.rawFillPath).recordOperation(opIdx);
       }
       clip(opIdx) {
@@ -74438,12 +74438,12 @@ var init_pdf = __esm({
             x,
             y,
             fontSize,
-            path: path3
+            path: path4
           } of paths) {
-            if (!path3) {
+            if (!path4) {
               continue;
             }
-            newPath.addPath(path3, new DOMMatrix(transform2).preMultiplySelf(invTransf).translate(x, y).scale(fontSize, -fontSize));
+            newPath.addPath(path4, new DOMMatrix(transform2).preMultiplySelf(invTransf).translate(x, y).scale(fontSize, -fontSize));
           }
           ctx.clip(newPath);
         }
@@ -74536,9 +74536,9 @@ var init_pdf = __esm({
         this.moveText(opIdx, 0, this.current.leading);
         this.dependencyTracker?.recordIncrementalData("moveText", this.dependencyTracker.getSimpleIndex("leading") ?? opIdx);
       }
-      #getScaledPath(path3, currentTransform, transform2) {
+      #getScaledPath(path4, currentTransform, transform2) {
         const newPath = new Path2D();
-        newPath.addPath(path3, new DOMMatrix(transform2).invertSelf().multiplySelf(currentTransform));
+        newPath.addPath(path4, new DOMMatrix(transform2).invertSelf().multiplySelf(currentTransform));
         return newPath;
       }
       paintChar(opIdx, character, x, y, patternFillTransform, patternStrokeTransform) {
@@ -74551,11 +74551,11 @@ var init_pdf = __esm({
         const isAddToPathSet = !!(textRenderingMode & TextRenderingMode.ADD_TO_PATH_FLAG);
         const patternFill = current.patternFill && !font.missingFile;
         const patternStroke = current.patternStroke && !font.missingFile;
-        let path3;
+        let path4;
         if ((font.disableFontFace || isAddToPathSet || patternFill || patternStroke) && !font.missingFile) {
-          path3 = font.getPathGenerator(this.commonObjs, character);
+          path4 = font.getPathGenerator(this.commonObjs, character);
         }
-        if (path3 && (font.disableFontFace || patternFill || patternStroke)) {
+        if (path4 && (font.disableFontFace || patternFill || patternStroke)) {
           ctx.save();
           ctx.translate(x, y);
           ctx.scale(fontSize, -fontSize);
@@ -74565,10 +74565,10 @@ var init_pdf = __esm({
             if (patternFillTransform) {
               currentTransform = ctx.getTransform();
               ctx.setTransform(...patternFillTransform);
-              const scaledPath = this.#getScaledPath(path3, currentTransform, patternFillTransform);
+              const scaledPath = this.#getScaledPath(path4, currentTransform, patternFillTransform);
               ctx.fill(scaledPath);
             } else {
-              ctx.fill(path3);
+              ctx.fill(path4);
             }
           }
           if (fillStrokeMode === TextRenderingMode.STROKE || fillStrokeMode === TextRenderingMode.FILL_STROKE) {
@@ -74585,10 +74585,10 @@ var init_pdf = __esm({
               const transf = Util.transform([a, b, c, d, 0, 0], invPatternTransform);
               Util.singularValueDecompose2dScale(transf, XY);
               ctx.lineWidth *= Math.max(XY[0], XY[1]) / fontSize;
-              ctx.stroke(this.#getScaledPath(path3, currentTransform, patternStrokeTransform));
+              ctx.stroke(this.#getScaledPath(path4, currentTransform, patternStrokeTransform));
             } else {
               ctx.lineWidth /= fontSize;
-              ctx.stroke(path3);
+              ctx.stroke(path4);
             }
           }
           ctx.restore();
@@ -74611,7 +74611,7 @@ var init_pdf = __esm({
             x,
             y,
             fontSize,
-            path: path3
+            path: path4
           });
           this.dependencyTracker?.recordCharacterBBox(opIdx, ctx, font, fontSize, x, y);
         }
@@ -75017,9 +75017,9 @@ var init_pdf = __esm({
         const [x0, y0, x1, y1] = group.bbox;
         clip.rect(x0, y0, x1 - x0, y1 - y0);
         if (group.matrix) {
-          const path3 = new Path2D();
-          path3.addPath(clip, new DOMMatrix(group.matrix));
-          clip = path3;
+          const path4 = new Path2D();
+          path4.addPath(clip, new DOMMatrix(group.matrix));
+          clip = path4;
         }
         groupCtx.clip(clip);
         if (group.smask) {
@@ -75363,7 +75363,7 @@ var init_pdf = __esm({
       }
       endCompat(opIdx) {
       }
-      consumePath(opIdx, path3, clipBox) {
+      consumePath(opIdx, path4, clipBox) {
         const isEmpty = this.current.isEmptyClip();
         if (this.pendingClip) {
           this.current.updateClipFromPath();
@@ -75375,9 +75375,9 @@ var init_pdf = __esm({
         if (this.pendingClip) {
           if (!isEmpty) {
             if (this.pendingClip === EO_CLIP) {
-              ctx.clip(path3, "evenodd");
+              ctx.clip(path4, "evenodd");
             } else {
-              ctx.clip(path3);
+              ctx.clip(path4);
             }
           }
           this.pendingClip = null;
@@ -75450,7 +75450,7 @@ var init_pdf = __esm({
         }
         return this._cachedScaleForStroking;
       }
-      rescaleAndStroke(path3, saveRestore) {
+      rescaleAndStroke(path4, saveRestore) {
         const {
           ctx,
           current: {
@@ -75460,7 +75460,7 @@ var init_pdf = __esm({
         const [scaleX, scaleY] = this.getScaleForStroking();
         if (scaleX === scaleY) {
           ctx.lineWidth = (lineWidth || 1) * scaleX;
-          ctx.stroke(path3);
+          ctx.stroke(path4);
           return;
         }
         const dashes = ctx.getLineDash();
@@ -75471,7 +75471,7 @@ var init_pdf = __esm({
         SCALE_MATRIX.a = 1 / scaleX;
         SCALE_MATRIX.d = 1 / scaleY;
         const newPath = new Path2D();
-        newPath.addPath(path3, SCALE_MATRIX);
+        newPath.addPath(path4, SCALE_MATRIX);
         if (dashes.length > 0) {
           const scale = Math.max(scaleX, scaleY);
           ctx.setLineDash(dashes.map((x) => x / scale));
@@ -77131,10 +77131,10 @@ var init_pdf = __esm({
         this._readableStream = null;
         this._readCapability = Promise.withResolvers();
         this._headersCapability = Promise.withResolvers();
-        const fs3 = process.getBuiltinModule("fs");
-        fs3.promises.lstat(this._url).then((stat) => {
+        const fs4 = process.getBuiltinModule("fs");
+        fs4.promises.lstat(this._url).then((stat) => {
           this._contentLength = stat.size;
-          this._setReadableStream(fs3.createReadStream(this._url));
+          this._setReadableStream(fs4.createReadStream(this._url));
           this._headersCapability.resolve();
         }, (error46) => {
           if (error46.code === "ENOENT") {
@@ -77229,8 +77229,8 @@ var init_pdf = __esm({
         this._readCapability = Promise.withResolvers();
         const source = stream4.source;
         this._isStreamingSupported = !source.disableStream;
-        const fs3 = process.getBuiltinModule("fs");
-        this._setReadableStream(fs3.createReadStream(this._url, {
+        const fs4 = process.getBuiltinModule("fs");
+        this._setReadableStream(fs4.createReadStream(this._url, {
           start,
           end: end - 1
         }));
@@ -86612,11 +86612,11 @@ var init_pdf = __esm({
     };
     ContourDrawOutline = class extends InkDrawOutline {
       toSVGPath() {
-        let path3 = super.toSVGPath();
-        if (!path3.endsWith("Z")) {
-          path3 += "Z";
+        let path4 = super.toSVGPath();
+        if (!path4.endsWith("Z")) {
+          path4 += "Z";
         }
-        return path3;
+        return path4;
       }
     };
     BASE_HEADER_LENGTH = 8;
@@ -89092,13 +89092,13 @@ var init_pdf = __esm({
         const root = this.#createSVG();
         const defs = _DrawLayer._svgFactory.createElement("defs");
         root.append(defs);
-        const path3 = _DrawLayer._svgFactory.createElement("path");
-        defs.append(path3);
+        const path4 = _DrawLayer._svgFactory.createElement("path");
+        defs.append(path4);
         const pathId = `path_p${this.pageIndex}_${id}`;
-        path3.setAttribute("id", pathId);
-        path3.setAttribute("vector-effect", "non-scaling-stroke");
+        path4.setAttribute("id", pathId);
+        path4.setAttribute("vector-effect", "non-scaling-stroke");
         if (isPathUpdatable) {
-          this.#toUpdate.set(id, path3);
+          this.#toUpdate.set(id, path4);
         }
         const clipPathId = hasClip ? this.#createClipPath(defs, pathId) : null;
         const use = _DrawLayer._svgFactory.createElement("use");
@@ -89116,11 +89116,11 @@ var init_pdf = __esm({
         const root = this.#createSVG();
         const defs = _DrawLayer._svgFactory.createElement("defs");
         root.append(defs);
-        const path3 = _DrawLayer._svgFactory.createElement("path");
-        defs.append(path3);
+        const path4 = _DrawLayer._svgFactory.createElement("path");
+        defs.append(path4);
         const pathId = `path_p${this.pageIndex}_${id}`;
-        path3.setAttribute("id", pathId);
-        path3.setAttribute("vector-effect", "non-scaling-stroke");
+        path4.setAttribute("id", pathId);
+        path4.setAttribute("vector-effect", "non-scaling-stroke");
         let maskId;
         if (mustRemoveSelfIntersections) {
           const mask = _DrawLayer._svgFactory.createElement("mask");
@@ -89167,7 +89167,7 @@ var init_pdf = __esm({
           root,
           bbox,
           rootClass,
-          path: path3
+          path: path4
         } = properties;
         const element = typeof elementOrId === "number" ? this.#mapping.get(elementOrId) : elementOrId;
         if (!element) {
@@ -89187,10 +89187,10 @@ var init_pdf = __esm({
             classList.toggle(className, value);
           }
         }
-        if (path3) {
+        if (path4) {
           const defs = element.firstChild;
           const pathElement = defs.firstChild;
-          this.#updateProperties(pathElement, path3);
+          this.#updateProperties(pathElement, path4);
         }
       }
       updateParent(id, layer) {
@@ -91519,8 +91519,8 @@ var require_pathstringifier = __commonJS({
       return key.replace(/\./g, "\\.");
     };
     exports2.escapeKey = escapeKey;
-    var stringifyPath = function(path3) {
-      return path3.map(String).map(exports2.escapeKey).join(".");
+    var stringifyPath = function(path4) {
+      return path4.map(String).map(exports2.escapeKey).join(".");
     };
     exports2.stringifyPath = stringifyPath;
     var parsePath = function(string4) {
@@ -91847,26 +91847,26 @@ var require_accessDeep = __commonJS({
       }
       return keys.next().value;
     };
-    function validatePath(path3) {
-      if (util_1.includes(path3, "__proto__")) {
+    function validatePath(path4) {
+      if (util_1.includes(path4, "__proto__")) {
         throw new Error("__proto__ is not allowed as a property");
       }
-      if (util_1.includes(path3, "prototype")) {
+      if (util_1.includes(path4, "prototype")) {
         throw new Error("prototype is not allowed as a property");
       }
-      if (util_1.includes(path3, "constructor")) {
+      if (util_1.includes(path4, "constructor")) {
         throw new Error("constructor is not allowed as a property");
       }
     }
-    var getDeep = function(object2, path3) {
-      validatePath(path3);
-      for (var i = 0; i < path3.length; i++) {
-        var key = path3[i];
+    var getDeep = function(object2, path4) {
+      validatePath(path4);
+      for (var i = 0; i < path4.length; i++) {
+        var key = path4[i];
         if (is_1.isSet(object2)) {
           object2 = getNthKey(object2, +key);
         } else if (is_1.isMap(object2)) {
           var row = +key;
-          var type = +path3[++i] === 0 ? "key" : "value";
+          var type = +path4[++i] === 0 ? "key" : "value";
           var keyOfRow = getNthKey(object2, row);
           switch (type) {
             case "key":
@@ -91883,14 +91883,14 @@ var require_accessDeep = __commonJS({
       return object2;
     };
     exports2.getDeep = getDeep;
-    var setDeep = function(object2, path3, mapper) {
-      validatePath(path3);
-      if (path3.length === 0) {
+    var setDeep = function(object2, path4, mapper) {
+      validatePath(path4);
+      if (path4.length === 0) {
         return mapper(object2);
       }
       var parent = object2;
-      for (var i = 0; i < path3.length - 1; i++) {
-        var key = path3[i];
+      for (var i = 0; i < path4.length - 1; i++) {
+        var key = path4[i];
         if (is_1.isArray(parent)) {
           var index2 = +key;
           parent = parent[index2];
@@ -91900,12 +91900,12 @@ var require_accessDeep = __commonJS({
           var row = +key;
           parent = getNthKey(parent, row);
         } else if (is_1.isMap(parent)) {
-          var isEnd = i === path3.length - 2;
+          var isEnd = i === path4.length - 2;
           if (isEnd) {
             break;
           }
           var row = +key;
-          var type = +path3[++i] === 0 ? "key" : "value";
+          var type = +path4[++i] === 0 ? "key" : "value";
           var keyOfRow = getNthKey(parent, row);
           switch (type) {
             case "key":
@@ -91917,7 +91917,7 @@ var require_accessDeep = __commonJS({
           }
         }
       }
-      var lastKey = path3[path3.length - 1];
+      var lastKey = path4[path4.length - 1];
       if (is_1.isArray(parent)) {
         parent[+lastKey] = mapper(parent[+lastKey]);
       } else if (is_1.isPlainObject(parent)) {
@@ -91932,7 +91932,7 @@ var require_accessDeep = __commonJS({
         }
       }
       if (is_1.isMap(parent)) {
-        var row = +path3[path3.length - 2];
+        var row = +path4[path4.length - 2];
         var keyToRow = getNthKey(parent, row);
         var type = +lastKey === 0 ? "key" : "value";
         switch (type) {
@@ -92012,8 +92012,8 @@ var require_plainer = __commonJS({
       walker2(nodeValue, origin2);
     }
     function applyValueAnnotations(plain, annotations, superJson) {
-      traverse(annotations, function(type, path3) {
-        plain = accessDeep_1.setDeep(plain, path3, function(v) {
+      traverse(annotations, function(type, path4) {
+        plain = accessDeep_1.setDeep(plain, path4, function(v) {
           return transformer_1.untransformValue(v, type, superJson);
         });
       });
@@ -92021,8 +92021,8 @@ var require_plainer = __commonJS({
     }
     exports2.applyValueAnnotations = applyValueAnnotations;
     function applyReferentialEqualityAnnotations(plain, annotations) {
-      function apply(identicalPaths, path3) {
-        var object2 = accessDeep_1.getDeep(plain, pathstringifier_2.parsePath(path3));
+      function apply(identicalPaths, path4) {
+        var object2 = accessDeep_1.getDeep(plain, pathstringifier_2.parsePath(path4));
         identicalPaths.map(pathstringifier_2.parsePath).forEach(function(identicalObjectPath) {
           plain = accessDeep_1.setDeep(plain, identicalObjectPath, function() {
             return object2;
@@ -92048,12 +92048,12 @@ var require_plainer = __commonJS({
     var isDeep = function(object2, superJson) {
       return is_1.isPlainObject(object2) || is_1.isArray(object2) || is_1.isMap(object2) || is_1.isSet(object2) || transformer_1.isInstanceOfRegisteredClass(object2, superJson);
     };
-    function addIdentity(object2, path3, identities) {
+    function addIdentity(object2, path4, identities) {
       var existingSet = identities.get(object2);
       if (existingSet) {
-        existingSet.push(path3);
+        existingSet.push(path4);
       } else {
-        identities.set(object2, [path3]);
+        identities.set(object2, [path4]);
       }
     }
     function generateReferentialEqualityAnnotations(identitites, dedupe) {
@@ -92064,8 +92064,8 @@ var require_plainer = __commonJS({
           return;
         }
         if (!dedupe) {
-          paths = paths.map(function(path3) {
-            return path3.map(String);
+          paths = paths.map(function(path4) {
+            return path4.map(String);
           }).sort(function(a, b) {
             return a.length - b.length;
           });
@@ -92088,10 +92088,10 @@ var require_plainer = __commonJS({
       }
     }
     exports2.generateReferentialEqualityAnnotations = generateReferentialEqualityAnnotations;
-    var walker = function(object2, identities, superJson, dedupe, path3, objectsInThisPath, seenObjects) {
+    var walker = function(object2, identities, superJson, dedupe, path4, objectsInThisPath, seenObjects) {
       var _a;
-      if (path3 === void 0) {
-        path3 = [];
+      if (path4 === void 0) {
+        path4 = [];
       }
       if (objectsInThisPath === void 0) {
         objectsInThisPath = [];
@@ -92101,7 +92101,7 @@ var require_plainer = __commonJS({
       }
       var primitive = is_1.isPrimitive(object2);
       if (!primitive) {
-        addIdentity(object2, path3, identities);
+        addIdentity(object2, path4, identities);
         var seen = seenObjects.get(object2);
         if (seen) {
           return dedupe ? {
@@ -92132,7 +92132,7 @@ var require_plainer = __commonJS({
       var transformedValue = is_1.isArray(transformed) ? [] : {};
       var innerAnnotations = {};
       util_1.forEach(transformed, function(value, index2) {
-        var recursiveResult = exports2.walker(value, identities, superJson, dedupe, __spreadArray2(__spreadArray2([], __read2(path3)), [index2]), __spreadArray2(__spreadArray2([], __read2(objectsInThisPath)), [object2]), seenObjects);
+        var recursiveResult = exports2.walker(value, identities, superJson, dedupe, __spreadArray2(__spreadArray2([], __read2(path4)), [index2]), __spreadArray2(__spreadArray2([], __read2(objectsInThisPath)), [object2]), seenObjects);
         transformedValue[index2] = recursiveResult.transformedValue;
         if (is_1.isArray(recursiveResult.annotations)) {
           innerAnnotations[index2] = recursiveResult.annotations;
@@ -92623,27 +92623,27 @@ var noop = () => {
 var freezeIfAvailable = (obj) => {
   if (Object.freeze) Object.freeze(obj);
 };
-function createInnerProxy(callback, path3, memo2) {
+function createInnerProxy(callback, path4, memo2) {
   var _memo$cacheKey;
-  const cacheKey = path3.join(".");
+  const cacheKey = path4.join(".");
   (_memo$cacheKey = memo2[cacheKey]) !== null && _memo$cacheKey !== void 0 || (memo2[cacheKey] = new Proxy(noop, {
     get(_obj, key) {
       if (typeof key !== "string" || key === "then") return void 0;
-      return createInnerProxy(callback, [...path3, key], memo2);
+      return createInnerProxy(callback, [...path4, key], memo2);
     },
     apply(_1, _2, args) {
-      const lastOfPath = path3[path3.length - 1];
+      const lastOfPath = path4[path4.length - 1];
       let opts = {
         args,
-        path: path3
+        path: path4
       };
       if (lastOfPath === "call") opts = {
         args: args.length >= 2 ? [args[1]] : [],
-        path: path3.slice(0, -1)
+        path: path4.slice(0, -1)
       };
       else if (lastOfPath === "apply") opts = {
         args: args.length >= 2 ? args[1] : [],
-        path: path3.slice(0, -1)
+        path: path4.slice(0, -1)
       };
       freezeIfAvailable(opts.args);
       freezeIfAvailable(opts.path);
@@ -92771,7 +92771,7 @@ var require_objectSpread2 = __commonJS2({ "../../node_modules/.pnpm/@oxc-project
 } });
 var import_objectSpread2 = __toESM2(require_objectSpread2(), 1);
 function getErrorShape(opts) {
-  const { path: path3, error: error46, config: config2 } = opts;
+  const { path: path4, error: error46, config: config2 } = opts;
   const { code } = opts.error;
   const shape = {
     message: error46.message,
@@ -92782,7 +92782,7 @@ function getErrorShape(opts) {
     }
   };
   if (config2.isDev && typeof opts.error.stack === "string") shape.data.stack = opts.error.stack;
-  if (typeof path3 === "string") shape.data.path = path3;
+  if (typeof path4 === "string") shape.data.path = path4;
   return config2.errorFormatter((0, import_objectSpread2.default)((0, import_objectSpread2.default)({}, opts), {}, { shape }));
 }
 
@@ -92908,12 +92908,12 @@ function createRouterFactory(config2) {
         })
       };
     }
-    function step(from, path3 = []) {
+    function step(from, path4 = []) {
       const aggregate = omitPrototype({});
       for (const [key, item] of Object.entries(from !== null && from !== void 0 ? from : {})) {
         if (isLazy(item)) {
-          lazy$1[[...path3, key].join(".")] = createLazyLoader({
-            path: path3,
+          lazy$1[[...path4, key].join(".")] = createLazyLoader({
+            path: path4,
             ref: item,
             key,
             aggregate
@@ -92921,14 +92921,14 @@ function createRouterFactory(config2) {
           continue;
         }
         if (isRouter(item)) {
-          aggregate[key] = step(item._def.record, [...path3, key]);
+          aggregate[key] = step(item._def.record, [...path4, key]);
           continue;
         }
         if (!isProcedure(item)) {
-          aggregate[key] = step(item, [...path3, key]);
+          aggregate[key] = step(item, [...path4, key]);
           continue;
         }
-        const newPath = [...path3, key].join(".");
+        const newPath = [...path4, key].join(".");
         if (procedures[newPath]) throw new Error(`Duplicate key: ${newPath}`);
         procedures[newPath] = item;
         aggregate[key] = item;
@@ -92953,15 +92953,15 @@ function createRouterFactory(config2) {
 function isProcedure(procedureOrRouter) {
   return typeof procedureOrRouter === "function";
 }
-async function getProcedureAtPath(router2, path3) {
+async function getProcedureAtPath(router2, path4) {
   const { _def } = router2;
-  let procedure = _def.procedures[path3];
+  let procedure = _def.procedures[path4];
   while (!procedure) {
-    const key = Object.keys(_def.lazy).find((key$1) => path3.startsWith(key$1));
+    const key = Object.keys(_def.lazy).find((key$1) => path4.startsWith(key$1));
     if (!key) return null;
     const lazyRouter = _def.lazy[key];
     await lazyRouter.load();
-    procedure = _def.procedures[path3];
+    procedure = _def.procedures[path4];
   }
   return procedure;
 }
@@ -92970,15 +92970,15 @@ function createCallerFactory() {
     const { _def } = router2;
     return function createCaller(ctxOrCallback, opts) {
       return createRecursiveProxy(async (innerOpts) => {
-        const { path: path3, args } = innerOpts;
-        const fullPath = path3.join(".");
-        if (path3.length === 1 && path3[0] === "_def") return _def;
+        const { path: path4, args } = innerOpts;
+        const fullPath = path4.join(".");
+        if (path4.length === 1 && path4[0] === "_def") return _def;
         const procedure = await getProcedureAtPath(router2, fullPath);
         let ctx = void 0;
         try {
           if (!procedure) throw new TRPCError({
             code: "NOT_FOUND",
-            message: `No procedure found on path "${path3}"`
+            message: `No procedure found on path "${path4}"`
           });
           ctx = isFunction(ctxOrCallback) ? await Promise.resolve(ctxOrCallback()) : ctxOrCallback;
           return await procedure({
@@ -93188,10 +93188,10 @@ var jsonContentTypeHandler = {
       }
       return acc;
     });
-    const calls = await Promise.all(paths.map(async (path3, index2) => {
-      const procedure = await getProcedureAtPath(opts.router, path3);
+    const calls = await Promise.all(paths.map(async (path4, index2) => {
+      const procedure = await getProcedureAtPath(opts.router, path4);
       return {
-        path: path3,
+        path: path4,
         procedure,
         getRawInput: async () => {
           const inputs = await getInputs.read();
@@ -94023,9 +94023,9 @@ function isPromise(value) {
   return (isObject(value) || isFunction(value)) && typeof (value === null || value === void 0 ? void 0 : value["then"]) === "function" && typeof (value === null || value === void 0 ? void 0 : value["catch"]) === "function";
 }
 var MaxDepthError = class extends Error {
-  constructor(path3) {
-    super("Max depth reached at path: " + path3.join("."));
-    this.path = path3;
+  constructor(path4) {
+    super("Max depth reached at path: " + path4.join("."));
+    this.path = path4;
   }
 };
 function createBatchStreamProducer(_x3) {
@@ -94043,16 +94043,16 @@ function _createBatchStreamProducer() {
       mergedIterables.add(iterable$1);
       return idx;
     }
-    function encodePromise(promise2, path3) {
+    function encodePromise(promise2, path4) {
       return registerAsync(/* @__PURE__ */ (function() {
         var _ref = (0, import_wrapAsyncGenerator$2.default)(function* (idx) {
-          const error46 = checkMaxDepth(path3);
+          const error46 = checkMaxDepth(path4);
           if (error46) {
             promise2.catch((cause) => {
               var _opts$onError;
               (_opts$onError = opts.onError) === null || _opts$onError === void 0 || _opts$onError.call(opts, {
                 error: cause,
-                path: path3
+                path: path4
               });
             });
             promise2 = Promise.reject(error46);
@@ -94062,20 +94062,20 @@ function _createBatchStreamProducer() {
             yield [
               idx,
               PROMISE_STATUS_FULFILLED,
-              encode6(next, path3)
+              encode6(next, path4)
             ];
           } catch (cause) {
             var _opts$onError2, _opts$formatError;
             (_opts$onError2 = opts.onError) === null || _opts$onError2 === void 0 || _opts$onError2.call(opts, {
               error: cause,
-              path: path3
+              path: path4
             });
             yield [
               idx,
               PROMISE_STATUS_REJECTED,
               (_opts$formatError = opts.formatError) === null || _opts$formatError === void 0 ? void 0 : _opts$formatError.call(opts, {
                 error: cause,
-                path: path3
+                path: path4
               })
             ];
           }
@@ -94085,12 +94085,12 @@ function _createBatchStreamProducer() {
         };
       })());
     }
-    function encodeAsyncIterable(iterable$1, path3) {
+    function encodeAsyncIterable(iterable$1, path4) {
       return registerAsync(/* @__PURE__ */ (function() {
         var _ref2 = (0, import_wrapAsyncGenerator$2.default)(function* (idx) {
           try {
             var _usingCtx$1 = (0, import_usingCtx$1.default)();
-            const error46 = checkMaxDepth(path3);
+            const error46 = checkMaxDepth(path4);
             if (error46) throw error46;
             const iterator2 = _usingCtx$1.a(iteratorResource(iterable$1));
             try {
@@ -94100,28 +94100,28 @@ function _createBatchStreamProducer() {
                   yield [
                     idx,
                     ASYNC_ITERABLE_STATUS_RETURN,
-                    encode6(next.value, path3)
+                    encode6(next.value, path4)
                   ];
                   break;
                 }
                 yield [
                   idx,
                   ASYNC_ITERABLE_STATUS_YIELD,
-                  encode6(next.value, path3)
+                  encode6(next.value, path4)
                 ];
               }
             } catch (cause) {
               var _opts$onError3, _opts$formatError2;
               (_opts$onError3 = opts.onError) === null || _opts$onError3 === void 0 || _opts$onError3.call(opts, {
                 error: cause,
-                path: path3
+                path: path4
               });
               yield [
                 idx,
                 ASYNC_ITERABLE_STATUS_ERROR,
                 (_opts$formatError2 = opts.formatError) === null || _opts$formatError2 === void 0 ? void 0 : _opts$formatError2.call(opts, {
                   error: cause,
-                  path: path3
+                  path: path4
                 })
               ];
             }
@@ -94136,27 +94136,27 @@ function _createBatchStreamProducer() {
         };
       })());
     }
-    function checkMaxDepth(path3) {
-      if (opts.maxDepth && path3.length > opts.maxDepth) return new MaxDepthError(path3);
+    function checkMaxDepth(path4) {
+      if (opts.maxDepth && path4.length > opts.maxDepth) return new MaxDepthError(path4);
       return null;
     }
-    function encodeAsync3(value, path3) {
-      if (isPromise(value)) return [CHUNK_VALUE_TYPE_PROMISE, encodePromise(value, path3)];
+    function encodeAsync3(value, path4) {
+      if (isPromise(value)) return [CHUNK_VALUE_TYPE_PROMISE, encodePromise(value, path4)];
       if (isAsyncIterable(value)) {
-        if (opts.maxDepth && path3.length >= opts.maxDepth) throw new Error("Max depth reached");
-        return [CHUNK_VALUE_TYPE_ASYNC_ITERABLE, encodeAsyncIterable(value, path3)];
+        if (opts.maxDepth && path4.length >= opts.maxDepth) throw new Error("Max depth reached");
+        return [CHUNK_VALUE_TYPE_ASYNC_ITERABLE, encodeAsyncIterable(value, path4)];
       }
       return null;
     }
-    function encode6(value, path3) {
+    function encode6(value, path4) {
       if (value === void 0) return [[]];
-      const reg = encodeAsync3(value, path3);
+      const reg = encodeAsync3(value, path4);
       if (reg) return [[placeholder], [null, ...reg]];
       if (!isPlainObject(value)) return [[value]];
       const newObj = {};
       const asyncValues = [];
       for (const [key, item] of Object.entries(value)) {
-        const transformed = encodeAsync3(item, [...path3, key]);
+        const transformed = encodeAsync3(item, [...path4, key]);
         if (!transformed) {
           newObj[key] = item;
           continue;
@@ -94577,11 +94577,11 @@ async function resolveResponse(opts) {
               var _call$procedure$_def$2, _call$procedure3, _opts$onError2;
               const error$1 = getTRPCErrorFromUnknown(errorOpts.error);
               const input = call === null || call === void 0 ? void 0 : call.result();
-              const path3 = call === null || call === void 0 ? void 0 : call.path;
+              const path4 = call === null || call === void 0 ? void 0 : call.path;
               const type = (_call$procedure$_def$2 = call === null || call === void 0 || (_call$procedure3 = call.procedure) === null || _call$procedure3 === void 0 ? void 0 : _call$procedure3._def.type) !== null && _call$procedure$_def$2 !== void 0 ? _call$procedure$_def$2 : "unknown";
               (_opts$onError2 = opts.onError) === null || _opts$onError2 === void 0 || _opts$onError2.call(opts, {
                 error: error$1,
-                path: path3,
+                path: path4,
                 input,
                 ctx: ctxManager.valueOrUndefined(),
                 req: opts.req,
@@ -94592,7 +94592,7 @@ async function resolveResponse(opts) {
                 ctx: ctxManager.valueOrUndefined(),
                 error: error$1,
                 input,
-                path: path3,
+                path: path4,
                 type
               });
               return shape;
@@ -94661,14 +94661,14 @@ async function resolveResponse(opts) {
           const call = info2 === null || info2 === void 0 ? void 0 : info2.calls[errorOpts.path[0]];
           const error46 = getTRPCErrorFromUnknown(errorOpts.error);
           const input = call === null || call === void 0 ? void 0 : call.result();
-          const path3 = call === null || call === void 0 ? void 0 : call.path;
+          const path4 = call === null || call === void 0 ? void 0 : call.path;
           const type = (_call$procedure$_def$3 = call === null || call === void 0 || (_call$procedure4 = call.procedure) === null || _call$procedure4 === void 0 ? void 0 : _call$procedure4._def.type) !== null && _call$procedure$_def$3 !== void 0 ? _call$procedure$_def$3 : "unknown";
           const shape = getErrorShape({
             config: config2,
             ctx: ctxManager.valueOrUndefined(),
             error: error46,
             input,
-            path: path3,
+            path: path4,
             type
           });
           return shape;
@@ -95245,18 +95245,18 @@ async function nodeHTTPRequestHandler(opts) {
 var import_objectSpread26 = __toESM2(require_objectSpread2(), 1);
 function createExpressMiddleware(opts) {
   return (req, res) => {
-    let path3 = "";
+    let path4 = "";
     run(async () => {
-      path3 = req.path.slice(req.path.lastIndexOf("/") + 1);
+      path4 = req.path.slice(req.path.lastIndexOf("/") + 1);
       await nodeHTTPRequestHandler((0, import_objectSpread26.default)((0, import_objectSpread26.default)({}, opts), {}, {
         req,
         res,
-        path: path3
+        path: path4
       }));
     }).catch(internal_exceptionHandler((0, import_objectSpread26.default)({
       req,
       res,
-      path: path3
+      path: path4
     }, opts)));
   };
 }
@@ -96600,7 +96600,7 @@ var QueryPromise = class {
 function mapResultRow(columns, row, joinsNotNullableMap) {
   const nullifyMap = {};
   const result = columns.reduce(
-    (result2, { path: path3, field }, columnIndex) => {
+    (result2, { path: path4, field }, columnIndex) => {
       let decoder2;
       if (is(field, Column)) {
         decoder2 = field;
@@ -96610,8 +96610,8 @@ function mapResultRow(columns, row, joinsNotNullableMap) {
         decoder2 = field.sql.decoder;
       }
       let node = result2;
-      for (const [pathChunkIndex, pathChunk] of path3.entries()) {
-        if (pathChunkIndex < path3.length - 1) {
+      for (const [pathChunkIndex, pathChunk] of path4.entries()) {
+        if (pathChunkIndex < path4.length - 1) {
           if (!(pathChunk in node)) {
             node[pathChunk] = {};
           }
@@ -96619,8 +96619,8 @@ function mapResultRow(columns, row, joinsNotNullableMap) {
         } else {
           const rawValue = row[columnIndex];
           const value = node[pathChunk] = rawValue === null ? null : decoder2.mapFromDriverValue(rawValue);
-          if (joinsNotNullableMap && is(field, Column) && path3.length === 2) {
-            const objectName = path3[0];
+          if (joinsNotNullableMap && is(field, Column) && path4.length === 2) {
+            const objectName = path4[0];
             if (!(objectName in nullifyMap)) {
               nullifyMap[objectName] = value === null ? getTableName(field.table) : false;
             } else if (typeof nullifyMap[objectName] === "string" && nullifyMap[objectName] !== getTableName(field.table)) {
@@ -101891,7 +101891,9 @@ var ENV = {
   groqApiKeys: (process.env.GROQ_API_KEYS ?? process.env.GROQ_API_KEY ?? "").split(",").map((k) => k.trim()).filter(Boolean),
   geminiApiKeys: (process.env.GEMINI_API_KEYS ?? process.env.GEMINI_API_KEY ?? "").split(",").map((k) => k.trim()).filter((k) => k.length > 10 && (k.startsWith("AIzaSy") || k.startsWith("AQ."))),
   serpApiKey: process.env.SERPAPI_KEY ?? "",
-  youtubeApiKey: process.env.YOUTUBE_DATA_API_KEY ?? ""
+  youtubeApiKey: process.env.YOUTUBE_DATA_API_KEY ?? "",
+  customModelApiUrl: process.env.CUSTOM_MODEL_API_URL ?? "https://hafsatahir69-studentgpt-server.hf.space",
+  customModelApiKey: process.env.CUSTOM_MODEL_API_KEY ?? "studentgpt-custom-lora"
 };
 
 // server/db.ts
@@ -102764,9 +102766,9 @@ function isVisitable(thing) {
 function removeBrackets(key) {
   return utils_default.endsWith(key, "[]") ? key.slice(0, -2) : key;
 }
-function renderKey(path3, key, dots) {
-  if (!path3) return key;
-  return path3.concat(key).map(function each(token, i) {
+function renderKey(path4, key, dots) {
+  if (!path4) return key;
+  return path4.concat(key).map(function each(token, i) {
     token = removeBrackets(token);
     return !dots && i ? "[" + token + "]" : token;
   }).join(dots ? "." : "");
@@ -102814,9 +102816,9 @@ function toFormData(obj, formData, options) {
     }
     return value;
   }
-  function defaultVisitor(value, key, path3) {
+  function defaultVisitor(value, key, path4) {
     let arr = value;
-    if (value && !path3 && typeof value === "object") {
+    if (value && !path4 && typeof value === "object") {
       if (utils_default.endsWith(key, "{}")) {
         key = metaTokens ? key : key.slice(0, -2);
         value = JSON.stringify(value);
@@ -102835,7 +102837,7 @@ function toFormData(obj, formData, options) {
     if (isVisitable(value)) {
       return true;
     }
-    formData.append(renderKey(path3, key, dots), convertValue(value));
+    formData.append(renderKey(path4, key, dots), convertValue(value));
     return false;
   }
   const stack = [];
@@ -102844,10 +102846,10 @@ function toFormData(obj, formData, options) {
     convertValue,
     isVisitable
   });
-  function build2(value, path3) {
+  function build2(value, path4) {
     if (utils_default.isUndefined(value)) return;
     if (stack.indexOf(value) !== -1) {
-      throw Error("Circular reference detected in " + path3.join("."));
+      throw Error("Circular reference detected in " + path4.join("."));
     }
     stack.push(value);
     utils_default.forEach(value, function each(el, key) {
@@ -102855,11 +102857,11 @@ function toFormData(obj, formData, options) {
         formData,
         el,
         utils_default.isString(key) ? key.trim() : key,
-        path3,
+        path4,
         exposedHelpers
       );
       if (result === true) {
-        build2(el, path3 ? path3.concat(key) : [key]);
+        build2(el, path4 ? path4.concat(key) : [key]);
       }
     });
     stack.pop();
@@ -103071,7 +103073,7 @@ var platform_default = {
 // node_modules/.pnpm/axios@1.12.2/node_modules/axios/lib/helpers/toURLEncodedForm.js
 function toURLEncodedForm(data, options) {
   return toFormData_default(data, new platform_default.classes.URLSearchParams(), {
-    visitor: function(value, key, path3, helpers) {
+    visitor: function(value, key, path4, helpers) {
       if (platform_default.isNode && utils_default.isBuffer(value)) {
         this.append(key, value.toString("base64"));
         return false;
@@ -103101,11 +103103,11 @@ function arrayToObject(arr) {
   return obj;
 }
 function formDataToJSON(formData) {
-  function buildPath(path3, value, target, index2) {
-    let name = path3[index2++];
+  function buildPath(path4, value, target, index2) {
+    let name = path4[index2++];
     if (name === "__proto__") return true;
     const isNumericKey = Number.isFinite(+name);
-    const isLast = index2 >= path3.length;
+    const isLast = index2 >= path4.length;
     name = !name && utils_default.isArray(target) ? target.length : name;
     if (isLast) {
       if (utils_default.hasOwnProp(target, name)) {
@@ -103118,7 +103120,7 @@ function formDataToJSON(formData) {
     if (!target[name] || !utils_default.isObject(target[name])) {
       target[name] = [];
     }
-    const result = buildPath(path3, value, target[name], index2);
+    const result = buildPath(path4, value, target[name], index2);
     if (result && utils_default.isArray(target[name])) {
       target[name] = arrayToObject(target[name]);
     }
@@ -104315,9 +104317,9 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config2) {
       auth = urlUsername + ":" + urlPassword;
     }
     auth && headers.delete("authorization");
-    let path3;
+    let path4;
     try {
-      path3 = buildURL(
+      path4 = buildURL(
         parsed.pathname + parsed.search,
         config2.params,
         config2.paramsSerializer
@@ -104335,7 +104337,7 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config2) {
       false
     );
     const options = {
-      path: path3,
+      path: path4,
       method,
       headers: headers.toJSON(),
       agents: { http: config2.httpAgent, https: config2.httpsAgent },
@@ -104565,10 +104567,10 @@ var isURLSameOrigin_default = platform_default.hasStandardBrowserEnv ? /* @__PUR
 var cookies_default = platform_default.hasStandardBrowserEnv ? (
   // Standard browser envs support document.cookie
   {
-    write(name, value, expires, path3, domain2, secure) {
+    write(name, value, expires, path4, domain2, secure) {
       const cookie = [name + "=" + encodeURIComponent(value)];
       utils_default.isNumber(expires) && cookie.push("expires=" + new Date(expires).toGMTString());
-      utils_default.isString(path3) && cookie.push("path=" + path3);
+      utils_default.isString(path4) && cookie.push("path=" + path4);
       utils_default.isString(domain2) && cookie.push("domain=" + domain2);
       secure === true && cookie.push("secure");
       document.cookie = cookie.join("; ");
@@ -111220,8 +111222,8 @@ var IcebergError = class extends Error {
     return this.status === 419;
   }
 };
-function buildUrl(baseUrl, path3, query) {
-  const url3 = new URL(path3, baseUrl);
+function buildUrl(baseUrl, path4, query) {
+  const url3 = new URL(path4, baseUrl);
   if (query) {
     for (const [key, value] of Object.entries(query)) {
       if (value !== void 0) {
@@ -111251,12 +111253,12 @@ function createFetchClient(options) {
   return {
     async request({
       method,
-      path: path3,
+      path: path4,
       query,
       body,
       headers
     }) {
-      const url3 = buildUrl(options.baseUrl, path3, query);
+      const url3 = buildUrl(options.baseUrl, path4, query);
       const authHeaders = await buildAuthHeaders(options.auth);
       const res = await fetchFn(url3, {
         method,
@@ -111853,7 +111855,7 @@ var isValidBucketName = (bucketName) => {
   if (bucketName.includes("/") || bucketName.includes("\\")) return false;
   return /^[\w!.\*'() &$@=;:+,?-]+$/.test(bucketName);
 };
-var encodeStoragePath = (path3) => path3.split("/").map(encodeURIComponent).join("/");
+var encodeStoragePath = (path4) => path4.split("/").map(encodeURIComponent).join("/");
 var _getErrorMessage = (err) => {
   if (typeof err === "object" && err !== null) {
     const e = err;
@@ -112120,7 +112122,7 @@ var StorageFileApi = class extends BaseApiClient {
   * @param path The relative file path. Should be of the format `folder/subfolder/filename.png`. The bucket must already exist before attempting to upload.
   * @param fileBody The body of the file to be stored in the bucket.
   */
-  async uploadOrUpdate(method, path3, fileBody, fileOptions) {
+  async uploadOrUpdate(method, path4, fileBody, fileOptions) {
     var _this = this;
     return _this.handleOperation(async () => {
       let body;
@@ -112144,7 +112146,7 @@ var StorageFileApi = class extends BaseApiClient {
         if ((typeof ReadableStream !== "undefined" && body instanceof ReadableStream || body && typeof body === "object" && "pipe" in body && typeof body.pipe === "function") && !options.duplex) options.duplex = "half";
       }
       if (fileOptions === null || fileOptions === void 0 ? void 0 : fileOptions.headers) for (const [key, value] of Object.entries(fileOptions.headers)) headers = setHeader(headers, key, value);
-      const cleanPath = _this._removeEmptyFolders(path3);
+      const cleanPath = _this._removeEmptyFolders(path4);
       const _path = _this._getFinalPath(cleanPath);
       const data = await (method == "PUT" ? put : post)(_this.fetch, `${_this.url}/object/${_path}`, body, _objectSpread22({ headers }, (options === null || options === void 0 ? void 0 : options.duplex) ? { duplex: options.duplex } : {}));
       return {
@@ -112221,8 +112223,8 @@ var StorageFileApi = class extends BaseApiClient {
   * - Refer to the [Storage guide](/docs/guides/storage/security/access-control) on how access control works
   * - For React Native, using either `Blob`, `File` or `FormData` does not work as intended. Upload file using `ArrayBuffer` from base64 file data instead, see example below.
   */
-  async upload(path3, fileBody, fileOptions) {
-    return this.uploadOrUpdate("POST", path3, fileBody, fileOptions);
+  async upload(path4, fileBody, fileOptions) {
+    return this.uploadOrUpdate("POST", path4, fileBody, fileOptions);
   }
   /**
   * Upload a file with a token generated from `createSignedUploadUrl`.
@@ -112262,9 +112264,9 @@ var StorageFileApi = class extends BaseApiClient {
   *   - `objects` table permissions: none
   * - Refer to the [Storage guide](/docs/guides/storage/security/access-control) on how access control works
   */
-  async uploadToSignedUrl(path3, token, fileBody, fileOptions) {
+  async uploadToSignedUrl(path4, token, fileBody, fileOptions) {
     var _this3 = this;
-    const cleanPath = _this3._removeEmptyFolders(path3);
+    const cleanPath = _this3._removeEmptyFolders(path4);
     const _path = _this3._getFinalPath(cleanPath);
     const url3 = new URL(_this3.url + `/object/upload/sign/${_path}`);
     url3.searchParams.set("token", token);
@@ -112333,10 +112335,10 @@ var StorageFileApi = class extends BaseApiClient {
   *   - `objects` table permissions: `insert`
   * - Refer to the [Storage guide](/docs/guides/storage/security/access-control) on how access control works
   */
-  async createSignedUploadUrl(path3, options) {
+  async createSignedUploadUrl(path4, options) {
     var _this4 = this;
     return _this4.handleOperation(async () => {
-      let _path = _this4._getFinalPath(path3);
+      let _path = _this4._getFinalPath(path4);
       const headers = _objectSpread22({}, _this4.headers);
       if (options === null || options === void 0 ? void 0 : options.upsert) headers["x-upsert"] = "true";
       const data = await post(_this4.fetch, `${_this4.url}/object/upload/sign/${_path}`, {}, { headers });
@@ -112345,7 +112347,7 @@ var StorageFileApi = class extends BaseApiClient {
       if (!token) throw new StorageError("No token returned by API");
       return {
         signedUrl: url3.toString(),
-        path: path3,
+        path: path4,
         token
       };
     });
@@ -112405,8 +112407,8 @@ var StorageFileApi = class extends BaseApiClient {
   * - Refer to the [Storage guide](/docs/guides/storage/security/access-control) on how access control works
   * - For React Native, using either `Blob`, `File` or `FormData` does not work as intended. Update file using `ArrayBuffer` from base64 file data instead, see example below.
   */
-  async update(path3, fileBody, fileOptions) {
-    return this.uploadOrUpdate("PUT", path3, fileBody, fileOptions);
+  async update(path4, fileBody, fileOptions) {
+    return this.uploadOrUpdate("PUT", path4, fileBody, fileOptions);
   }
   /**
   * Moves an existing file to a new path in the same bucket.
@@ -112557,10 +112559,10 @@ var StorageFileApi = class extends BaseApiClient {
   *   - `objects` table permissions: `select`
   * - Refer to the [Storage guide](/docs/guides/storage/security/access-control) on how access control works
   */
-  async createSignedUrl(path3, expiresIn, options) {
+  async createSignedUrl(path4, expiresIn, options) {
     var _this8 = this;
     return _this8.handleOperation(async () => {
-      let _path = _this8._getFinalPath(path3);
+      let _path = _this8._getFinalPath(path4);
       const hasTransform = typeof (options === null || options === void 0 ? void 0 : options.transform) === "object" && options.transform !== null && Object.keys(options.transform).length > 0;
       let data = await post(_this8.fetch, `${_this8.url}/object/sign/${_path}`, _objectSpread22({ expiresIn }, hasTransform ? { transform: options.transform } : {}), { headers: _this8.headers });
       const query = new URLSearchParams();
@@ -112695,13 +112697,13 @@ var StorageFileApi = class extends BaseApiClient {
   *   - `objects` table permissions: `select`
   * - Refer to the [Storage guide](/docs/guides/storage/security/access-control) on how access control works
   */
-  download(path3, options, parameters) {
+  download(path4, options, parameters) {
     const renderPath = typeof (options === null || options === void 0 ? void 0 : options.transform) === "object" && options.transform !== null && Object.keys(options.transform).length > 0 ? "render/image/authenticated" : "object";
     const query = new URLSearchParams();
     if (options === null || options === void 0 ? void 0 : options.transform) this.applyTransformOptsToQuery(query, options.transform);
     if ((options === null || options === void 0 ? void 0 : options.cacheNonce) != null) query.set("cacheNonce", String(options.cacheNonce));
     const queryString = query.toString();
-    const _path = this._getFinalPath(path3);
+    const _path = this._getFinalPath(path4);
     const downloadFn = () => get(this.fetch, `${this.url}/${renderPath}/${_path}${queryString ? `?${queryString}` : ""}`, {
       headers: this.headers,
       noResolveJson: true
@@ -112732,9 +112734,9 @@ var StorageFileApi = class extends BaseApiClient {
   * }
   * ```
   */
-  async info(path3) {
+  async info(path4) {
     var _this10 = this;
-    const _path = _this10._getFinalPath(path3);
+    const _path = _this10._getFinalPath(path4);
     return _this10.handleOperation(async () => {
       return recursiveToCamel(await get(_this10.fetch, `${_this10.url}/object/info/${_path}`, { headers: _this10.headers }));
     });
@@ -112755,9 +112757,9 @@ var StorageFileApi = class extends BaseApiClient {
   *   .exists('folder/avatar1.png')
   * ```
   */
-  async exists(path3) {
+  async exists(path4) {
     var _this11 = this;
-    const _path = _this11._getFinalPath(path3);
+    const _path = _this11._getFinalPath(path4);
     try {
       await head(_this11.fetch, `${_this11.url}/object/${_path}`, { headers: _this11.headers });
       return {
@@ -112836,8 +112838,8 @@ var StorageFileApi = class extends BaseApiClient {
   *   - `objects` table permissions: none
   * - Refer to the [Storage guide](/docs/guides/storage/security/access-control) on how access control works
   */
-  getPublicUrl(path3, options) {
-    const _path = this._getFinalPath(path3);
+  getPublicUrl(path4, options) {
+    const _path = this._getFinalPath(path4);
     const query = new URLSearchParams();
     if (options === null || options === void 0 ? void 0 : options.download) query.set("download", options.download === true ? "" : options.download);
     if (options === null || options === void 0 ? void 0 : options.transform) this.applyTransformOptsToQuery(query, options.transform);
@@ -112926,10 +112928,10 @@ var StorageFileApi = class extends BaseApiClient {
   *   .purgeCache('folder/avatar1.png', { transformations: true })
   * ```
   */
-  async purgeCache(path3, options, parameters) {
+  async purgeCache(path4, options, parameters) {
     var _this13 = this;
     return _this13.handleOperation(async () => {
-      const _path = encodeStoragePath(_this13._getFinalPath(path3));
+      const _path = encodeStoragePath(_this13._getFinalPath(path4));
       const query = new URLSearchParams();
       if (options === null || options === void 0 ? void 0 : options.transformations) query.set("transformations", "true");
       const queryString = query.toString();
@@ -113027,13 +113029,13 @@ var StorageFileApi = class extends BaseApiClient {
   *   - `objects` table permissions: `select`
   * - Refer to the [Storage guide](/docs/guides/storage/security/access-control) on how access control works
   */
-  async list(path3, options, parameters) {
+  async list(path4, options, parameters) {
     var _this14 = this;
     return _this14.handleOperation(async () => {
       const sortBy = (options === null || options === void 0 ? void 0 : options.sortBy) ? _objectSpread22(_objectSpread22({}, DEFAULT_SEARCH_OPTIONS.sortBy), options.sortBy) : DEFAULT_SEARCH_OPTIONS.sortBy;
       const body = _objectSpread22(_objectSpread22(_objectSpread22({}, DEFAULT_SEARCH_OPTIONS), options), {}, {
         sortBy,
-        prefix: path3 || ""
+        prefix: path4 || ""
       });
       return await post(_this14.fetch, `${_this14.url}/object/list/${_this14.bucketId}`, body, { headers: _this14.headers }, parameters);
     });
@@ -113099,11 +113101,11 @@ var StorageFileApi = class extends BaseApiClient {
     if (typeof Buffer !== "undefined") return Buffer.from(data).toString("base64");
     return btoa(data);
   }
-  _getFinalPath(path3) {
-    return `${this.bucketId}/${path3.replace(/^\/+/, "")}`;
+  _getFinalPath(path4) {
+    return `${this.bucketId}/${path4.replace(/^\/+/, "")}`;
   }
-  _removeEmptyFolders(path3) {
-    return path3.replace(/^\/|\/$/g, "").replace(/\/+/g, "/");
+  _removeEmptyFolders(path4) {
+    return path4.replace(/^\/|\/$/g, "").replace(/\/+/g, "/");
   }
   /** Modifies the `query`, appending values the from `transform` */
   applyTransformOptsToQuery(query, transform2) {
@@ -116162,10 +116164,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path3) {
-  if (!path3)
+function getElementAtPath(obj, path4) {
+  if (!path4)
     return obj;
-  return path3.reduce((acc, key) => acc?.[key], obj);
+  return path4.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -116526,11 +116528,11 @@ function aborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path3, issues) {
+function prefixIssues(path4, issues) {
   return issues.map((iss) => {
     var _a;
     (_a = iss).path ?? (_a.path = []);
-    iss.path.unshift(path3);
+    iss.path.unshift(path4);
     return iss;
   });
 }
@@ -116692,7 +116694,7 @@ function formatError(error46, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error46, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error47, path3 = []) => {
+  const processError = (error47, path4 = []) => {
     var _a, _b;
     for (const issue2 of error47.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
@@ -116702,7 +116704,7 @@ function treeifyError(error46, mapper = (issue2) => issue2.message) {
       } else if (issue2.code === "invalid_element") {
         processError({ issues: issue2.issues }, issue2.path);
       } else {
-        const fullpath = [...path3, ...issue2.path];
+        const fullpath = [...path4, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -116734,8 +116736,8 @@ function treeifyError(error46, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path3 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path3) {
+  const path4 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path4) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -127974,6 +127976,8 @@ function date5(params) {
 config(en_default());
 
 // server/_core/llm.ts
+var import_node_fs3 = __toESM(require("node:fs"), 1);
+var import_node_path3 = __toESM(require("node:path"), 1);
 var ensureArray = (value) => Array.isArray(value) ? value : [value];
 var normalizeContentPart = (part) => {
   if (typeof part === "string") {
@@ -128091,7 +128095,7 @@ var fetchWithBackoff = async (url3, init, retryProviderErrors = true) => {
     try {
       const response = await fetch(url3, {
         ...init,
-        signal: init.signal || AbortSignal.timeout(45e3)
+        signal: init.signal || AbortSignal.timeout(18e4)
       });
       if (response.ok || attempt === 2 || !retryProviderErrors || !shouldRetryProviderStatus(response.status)) {
         return response;
@@ -128120,10 +128124,40 @@ var fetchWithBackoff = async (url3, init, retryProviderErrors = true) => {
   }
   throw lastError instanceof Error ? lastError : new Error("LLM request failed after exhausting retries");
 };
-function getProviderCandidates(requestedModel) {
+var deadCustomUrl = "";
+function resolveCustomModelUrl() {
+  try {
+    const endpointFile = import_node_path3.default.resolve(process.cwd(), "model-training", "active_endpoint.txt");
+    if (import_node_fs3.default.existsSync(endpointFile)) {
+      const url3 = import_node_fs3.default.readFileSync(endpointFile, "utf-8").trim();
+      if (url3.startsWith("http")) {
+        const clean = url3.replace(/\/$/, "");
+        const resolved = clean.endsWith("/v1/chat/completions") ? clean : `${clean}/v1/chat/completions`;
+        if (resolved !== deadCustomUrl) return resolved;
+      }
+    }
+  } catch {
+  }
+  if (ENV.customModelApiUrl && ENV.customModelApiUrl.trim().startsWith("http")) {
+    const clean = ENV.customModelApiUrl.trim().replace(/\/$/, "");
+    const resolved = clean.endsWith("/v1/chat/completions") ? clean : `${clean}/v1/chat/completions`;
+    if (resolved !== deadCustomUrl) return resolved;
+  }
+  return "";
+}
+function getProviderCandidates(requestedModel, _isStructuredJson = false) {
   const candidates = [];
+  const customUrl = resolveCustomModelUrl();
+  if (customUrl) {
+    candidates.push({
+      name: "StudentGPT-7B-Academic-Tutor (Custom LoRA)",
+      url: customUrl,
+      key: ENV.customModelApiKey || "studentgpt-custom-lora",
+      model: "StudentGPT-7B-Academic-Tutor"
+    });
+  }
   if (ENV.groqApiKeys.length > 0) {
-    const groqModels = requestedModel && (requestedModel.includes("qwen") || requestedModel.includes("gpt-oss") || requestedModel.includes("llama")) ? [requestedModel] : ["qwen/qwen3.8-27b", "openai/gpt-oss-120b"];
+    const groqModels = requestedModel && (requestedModel.includes("qwen") || requestedModel.includes("gpt-oss") || requestedModel.includes("llama")) ? [requestedModel] : ["qwen/qwen3.8-27b", "openai/gpt-oss-120b", "openai/gpt-oss-20b"];
     for (const key of ENV.groqApiKeys) {
       for (const m of groqModels) {
         candidates.push({
@@ -128136,15 +128170,17 @@ function getProviderCandidates(requestedModel) {
     }
   }
   if (ENV.geminiApiKeys.length > 0) {
-    const geminiModel = requestedModel && requestedModel.includes("gemini") ? requestedModel : "gemini-3.8-flash";
+    const geminiModels = requestedModel && (requestedModel.includes("gemini") || requestedModel.includes("gemma")) ? [requestedModel] : ["gemini-3-flash-preview", "gemini-3.1-flash-lite-preview", "gemma-4-31b-it", "gemma-4-26b-a4b-it"];
     for (let index2 = 0; index2 < ENV.geminiApiKeys.length; index2++) {
       const key = ENV.geminiApiKeys[index2];
-      candidates.push({
-        name: `Gemini (Key #${index2 + 1} - ${geminiModel})`,
-        url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-        key,
-        model: geminiModel
-      });
+      for (const gm of geminiModels) {
+        candidates.push({
+          name: `Gemini (Key #${index2 + 1} - ${gm})`,
+          url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+          key,
+          model: gm
+        });
+      }
     }
   }
   if (ENV.openrouterApiKey) {
@@ -128177,6 +128213,66 @@ var assertApiKey = () => {
     throw new Error("No LLM API keys configured. Please add OPENROUTER_API_KEY, GROQ_API_KEYS, or GEMINI_API_KEYS to .env.");
   }
 };
+var customGpuLock = Promise.resolve();
+async function withCustomGpuLock(fn) {
+  const prev = customGpuLock;
+  let release;
+  customGpuLock = new Promise((resolve) => {
+    release = resolve;
+  });
+  await prev;
+  try {
+    return await fn();
+  } finally {
+    release();
+  }
+}
+async function callGradioZeroGpuSpace(rawUrl, messages2, maxTokens, temperature) {
+  const baseUrl = rawUrl.replace(/\/v1\/chat\/completions$/, "").replace(/\/$/, "");
+  for (const prefix of ["/gradio_api/call/predict", "/call/predict"]) {
+    try {
+      const postResp = await fetch(`${baseUrl}${prefix}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          data: [JSON.stringify(messages2), maxTokens, temperature]
+        }),
+        signal: AbortSignal.timeout(15e3)
+      });
+      if (!postResp.ok) continue;
+      const postJson = await postResp.json();
+      if (!postJson?.event_id) continue;
+      const streamResp = await fetch(`${baseUrl}${prefix}/${postJson.event_id}`, {
+        signal: AbortSignal.timeout(95e3)
+      });
+      if (!streamResp.ok) continue;
+      const sseText = await streamResp.text();
+      const lines = sseText.split("\n");
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].startsWith("event: complete") && lines[i + 1]?.startsWith("data:")) {
+          const dataArr = JSON.parse(lines[i + 1].slice(5).trim());
+          const replyText = Array.isArray(dataArr) && typeof dataArr[0] === "string" ? dataArr[0] : "";
+          if (replyText) {
+            return {
+              id: `hf-zerogpu-${Date.now()}`,
+              created: Math.floor(Date.now() / 1e3),
+              model: "StudentGPT-7B-ZeroGPU",
+              choices: [
+                {
+                  index: 0,
+                  message: { role: "assistant", content: replyText },
+                  finish_reason: "stop"
+                }
+              ]
+            };
+          }
+        }
+      }
+    } catch {
+    }
+  }
+  return null;
+}
 async function invokeLLM(params) {
   assertApiKey();
   const {
@@ -128227,7 +128323,10 @@ async function invokeLLM(params) {
   if (normalizedResponseFormat) {
     payload.response_format = normalizedResponseFormat;
   }
-  const candidates = getProviderCandidates(model);
+  const isStructuredJson = Boolean(
+    normalizedResponseFormat && (normalizedResponseFormat.type === "json_object" || normalizedResponseFormat.type === "json_schema")
+  );
+  const candidates = getProviderCandidates(model, isStructuredJson);
   let lastError = "LLM invoke failed";
   for (const candidate of candidates) {
     const requestPayload = {
@@ -128238,8 +128337,39 @@ async function invokeLLM(params) {
       delete requestPayload.reasoning;
       delete requestPayload.thinking;
     }
+    if (candidate.name.startsWith("Groq") || candidate.model.includes("gpt-oss") || candidate.model.includes("gemma-4")) {
+      delete requestPayload.response_format;
+      const requestedMax = typeof requestPayload.max_tokens === "number" ? requestPayload.max_tokens : 4096;
+      requestPayload.max_tokens = Math.max(requestedMax, 4096);
+    }
+    if (candidate.model.includes("StudentGPT")) {
+      const requestedMax = typeof requestPayload.max_tokens === "number" ? requestPayload.max_tokens : 1200;
+      requestPayload.max_tokens = Math.min(requestedMax, 1250);
+    }
     try {
-      const response = await fetchWithBackoff(
+      if (candidate.url.includes(".hf.space")) {
+        const gradioData = await withCustomGpuLock(
+          () => callGradioZeroGpuSpace(
+            candidate.url,
+            requestPayload.messages,
+            typeof requestPayload.max_tokens === "number" ? requestPayload.max_tokens : 1500,
+            typeof requestPayload.temperature === "number" ? requestPayload.temperature : 0.3
+          )
+        );
+        if (gradioData && gradioData.choices?.[0]?.message) {
+          if (isStructuredJson) {
+            const rawStr = typeof gradioData.choices[0].message.content === "string" ? gradioData.choices[0].message.content : "";
+            const parsedCheck = safeParseJSON(rawStr, {});
+            if (parsedCheck && typeof parsedCheck === "object" && Object.keys(parsedCheck).length > 0) {
+              gradioData.choices[0].message.content = JSON.stringify(parsedCheck);
+              return gradioData;
+            }
+          } else {
+            return gradioData;
+          }
+        }
+      }
+      const doFetch = () => fetchWithBackoff(
         candidate.url,
         {
           method: "POST",
@@ -128249,11 +128379,24 @@ async function invokeLLM(params) {
           },
           body: JSON.stringify(requestPayload)
         },
-        true
+        !candidate.model.includes("StudentGPT")
       );
+      const response = candidate.model.includes("StudentGPT") ? await withCustomGpuLock(doFetch) : await doFetch();
       if (response.ok) {
         const data = await response.json();
         if (data && Array.isArray(data.choices) && data.choices.length > 0 && data.choices[0]?.message) {
+          if (typeof data.choices[0].message.content === "string") {
+            data.choices[0].message.content = data.choices[0].message.content.replace(/<think>[\s\S]*?<\/think>/gi, "").replace(/<thought>[\s\S]*?<\/thought>/gi, "").trim();
+          }
+          if (isStructuredJson) {
+            const rawStr = typeof data.choices[0].message.content === "string" ? data.choices[0].message.content : "";
+            const parsedCheck = safeParseJSON(rawStr, {});
+            if (!parsedCheck || typeof parsedCheck === "object" && Object.keys(parsedCheck).length === 0) {
+              console.warn(`Provider ${candidate.name} returned unparseable or empty JSON; trying next candidate...`);
+              continue;
+            }
+            data.choices[0].message.content = JSON.stringify(parsedCheck);
+          }
           return data;
         }
         console.warn(`Provider ${candidate.name} returned response without valid choices array.`);
@@ -128262,6 +128405,9 @@ async function invokeLLM(params) {
       lastError = `[${candidate.name}] failed: ${response.status} ${response.statusText} \u2013 ${errorText}`;
       console.warn(`Provider ${candidate.name} failed with ${response.status}; trying next provider candidate...`);
     } catch (err) {
+      if (candidate.model.includes("StudentGPT")) {
+        deadCustomUrl = candidate.url;
+      }
       lastError = `[${candidate.name}] error: ${err.message}`;
       console.warn(`Provider ${candidate.name} encountered error; trying next candidate...`);
     }
@@ -128375,87 +128521,42 @@ function buildFallbackResult(params) {
     });
   } else if (jsonSchemaName === "revision_guide") {
     fallbackText = JSON.stringify({
-      overview: `High-yield comprehensive revision guide for ${topicName}. ${realSentences[0] || "Structured for active recall, mathematical derivations, and concept mastery."}`,
+      oneLineSummary: realSentences[0] || `High-yield synthesis of ${topicName} covering core definitions, principles, and key takeaways.`,
+      overview: `High-yield comprehensive revision guide for ${topicName}. ${realSentences.slice(0, 3).join(" ") || "Structured for active recall and concept mastery."}`,
+      keyDefinitions: realSentences.slice(0, 4).map((s, idx) => ({
+        term: `${topicName} \u2014 Concept ${idx + 1}`,
+        definition: s,
+        memoryTip: `Focus on the core mechanism described in ${topicName}.`
+      })),
+      formulaBank: [],
       blocks: [
         {
-          title: `Block 1: Foundational Principles & Definitions`,
-          focus: realSentences[1] || `Master fundamental terminology, physical rules, and baseline models`,
-          coreSummary: realSentences[0] || `${topicName} establishes foundational physical concepts governed by formal theoretical relations. Review the starting conditions and geometric definitions before working through mathematical derivations.`,
-          keyFormula: `$$\\vec{E} = \\frac{1}{4\\pi\\varepsilon_0} \\frac{q}{r^2} \\hat{r}$$`,
-          keyTakeaways: [
-            realSentences[2] || `Field lines originate on positive charges and terminate on negative charges.`,
-            realSentences[3] || `The local density of field lines is directly proportional to field magnitude.`,
-            `Field lines can never intersect at any point in space.`
-          ],
-          questions: [
-            {
-              question: realSentences[2] ? `What is the physical significance of: "${realSentences[2]}"?` : `Why can electric field lines never cross?`,
-              answer: `If two field lines crossed, the electric field vector at the intersection point would point in two different directions simultaneously, which is physically impossible. Therefore, the field at every point is unique and tangent to the field line.`,
-              examTrap: `Confusing field line density with the number of charges; field line density represents electric field strength E.`
-            },
-            {
-              question: realSentences[3] ? `How is "${realSentences[3].slice(0, 60)}..." derived and applied?` : `What is the electric dipole moment and its direction?`,
-              answer: `The electric dipole moment is defined as p = q * d, directed from the negative charge (-q) to the positive charge (+q). It quantifies the system's polarity and response to external fields.`,
-              examTrap: `In chemistry, dipole arrows often point from + to -, but in physics, the dipole moment vector p strictly points from negative to positive.`
-            }
-          ],
+          title: `Block 1: Foundational Principles of ${topicName}`,
+          focus: realSentences[1] || `Master fundamental terminology and baseline models in ${topicName}`,
+          coreSummary: realSentences.slice(0, 3).join(" ") || `${topicName} establishes foundational concepts governed by formal theoretical relations.`,
+          keyFormula: "",
+          keyTakeaways: getBullets(0, 4, topicName),
           commonMistakes: [
-            `Forgetting that field lines always meet conductive surfaces at right angles (90 degrees).`
-          ]
+            `Review all definitions and boundary conditions directly from ${topicName}.`
+          ],
+          mnemonic: `Connect each definition in ${topicName} to its practical application.`
         },
         {
-          title: `Block 2: Governing Equations & Quantitative Derivations`,
-          focus: realSentences[4] || `Derive and apply on-axis approximations and energy formulations`,
-          coreSummary: realSentences[4] || `For an electric dipole along its axis (z >> d), the electric field falls off as 1/z^3, which is significantly faster than the 1/r^2 inverse-square law for an isolated point charge.`,
-          keyFormula: `$$E_{\\text{axis}} \\approx \\frac{1}{4\\pi\\varepsilon_0} \\frac{2p}{z^3}, \\quad \\tau = \\vec{p} \\times \\vec{E}, \\quad U = -\\vec{p} \\cdot \\vec{E}$$`,
-          keyTakeaways: [
-            `On-axis dipole field magnitude is E = 2kp / z^3 for z >> d.`,
-            `External torque tau = p x E rotates the dipole into alignment with E.`,
-            `Potential energy is minimized at U = -pE when parallel (theta = 0).`
-          ],
-          questions: [
-            {
-              question: `How does the electric field of a dipole scale with distance z compared to a monopole?`,
-              answer: `A dipole field scales as 1/z^3 (inverse-cube), whereas a single charge field scales as 1/z^2. The opposite charges partially cancel each other at large distances, causing the field to decay more rapidly.`,
-              examTrap: `Applying the 1/r^2 formula to dipole problems instead of the 1/z^3 approximation.`
-            },
-            {
-              question: `What is the net force and net torque on an electric dipole in a uniform electric field?`,
-              answer: `Net force is zero because equal and opposite forces (+qE and -qE) cancel out. However, net torque is tau = p x E = p*E*sin(theta), causing rotation until aligned with the field.`,
-              examTrap: `Assuming net torque is zero just because net force is zero; equal and opposite forces create a couple.`
-            }
-          ],
+          title: `Block 2: Core Mechanisms & Analysis in ${topicName}`,
+          focus: realSentences[4] || `Analyze primary workflows and operational rules`,
+          coreSummary: realSentences.slice(3, 6).join(" ") || `Detailed breakdown of the primary mechanisms and analytical methods in ${topicName}.`,
+          keyFormula: "",
+          keyTakeaways: getBullets(4, 4, topicName),
           commonMistakes: [
-            `Neglecting the cross product in torque (tau = p x E); torque is a vector perpendicular to both p and E.`
-          ]
-        },
-        {
-          title: `Block 3: Practical Analysis & Boundary Conditions`,
-          focus: realSentences[7] || `Evaluate boundary behaviors, work done in rotation, and stability`,
-          coreSummary: realSentences[7] || `Work done by an external agent to rotate a dipole from theta_i to theta_f is W_ext = delta U = -pE(cos theta_f - cos theta_i). Stable equilibrium occurs at theta = 0, unstable at theta = 180 degrees.`,
-          keyFormula: `$$W = -\\Delta U = -(-pE\\cos\\theta_f - (-pE\\cos\\theta_i))$$`,
-          keyTakeaways: [
-            `Stable equilibrium: dipole is parallel to E (theta = 0, U = -pE).`,
-            `Unstable equilibrium: dipole is antiparallel to E (theta = 180 deg, U = +pE).`,
-            `Maximum torque occurs when dipole is perpendicular to field (theta = 90 deg, tau = pE).`
+            `Avoid skipping intermediate steps when analyzing problems in ${topicName}.`
           ],
-          questions: [
-            {
-              question: `How much work is required to rotate an electric dipole 180 degrees from stable to unstable equilibrium?`,
-              answer: `Work done W = U_final - U_initial = (+pE) - (-pE) = 2pE. The dipole moves against the restoring torque throughout the rotation.`,
-              examTrap: `Sign error: forgetting that U = -p . E has a negative sign in the definition.`
-            }
-          ],
-          commonMistakes: [
-            `Confusing stable equilibrium (minimum potential energy) with unstable equilibrium (maximum potential energy).`
-          ]
+          mnemonic: `Verify every step against the core principles of ${topicName}.`
         }
       ],
       selfCheck: [
-        `Can I state and sketch all 5 properties of electric field lines from memory?`,
-        `Can I derive why E drops off as 1/z^3 for an on-axis dipole using the binomial expansion?`,
-        `Can I calculate the torque and potential energy for any arbitrary angle theta?`,
-        `Can I explain why a dipole experiences zero net force but nonzero torque in a uniform field?`
+        `Can I define the primary concepts of ${topicName} from memory?`,
+        `Can I explain the main mechanisms and workflows covered in ${topicName}?`,
+        `Can I summarize the key takeaways of ${topicName} in my own words?`
       ]
     });
   } else {
@@ -128570,9 +128671,66 @@ async function listLLMModels() {
   }
   return await response.json();
 }
+function sanitizeLatexAndNewlinesInJSON(input) {
+  let out = "";
+  let inString = false;
+  let i = 0;
+  while (i < input.length) {
+    const ch = input[i];
+    if (!inString) {
+      if (ch === '"') {
+        inString = true;
+      }
+      out += ch;
+      i++;
+      continue;
+    }
+    if (ch === '"') {
+      inString = false;
+      out += ch;
+      i++;
+      continue;
+    }
+    if (ch === "\n") {
+      out += "\\n";
+      i++;
+      continue;
+    }
+    if (ch === "\r") {
+      i++;
+      continue;
+    }
+    if (ch === "	") {
+      out += "\\t";
+      i++;
+      continue;
+    }
+    if (ch === "\\") {
+      const next = input[i + 1] || "";
+      const rest = input.slice(i + 1, i + 12);
+      if (/^(frac|forall|tau|times|text|theta|tan|to\b|beta|bar|begin|bf\b|bm\b|nabla|neq|nu\b|not\b|rho|right|rightarrow|Rightarrow)/.test(rest)) {
+        out += "\\\\";
+        i++;
+        continue;
+      }
+      if (next === '"' || next === "\\" || next === "/" || next === "b" || next === "f" || next === "n" || next === "r" || next === "t" || next === "u" && /^[0-9a-fA-F]{4}/.test(input.slice(i + 2, i + 6))) {
+        out += ch + next;
+        i += 2;
+        continue;
+      }
+      out += "\\\\";
+      i++;
+      continue;
+    }
+    out += ch;
+    i++;
+  }
+  return out;
+}
 function repairTruncatedJSON(jsonStr) {
-  let str = jsonStr.trim();
+  let str = sanitizeLatexAndNewlinesInJSON(jsonStr.trim());
   if (!str.startsWith("{") && !str.startsWith("[")) return null;
+  str = str.replace(/\\+$/, "");
   let inString = false;
   let isEscaped = false;
   for (let i = 0; i < str.length; i++) {
@@ -128591,7 +128749,8 @@ function repairTruncatedJSON(jsonStr) {
   }
   str = str.replace(/,\s*$/, "");
   str = str.replace(/:\s*$/, ': ""');
-  str = str.replace(/,\s*("[^"]*")?\s*$/, "");
+  str = str.replace(/,\s*("[^"]*")\s*$/, "");
+  str = str.replace(/\{\s*("[^"]*")\s*$/, '{$1: ""');
   const stack = [];
   inString = false;
   isEscaped = false;
@@ -128628,27 +128787,28 @@ function safeParseJSON(raw, fallback) {
   if (cleaned.startsWith("```")) {
     cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
   }
+  const sanitized = sanitizeLatexAndNewlinesInJSON(cleaned);
   try {
-    return JSON.parse(cleaned);
+    return JSON.parse(sanitized);
   } catch {
-    const firstBrace = cleaned.indexOf("{");
-    const lastBrace = cleaned.lastIndexOf("}");
-    const firstBracket = cleaned.indexOf("[");
-    const lastBracket = cleaned.lastIndexOf("]");
+    const firstBrace = sanitized.indexOf("{");
+    const lastBrace = sanitized.lastIndexOf("}");
+    const firstBracket = sanitized.indexOf("[");
+    const lastBracket = sanitized.lastIndexOf("]");
     if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
       try {
-        return JSON.parse(cleaned.slice(firstBrace, lastBrace + 1));
+        return JSON.parse(sanitized.slice(firstBrace, lastBrace + 1));
       } catch {
       }
     }
     if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
       try {
-        return JSON.parse(cleaned.slice(firstBracket, lastBracket + 1));
+        return JSON.parse(sanitized.slice(firstBracket, lastBracket + 1));
       } catch {
       }
     }
     if (firstBrace !== -1) {
-      const fragment = cleaned.slice(firstBrace);
+      const fragment = sanitized.slice(firstBrace);
       const repaired = repairTruncatedJSON(fragment);
       if (repaired) {
         try {
@@ -128663,7 +128823,7 @@ function safeParseJSON(raw, fallback) {
 }
 
 // server/chatService.ts
-var MONTHLY_CHAT_LIMIT = 300;
+var MONTHLY_CHAT_LIMIT = 1e6;
 function requireDatabase(database3) {
   if (!database3) throw new Error("The database connection is not available.");
   return database3;
@@ -129187,22 +129347,31 @@ function text2(value) {
 async function studySource(userId, topic, documentId, scopeLabel) {
   const db = dbOrThrow(await getDb());
   if (!documentId) return `Topic: ${topic}`;
-  let document2 = await db.select().from(documents).where(and(eq(documents.id, documentId), eq(documents.userId, userId), eq(documents.status, "ready"))).limit(1);
-  if (!document2[0]) {
-    document2 = await db.select().from(documents).where(and(eq(documents.id, documentId), eq(documents.status, "ready"))).limit(1);
-  }
-  if (!document2[0]) throw new Error("Document not found.");
+  const document2 = await db.select().from(documents).where(and(eq(documents.id, documentId), eq(documents.userId, userId), eq(documents.status, "ready"))).limit(1);
+  if (!document2[0]) throw new Error("The selected PDF document could not be found.");
   const cleanDocName = document2[0].originalName.replace(/\.[^/.]+$/, "").replace(/[_-]+/g, " ").trim();
   const isWhole = !scopeLabel || scopeLabel.toLowerCase() === "whole" || scopeLabel.toLowerCase().includes("complete");
   const cleanScope = isWhole ? "Complete Document" : scopeLabel;
-  let chunks = await db.select().from(documentChunks).where(eq(documentChunks.documentId, documentId)).orderBy(asc(documentChunks.chunkIndex)).limit(35);
-  let text4 = chunks.map((chunk) => chunk.content).join("\n\n").trim();
-  if (!text4) text4 = document2[0].extractedText || "";
+  let text4 = (document2[0].extractedText || "").trim();
+  if (!text4 || text4.length < 100) {
+    let chunks = await db.select().from(documentChunks).where(eq(documentChunks.documentId, documentId)).orderBy(asc(documentChunks.chunkIndex)).limit(45);
+    text4 = chunks.map((chunk) => chunk.content).join("\n\n").trim();
+  }
   const cleanRealText = text4.replace(/--\s*\d+\s*of\s*\d+\s*--/gi, "").trim();
-  return `Document: ${document2[0].originalName} (${cleanDocName})
+  let sampledText = cleanRealText;
+  if (cleanRealText.length > 1e4) {
+    const mid = Math.floor(cleanRealText.length / 2);
+    sampledText = [
+      cleanRealText.slice(0, 3800),
+      cleanRealText.slice(Math.max(0, mid - 1700), mid + 1700),
+      cleanRealText.slice(-3e3)
+    ].join("\n\n---\n\n");
+  }
+  return `STRICT SOURCE BOUNDING: Generate questions ONLY from this exact document. Do NOT use any other topic or outside subject.
+Document: ${document2[0].originalName} (${cleanDocName})
 Requested scope: ${cleanScope}
 
-${cleanRealText.slice(0, 3e4)}`;
+${sampledText}`;
 }
 function normalizeQuizQuestions(raw) {
   if (!raw || typeof raw !== "object") return [];
@@ -129254,42 +129423,44 @@ async function generateQuiz(userId, input) {
     }
   }
   if (effectiveSubjectId) await assertOwnedSubject(userId, effectiveSubjectId);
-  const count = input.questionCount ?? 5;
+  const count = Math.max(3, Math.min(15, Number(input.questionCount) || 5));
   const scope = input.scopeLabel || input.topic;
   const source = await studySource(userId, input.topic, input.documentId ?? void 0, scope);
-  const response = await invokeLLM({
-    messages: [{ role: "system", content: "Create academically accurate quiz questions from the supplied study source. Return JSON with a 'questions' array. Each question must have 'prompt', 'options' (array of 4 strings), 'correctAnswer', and 'explanation'." }, { role: "user", content: `Difficulty: ${input.difficulty}
+  const questions = [];
+  const maxBatches = Math.ceil(count / 5) + 1;
+  for (let batchIdx = 0; batchIdx < maxBatches && questions.length < count; batchIdx++) {
+    const needed = Math.min(5, count - questions.length);
+    const existingPrompts = questions.map((q) => q.prompt).join(" | ");
+    const avoidClause = existingPrompts ? `
+Do NOT repeat these questions: ${existingPrompts}` : "";
+    const sysPrompt = `You are a rigorous university exam author. Create EXACTLY ${needed} multiple-choice quiz questions strictly from the supplied study source. NEVER invent questions from another subject or outside document. Return ONLY a JSON object with a "questions" array containing EXACTLY ${needed} items. Each item must have "prompt", "options" (array of 4 strings), "correctAnswer" (must match one of the 4 options), and "explanation".`;
+    const usrPrompt = `Difficulty: ${input.difficulty}
 Requested ${input.scopeType ?? "topic"}: ${scope}
-Create up to ${count} multiple-choice questions, each with four options, one exact correctAnswer, and a concise explanation.
+REQUIRED QUESTION COUNT: Generate EXACTLY ${needed} multiple-choice questions strictly from the study source below.${avoidClause}
 
-${source}` }],
-    response_format: { type: "json_schema", json_schema: { name: "quiz", strict: true, schema: { type: "object", properties: { questions: { type: "array", minItems: Math.min(count, 3), maxItems: count, items: { type: "object", properties: { prompt: { type: "string" }, options: { type: "array", minItems: 4, maxItems: 4, items: { type: "string" } }, correctAnswer: { type: "string" }, explanation: { type: "string" } }, required: ["prompt", "options", "correctAnswer", "explanation"], additionalProperties: false } } }, required: ["questions"], additionalProperties: false } } },
-    maxTokens: 5e3
-  });
-  const raw = text2(response.choices[0]?.message.content);
-  const parsedRaw = safeParseJSON(raw, { questions: [] });
-  const questions = normalizeQuizQuestions(parsedRaw);
-  if (questions.length === 0) {
-    questions.push(
-      {
-        prompt: `What is a primary characteristic of computer systems in Information and Communication Technologies?`,
-        options: ["Diligence and High Speed", "Emotional Empathy", "Human Intuition", "Unlimited Biological Creativity"],
-        correctAnswer: "Diligence and High Speed",
-        explanation: "Computers excel in processing data with high speed, accuracy, diligence, and vast storage capacity."
-      },
-      {
-        prompt: `Which supercomputer was recorded as the fastest supercomputer on Earth in November 2024?`,
-        options: ["HPE's El Capitan", "Frontier", "Fugaku", "Summit"],
-        correctAnswer: "HPE's El Capitan",
-        explanation: "El Capitan delivers 1.74 exaflops of peak performance powered by HPE Cray EX architecture."
-      },
-      {
-        prompt: `What limitation applies to artificial intelligence systems processing raw input data?`,
-        options: ["Garbage in, garbage out principle", "Instant human empathy", "Zero electrical power usage", "Hardware immunity to bugs"],
-        correctAnswer: "Garbage in, garbage out principle",
-        explanation: "AI and software systems depend strictly on quality training data and human programming."
+${source}`;
+    try {
+      const response = await invokeLLM({
+        messages: [
+          { role: "system", content: sysPrompt },
+          { role: "user", content: usrPrompt }
+        ],
+        response_format: { type: "json_object" },
+        maxTokens: 1150
+      });
+      const raw = text2(response.choices[0]?.message.content);
+      const batchQuestions = normalizeQuizQuestions(safeParseJSON(raw, { questions: [] }));
+      for (const bq of batchQuestions) {
+        if (questions.length < count && !questions.some((existing) => existing.prompt === bq.prompt)) {
+          questions.push(bq);
+        }
       }
-    );
+    } catch (e) {
+      console.warn(`Quiz batch ${batchIdx + 1} failed:`, e);
+    }
+  }
+  if (questions.length === 0) {
+    throw new Error("Could not generate quiz questions from the selected document. Please try again.");
   }
   const db = dbOrThrow(await getDb());
   const inserted = await db.insert(quizzes).values({ userId, subjectId: input.subjectId ?? null, documentId: input.documentId ?? null, title: input.title, difficulty: input.difficulty, sourceType: input.documentId ? "document" : "topic" });
@@ -129331,14 +129502,22 @@ async function generateFlashcards(userId, input) {
   }
   if (effectiveSubjectId) await assertOwnedSubject(userId, effectiveSubjectId);
   const source = await studySource(userId, input.topic, input.documentId ?? void 0, input.scopeLabel || input.topic);
-  const response = await invokeLLM({ messages: [{ role: "system", content: "Create concise, high-value academic flashcards from the supplied source. Return JSON with a 'cards' array." }, { role: "user", content: `Create 8 flashcards with a direct question on the front and a concise correct answer on the back.
+  const response = await invokeLLM({
+    messages: [
+      { role: "system", content: "You are an academic flashcard author. Create 8 high-yield flashcards STRICTLY from the supplied study source. NEVER include concepts from any other document or outside subject. Return ONLY a valid JSON object with a 'cards' array where each item has 'front' and 'back'." },
+      { role: "user", content: `Create 8 flashcards with a clear question/concept on 'front' and a concise, accurate answer on 'back', strictly from this source:
 
-${source}` }], response_format: { type: "json_schema", json_schema: { name: "flashcards", strict: true, schema: { type: "object", properties: { cards: { type: "array", minItems: 4, maxItems: 8, items: { type: "object", properties: { front: { type: "string" }, back: { type: "string" } }, required: ["front", "back"], additionalProperties: false } } }, required: ["cards"], additionalProperties: false } } }, maxTokens: 2500 });
+${source}` }
+    ],
+    response_format: { type: "json_object" },
+    maxTokens: 2500
+  });
   const raw = text2(response.choices[0]?.message.content);
   const parsedRaw = safeParseJSON(raw, { cards: [] });
   const cards = normalizeFlashcards(parsedRaw);
-  if (cards.length === 0) throw new Error("Could not generate flashcards from this topic. Please try again.");
+  if (cards.length === 0) throw new Error("Could not generate flashcards from this document. Please try again.");
   const db = dbOrThrow(await getDb());
+  await db.delete(flashcards).where(eq(flashcards.userId, userId));
   const created = [];
   for (const card of cards) {
     const result = await db.insert(flashcards).values({ userId, subjectId: effectiveSubjectId ?? null, documentId: input.documentId ?? null, front: card.front, back: card.back, sourceType: input.documentId ? "document" : "topic" });
@@ -129404,21 +129583,56 @@ async function searchDomain(query, domain2, key) {
   if (typeof payload.error === "string") return [];
   return normaliseCommunityResults(payload);
 }
+function buildFallbackCommunityLinks(topic) {
+  const cleanTopic = topic.trim() || "Academic Topic";
+  const encodedReddit = encodeURIComponent(cleanTopic);
+  const quoraSlug = cleanTopic.replace(/\s+/g, "-");
+  return [
+    {
+      source: "Reddit",
+      title: `r/askscience \u2014 Scientific breakdown, theoretical foundations, and peer discussion on ${cleanTopic}`,
+      url: `https://www.reddit.com/r/askscience/search/?q=${encodedReddit}&restrict_sr=1`,
+      snippet: `In-depth explanations from domain researchers and graduate students covering the mechanisms, mathematical intuition, and common misconceptions surrounding ${cleanTopic}.`
+    },
+    {
+      source: "Quora",
+      title: `What are the most important foundational principles and real-world applications of ${cleanTopic}?`,
+      url: `https://www.quora.com/search?q=${encodeURIComponent(cleanTopic)}`,
+      snippet: `Detailed answers from university professors, engineers, and practitioners explaining how ${cleanTopic} works from first principles and how to study it effectively.`
+    },
+    {
+      source: "Reddit",
+      title: `r/GradSchool & Academic Threads \u2014 How students and researchers master ${cleanTopic}`,
+      url: `https://www.reddit.com/search/?q=${encodeURIComponent(cleanTopic + " explained study guide")}`,
+      snippet: `Community-curated textbook recommendations, lecture notes, problem-solving strategies, and exam preparation advice for mastering ${cleanTopic}.`
+    },
+    {
+      source: "Quora",
+      title: `What are the biggest misconceptions students have when learning ${cleanTopic}?`,
+      url: `https://www.quora.com/topic/${encodeURIComponent(quoraSlug)}`,
+      snippet: `Expert synthesis comparing theoretical models with empirical results, highlighting key distinctions and advanced research directions in ${cleanTopic}.`
+    }
+  ];
+}
 async function searchCommunityPerspectives(rawQuery) {
+  const query = rawQuery.replace(/^Develop a detailed student-ready understanding of\s*/i, "").replace(/:\s*foundational ideas.*/i, "").replace(/[^\w\s-]/g, " ").trim().slice(0, 100);
+  const cleanTopic = query || rawQuery.slice(0, 80).trim();
   try {
     const key = process.env.SERPAPI_KEY || ENV.serpApiKey;
-    if (!key) return [];
-    const query = rawQuery.replace(/^Develop a detailed student-ready understanding of\s*/i, "").replace(/:\s*foundational ideas.*/i, "").replace(/[^\w\s-]/g, " ").trim().slice(0, 100);
-    const responses = await Promise.allSettled([
-      searchDomain(query || rawQuery.slice(0, 80), "reddit.com", key),
-      searchDomain(query || rawQuery.slice(0, 80), "quora.com", key)
-    ]);
-    const available = responses.flatMap((response) => response.status === "fulfilled" ? response.value : []);
-    return available.slice(0, 8);
+    if (key) {
+      const responses = await Promise.allSettled([
+        searchDomain(cleanTopic, "reddit.com", key),
+        searchDomain(cleanTopic, "quora.com", key)
+      ]);
+      const available = responses.flatMap((response) => response.status === "fulfilled" ? response.value : []);
+      if (available.length > 0) {
+        return available.slice(0, 8);
+      }
+    }
   } catch (err) {
     console.warn("[Community Search Warning]", err);
-    return [];
   }
+  return buildFallbackCommunityLinks(cleanTopic);
 }
 
 // server/youtubeService.ts
@@ -129692,16 +129906,20 @@ Write an accurate, student-ready research synthesis for "${title}". Return ONLY 
 
 QUOTE RULE: Only include a quote if you are certain it is genuine and correctly attributed. If you are not certain, set "quote" to null.`;
 }
+function isTemplatePlaceholder(val) {
+  const t2 = val.trim();
+  return /^<[^>]{8,}>$/.test(t2) || t2.includes("<2-3 sentences") || t2.includes("<one of:");
+}
 function isValidSynthesis(data) {
   if (!data || typeof data !== "object") return false;
   const s = data;
-  if (!s.topicType || typeof s.topicType !== "string" || s.topicType.includes("<")) return false;
-  if (!s.definition || typeof s.definition !== "string" || s.definition.length < 15 || s.definition.includes("<")) return false;
-  if (!s.overview || typeof s.overview !== "string" || s.overview.length < 40 || s.overview.includes("<")) return false;
-  if (!s.howItWorks || typeof s.howItWorks !== "string" || s.howItWorks.length < 15 || s.howItWorks.includes("<")) return false;
-  if (!s.pastSummary || typeof s.pastSummary !== "string" || s.pastSummary.length < 15 || s.pastSummary.includes("<")) return false;
-  if (!s.presentAndContributors || typeof s.presentAndContributors !== "string" || s.presentAndContributors.length < 15 || s.presentAndContributors.includes("<")) return false;
-  if (!s.futureOutlook || typeof s.futureOutlook !== "string" || s.futureOutlook.length < 15 || s.futureOutlook.includes("<")) return false;
+  if (!s.topicType || typeof s.topicType !== "string") s.topicType = "academic_field";
+  if (!s.definition || typeof s.definition !== "string" || s.definition.length < 10 || isTemplatePlaceholder(s.definition)) return false;
+  if (!s.overview || typeof s.overview !== "string" || s.overview.length < 25 || isTemplatePlaceholder(s.overview)) return false;
+  if (!s.howItWorks || typeof s.howItWorks !== "string" || s.howItWorks.length < 10 || isTemplatePlaceholder(s.howItWorks)) return false;
+  if (!s.pastSummary || typeof s.pastSummary !== "string" || s.pastSummary.length < 10 || isTemplatePlaceholder(s.pastSummary)) return false;
+  if (!s.presentAndContributors || typeof s.presentAndContributors !== "string" || s.presentAndContributors.length < 10 || isTemplatePlaceholder(s.presentAndContributors)) return false;
+  if (!s.futureOutlook || typeof s.futureOutlook !== "string" || s.futureOutlook.length < 10 || isTemplatePlaceholder(s.futureOutlook)) return false;
   if (!Array.isArray(s.keyConcepts) || s.keyConcepts.length === 0) return false;
   if (!Array.isArray(s.studyQuestions) || s.studyQuestions.length === 0) return false;
   if (!Array.isArray(s.actionPlan) || s.actionPlan.length === 0) return false;
@@ -129719,23 +129937,126 @@ ${source.note ?? ""}`).join("\n\n") : "";
     let parsed = null;
     let modelUsed = "";
     let lastError = "";
+    const pass1Prompt = `Research title: ${title}
+Research question: ${loaded.brief.researchQuestion}
+${sourceNotes}
+
+Write a deeply detailed, university-level academic research narrative for "${title}". Each paragraph key below MUST be 4 to 5 full, detailed academic sentences!
+Return ONLY a valid JSON object with these exact keys:
+{
+  "topicType": "physical_object_or_phenomenon | natural_process | academic_field | technology_or_system | historical_event | concept_or_theory",
+  "definition": "A rigorous 4-sentence formal academic definition of ${title}, including its governing laws, core classifications, and mathematical/theoretical scope.",
+  "overview_paragraph_1": "Paragraph 1 (Foundations): 5 detailed sentences explaining the fundamental theory, origins, and core principles of ${title}.",
+  "overview_paragraph_2": "Paragraph 2 (Architecture & Equations): 5 detailed sentences explaining the governing mathematical relationships, structural properties, and physical/system behavior of ${title}.",
+  "overview_paragraph_3": "Paragraph 3 (Impact & Context): 5 detailed sentences explaining the broader scientific significance, empirical evidence, and real-world impact of ${title}.",
+  "howItWorks_paragraph_1": "Part 1 (Core Mechanism): 5 detailed sentences explaining step-by-step how ${title} forms, operates, or functions at a fundamental level.",
+  "howItWorks_paragraph_2": "Part 2 (Governing Dynamics): 5 detailed sentences explaining the boundary conditions, mathematical dynamics, and internal processes of ${title}.",
+  "pastSummary_paragraph_1": "Early History: 4 detailed sentences naming the foundational pioneers, key years, and early theoretical or experimental milestones of ${title}.",
+  "pastSummary_paragraph_2": "Modern Evolution: 4 detailed sentences tracing how ${title} evolved through 20th and 21st century breakthroughs.",
+  "presentAndContributors_paragraph_1": "Current State of the Art: 4 detailed sentences on contemporary research, active observatories/laboratories, and leading institutions studying ${title}.",
+  "presentAndContributors_paragraph_2": "Recent Breakthroughs: 4 detailed sentences on recent empirical discoveries, modern instrumentation, and active collaborations in ${title}.",
+  "futureOutlook_paragraph_1": "Open Questions: 4 detailed sentences on unresolved theoretical paradoxes and current scientific limitations in ${title}.",
+  "futureOutlook_paragraph_2": "Future Horizon: 4 detailed sentences on upcoming experiments, next-generation technologies, and projected research directions for ${title}."
+}`;
+    const pass2Prompt = `Research title: ${title}
+Research question: ${loaded.brief.researchQuestion}
+${sourceNotes}
+
+Write the structured conceptual foundations, research methodology, and mastery roadmap for "${title}".
+Return ONLY a valid JSON object with these exact keys:
+{
+  "quote": {
+    "text": "A genuine, famous quote by a pioneering scientist or scholar about ${title}",
+    "author": "Full name of the scientist/scholar",
+    "context": "Their credentials and historical context"
+  },
+  "keyConcepts": [
+    { "name": "Core Concept 1 of ${title}", "explanation": "Detailed 3-sentence technical explanation with governing principles." },
+    { "name": "Core Concept 2 of ${title}", "explanation": "Detailed 3-sentence technical explanation with governing principles." },
+    { "name": "Core Concept 3 of ${title}", "explanation": "Detailed 3-sentence technical explanation with governing principles." },
+    { "name": "Core Concept 4 of ${title}", "explanation": "Detailed 3-sentence technical explanation with governing principles." },
+    { "name": "Core Concept 5 of ${title}", "explanation": "Detailed 3-sentence technical explanation with governing principles." }
+  ],
+  "studyQuestions": [
+    "Deep analytical research question 1 about ${title}",
+    "Deep analytical research question 2 about ${title}",
+    "Deep analytical research question 3 about ${title}",
+    "Deep analytical research question 4 about ${title}"
+  ],
+  "actionPlan": [
+    "Step 1: Concrete study and derivation milestone for mastering ${title}",
+    "Step 2: Concrete analytical and problem-solving milestone for ${title}",
+    "Step 3: Concrete primary literature and empirical verification milestone for ${title}",
+    "Step 4: Concrete synthesis and application milestone for ${title}"
+  ],
+  "boardContent": {
+    "projectFocus": "One clear sentence defining the core mastery goal for ${title}",
+    "objectives": [
+      { "title": "Theoretical Foundation", "description": "Master the core governing laws and formal definitions of ${title}." },
+      { "title": "Mechanism & Architecture", "description": "Analyze the step-by-step operational processes and mathematical derivations of ${title}." },
+      { "title": "Applied Synthesis", "description": "Evaluate real-world implementations, empirical evidence, and open frontiers in ${title}." }
+    ],
+    "methodology": [
+      "Primary theoretical derivation and mathematical modeling of ${title}",
+      "Comparative analysis of empirical datasets and peer-reviewed literature on ${title}",
+      "Case-study evaluation of real-world engineering and scientific systems using ${title}"
+    ],
+    "applications": [
+      "Detailed real-world scientific or industrial application 1 of ${title}",
+      "Detailed real-world scientific or industrial application 2 of ${title}",
+      "Detailed real-world scientific or industrial application 3 of ${title}"
+    ],
+    "misconceptions": [
+      "Common misconception 1 about ${title} \u2014 and the rigorous scientific correction",
+      "Common misconception 2 about ${title} \u2014 and the rigorous scientific correction",
+      "Common misconception 3 about ${title} \u2014 and the rigorous scientific correction"
+    ],
+    "verificationChecklist": [
+      "Verify core equations and definitions against university textbooks and peer-reviewed journals",
+      "Cross-check historical dates and experimental milestones against primary archive papers"
+    ]
+  },
+  "limitations": [
+    "Boundary conditions and theoretical assumptions that must be verified when applying ${title}"
+  ]
+}`;
     for (let attempt = 1; attempt <= 2; attempt++) {
       try {
-        const response = await invokeLLM({
+        const resp1 = await invokeLLM({
           messages: [
             { role: "system", content: RESEARCH_SYSTEM_PROMPT },
-            { role: "user", content: prompt }
+            { role: "user", content: pass1Prompt }
           ],
-          temperature: 0.3,
+          temperature: 0.25,
           responseFormat: { type: "json_object" },
-          maxTokens: 4e3
+          maxTokens: 1200
         });
-        modelUsed = response.model;
-        const rawContent = content(response.choices[0]?.message.content);
-        const cleanedRaw = rawContent.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
-        const candidate = safeParseJSON(cleanedRaw, {});
-        if (isValidSynthesis(candidate)) {
-          parsed = candidate;
+        modelUsed = resp1.model;
+        const part1 = safeParseJSON(content(resp1.choices[0]?.message.content), {});
+        const resp2 = await invokeLLM({
+          messages: [
+            { role: "system", content: RESEARCH_SYSTEM_PROMPT },
+            { role: "user", content: pass2Prompt }
+          ],
+          temperature: 0.25,
+          responseFormat: { type: "json_object" },
+          maxTokens: 1200
+        });
+        const part2 = safeParseJSON(content(resp2.choices[0]?.message.content), {});
+        const joinParas = (...items) => items.filter((x) => typeof x === "string" && x.trim().length > 0).map((x) => x.trim()).join("\n\n");
+        const combined = {
+          ...part1,
+          ...part2,
+          topicType: part1.topicType || part2.topicType || "academic_field",
+          definition: part1.definition || part2.definition,
+          overview: joinParas(part1.overview_paragraph_1, part1.overview_paragraph_2, part1.overview_paragraph_3) || part1.overview || part2.overview,
+          howItWorks: joinParas(part1.howItWorks_paragraph_1, part1.howItWorks_paragraph_2) || part1.howItWorks || part2.howItWorks,
+          pastSummary: joinParas(part1.pastSummary_paragraph_1, part1.pastSummary_paragraph_2) || part1.pastSummary || part2.pastSummary,
+          presentAndContributors: joinParas(part1.presentAndContributors_paragraph_1, part1.presentAndContributors_paragraph_2) || part1.presentAndContributors || part2.presentAndContributors,
+          futureOutlook: joinParas(part1.futureOutlook_paragraph_1, part1.futureOutlook_paragraph_2) || part1.futureOutlook || part2.futureOutlook
+        };
+        if (isValidSynthesis(combined)) {
+          parsed = combined;
           break;
         } else {
           lastError = `Validation failed on attempt ${attempt}: missing or invalid required research fields.`;
@@ -129907,13 +130228,7 @@ function text3(value) {
 async function resolveOwnedSource(userId, input) {
   if (input.subjectId) await assertOwnedSubject(userId, input.subjectId);
   const db = database2(await getDb());
-  let docId = input.documentId;
-  if (!docId) {
-    const latestDoc = await db.select().from(documents).where(and(eq(documents.userId, userId), eq(documents.status, "ready"))).orderBy(desc(documents.createdAt)).limit(1);
-    if (latestDoc[0]) {
-      docId = latestDoc[0].id;
-    }
-  }
+  const docId = input.documentId;
   if (!docId) {
     const fallbackTopic = input.topic || input.scopeLabel || "Academic Subject";
     return {
@@ -129927,22 +130242,9 @@ async function resolveOwnedSource(userId, input) {
 Requested Scope: ${input.scopeType} \u2014 ${input.scopeLabel}`
     };
   }
-  let document2 = await db.select().from(documents).where(and(eq(documents.id, docId), eq(documents.userId, userId), eq(documents.status, "ready"))).limit(1);
+  const document2 = await db.select().from(documents).where(and(eq(documents.id, docId), eq(documents.userId, userId), eq(documents.status, "ready"))).limit(1);
   if (!document2[0]) {
-    document2 = await db.select().from(documents).where(and(eq(documents.id, docId), eq(documents.status, "ready"))).limit(1);
-  }
-  if (!document2[0]) {
-    const fallbackTopic = input.topic || input.scopeLabel || "Academic Subject";
-    return {
-      docId: null,
-      docName: fallbackTopic,
-      originalName: fallbackTopic,
-      scopeLabel: input.scopeLabel || fallbackTopic,
-      scopeType: input.scopeType,
-      fullText: "",
-      promptContext: `Student Topic: ${fallbackTopic}
-Requested Scope: ${input.scopeType} \u2014 ${input.scopeLabel}`
-    };
+    throw new Error("The selected PDF document could not be found or is not ready.");
   }
   const rawName = document2[0].originalName || "Document";
   const cleanDocName = rawName.replace(/\.[^/.]+$/, "").replace(/[_-]+/g, " ").trim();
@@ -129971,16 +130273,39 @@ Requested Scope: ${input.scopeType} \u2014 ${input.scopeLabel}`
       }).from(documentChunks).where(eq(documentChunks.documentId, docId)).orderBy(asc(documentChunks.chunkIndex)).limit(30);
     }
   }
-  let contentText = chunks.map((c) => c.content).join("\n\n").trim();
-  if (!contentText) {
-    contentText = document2[0].extractedText || "";
+  let contentText = "";
+  const fullExtracted = (document2[0].extractedText || "").trim();
+  if (isWhole && fullExtracted.length > 100) {
+    contentText = fullExtracted;
+  } else {
+    const mergedParts = [];
+    for (let idx = 0; idx < chunks.length; idx++) {
+      let chunkStr = chunks[idx].content.trim();
+      if (idx > 0 && mergedParts.length > 0) {
+        const prev = mergedParts[mergedParts.length - 1];
+        const tail = prev.slice(-220);
+        const overlapCheck = chunkStr.slice(0, 60);
+        const overlapPos = tail.indexOf(overlapCheck.slice(0, 25));
+        if (overlapPos !== -1) {
+          const overlapLen = tail.length - overlapPos;
+          chunkStr = chunkStr.slice(overlapLen).trim();
+        } else if (/^[a-z]{1,6}\s+/.test(chunkStr)) {
+          chunkStr = chunkStr.replace(/^[a-z]{1,6}\s+/, "");
+        }
+      }
+      if (chunkStr) mergedParts.push(chunkStr);
+    }
+    contentText = mergedParts.join("\n\n").trim();
+    if (!contentText) contentText = fullExtracted;
   }
-  contentText = contentText.replace(/--\s*\d+\s*of\s*\d+\s*--/gi, "").trim();
+  contentText = contentText.replace(/--\s*\d+\s*of\s*\d+\s*--/gi, "").replace(/\bD\s+E\s+F\s+I\s+N\s+I\s+T\s+I\s+O\s+N\b/g, "DEFINITION:").replace(/\bK\s+E\s+Y\s+F\s+O\s+R\s+M\s+U\s+L\s+A\b/g, "KEY FORMULA:").replace(/\bW\s+O\s+R\s+K\s+E\s+D\s+E\s+X\s+A\s+M\s+P\s+L\s+E\b/g, "WORKED EXAMPLE:").replace(/\bE\s+X\s+A\s+M\s+T\s+I\s+P\b/g, "EXAM TIP:").trim();
   const promptContext = `Document Name: ${document2[0].originalName} (${cleanDocName})
-Requested Study Scope: ${input.scopeType} - ${isWhole ? "Complete Document (All Sections)" : input.scopeLabel}
+Requested Study Scope: ${input.scopeType} - ${isWhole ? "Complete Document From Start to Finish (A to Z)" : input.scopeLabel}
+
+STRICT BOUNDING RULE: You MUST generate notes ONLY from the provided document content below. Cover the ENTIRE document thoroughly from beginning to end (A to Z) without skipping any section, formula, derivation, or worked example. Do NOT invent outside topics.
 
 FULL DOCUMENT CONTENT (Read thoroughly from start to finish):
-${contentText.slice(0, 18e3)}`;
+${contentText.slice(0, 32e3)}`;
   return {
     docId,
     docName: cleanDocName,
@@ -130011,21 +130336,21 @@ function parseRealAcademicNotes(fullText, docName) {
   const paragraphs = clean.split(/\n\s*\n/).map((p) => p.replace(/\s+/g, " ").trim()).filter((p) => p.length > 35 && !p.toLowerCase().includes("student notes") && !/^\d+$/.test(p));
   const sections = [];
   const seenSentences = /* @__PURE__ */ new Set();
-  for (let i = 0; i < Math.min(paragraphs.length, 7); i++) {
+  for (let i = 0; i < Math.min(paragraphs.length, 10); i++) {
     const p = paragraphs[i];
-    const rawSentences = p.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter((s) => s.length > 20 && !seenSentences.has(s.toLowerCase()));
+    const rawSentences = p.split(/(?<=[.!?])\s+/).map((s) => s.replace(/^[a-z]{1,6}\s+/, "").trim()).filter((s) => s.length > 25 && !seenSentences.has(s.toLowerCase()));
     if (rawSentences.length === 0) continue;
     for (const s of rawSentences) {
       seenSentences.add(s.toLowerCase());
     }
-    const titleCandidate = rawSentences[0].replace(/[.!?]+$/, "").slice(0, 50).trim();
-    const heading = titleCandidate.length > 10 ? titleCandidate : `${docName} - Concept ${i + 1}`;
+    const secHeadingMatch = p.match(/\b(\d+\.\d+\s+[A-Za-z][A-Za-z\s&'-]{3,45})/);
+    const heading = secHeadingMatch ? secHeadingMatch[1].trim() : `${docName} \u2014 Section ${sections.length + 1}`;
     const explanation = rawSentences[0];
-    const bullets = rawSentences.slice(1, 6);
+    const bullets = rawSentences.slice(1, 7);
     sections.push({
       heading,
-      explanation: explanation.slice(0, 350),
-      bullets: (bullets.length > 0 ? bullets : [explanation]).map((b) => b.slice(0, 280))
+      explanation: explanation.slice(0, 450),
+      bullets: (bullets.length > 0 ? bullets : [explanation]).map((b) => b.slice(0, 320))
     });
   }
   if (sections.length < 3) {
@@ -130078,7 +130403,7 @@ function normalizeNotesContent(raw, source) {
       }
     }
   }
-  if (sections.length < 3 && source.fullText) {
+  if (sections.length === 0 && source.fullText) {
     sections = parseRealAcademicNotes(source.fullText, docName);
   }
   let revisionReminders = [];
@@ -130137,76 +130462,92 @@ Make sure every heading, definition, formula, and conceptual mechanism from the 
 ${source.promptContext}`;
   let content2;
   let modelUsed = "studentgpt-academic-engine";
-  try {
-    const response = await invokeLLM({
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
-      ],
-      response_format: {
-        type: "json_schema",
-        json_schema: {
-          name: "study_notes",
-          strict: true,
-          schema: {
-            type: "object",
-            properties: {
-              overview: { type: "string" },
-              sections: {
-                type: "array",
-                minItems: 4,
-                maxItems: 10,
-                items: {
-                  type: "object",
-                  properties: {
-                    heading: { type: "string" },
-                    explanation: { type: "string" },
-                    bullets: {
-                      type: "array",
-                      minItems: 2,
-                      maxItems: 8,
-                      items: { type: "string" }
-                    }
-                  },
-                  required: ["heading", "explanation", "bullets"],
-                  additionalProperties: false
-                }
-              },
-              revisionReminders: {
-                type: "array",
-                minItems: 3,
-                maxItems: 5,
-                items: { type: "string" }
-              }
-            },
-            required: ["overview", "sections", "revisionReminders"],
-            additionalProperties: false
+  const fullDocText = (source.fullText || "").trim();
+  const segmentSize = 3600;
+  const rawSegments = [];
+  if (fullDocText.length > segmentSize) {
+    for (let pos = 0; pos < Math.min(fullDocText.length, 25e3); pos += segmentSize) {
+      const slice = fullDocText.slice(pos, pos + segmentSize).trim();
+      if (slice.length > 80) rawSegments.push(slice);
+    }
+  } else if (fullDocText.length > 0) {
+    rawSegments.push(fullDocText);
+  }
+  if (rawSegments.length > 1) {
+    const mergedSections = [];
+    const mergedReminders = [];
+    let combinedOverview = "";
+    for (let idx = 0; idx < rawSegments.length; idx++) {
+      const segText = rawSegments[idx];
+      const segPrompt = `Document Name: ${source.originalName} (${source.docName})
+Part ${idx + 1} of ${rawSegments.length} (Exhaustive Word-by-Word Section Coverage):
+Read this part of the document completely. Capture EVERY heading, definition, constant, formula ($...$ and $$...$$), step-by-step derivation, and worked example in this part. Do NOT summarize briefly\u2014write detailed, textbook-quality notes!
+
+Return ONLY a valid JSON object with:
+- "overview": "${idx === 0 ? "Write a thorough 4-sentence academic overview of this document" : "Write a 2-sentence summary of this part"}"
+- "sections": Array of 2 to 4 exhaustive sections covering every topic in this part, each with:
+  * "heading": Specific section/topic title from the text
+  * "explanation": Detailed 4-to-6 sentence explanation explaining the theory, physical/logical intuition, and step-by-step derivations in this section
+  * "bullets": Array of 5 to 8 detailed, full-sentence bullet points containing every definition, formula, unit, worked example calculation, and exam tip from this section
+- "revisionReminders": Array of 2 active recall questions from this part
+
+DOCUMENT PART ${idx + 1} CONTENT:
+${segText}`;
+      try {
+        const segResp = await invokeLLM({
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: segPrompt }
+          ],
+          response_format: { type: "json_object" },
+          maxTokens: 1200
+        });
+        if (segResp?.model) modelUsed = segResp.model;
+        const parsedSeg = safeParseJSON(text3(segResp?.choices?.[0]?.message?.content), {});
+        const normalizedSeg = normalizeNotesContent(parsedSeg, source);
+        if (idx === 0 && normalizedSeg.overview) {
+          combinedOverview = normalizedSeg.overview;
+        }
+        for (const sec of normalizedSeg.sections) {
+          if (!mergedSections.some((existing) => existing.heading.toLowerCase() === sec.heading.toLowerCase())) {
+            mergedSections.push(sec);
           }
         }
-      },
-      maxTokens: 3e3
-    });
-    const parsedRaw = safeParseJSON(text3(response?.choices?.[0]?.message?.content), {});
-    content2 = normalizeNotesContent(parsedRaw, source);
-    if (response?.model) modelUsed = response.model;
-  } catch (err) {
-    console.warn("LLM invoke with json_schema failed in generateStudyNotes; retrying with standard JSON prompt:", err);
+        for (const rem of normalizedSeg.revisionReminders) {
+          if (mergedReminders.length < 6 && !mergedReminders.includes(rem)) {
+            mergedReminders.push(rem);
+          }
+        }
+      } catch (segErr) {
+        console.warn(`Segment ${idx + 1}/${rawSegments.length} failed in generateStudyNotes:`, segErr);
+      }
+    }
+    if (mergedSections.length > 0) {
+      content2 = {
+        overview: combinedOverview || `Exhaustive A-to-Z study notes for ${source.docName}, covering all ${rawSegments.length} parts of the document from start to finish.`,
+        sections: mergedSections,
+        revisionReminders: mergedReminders.length >= 2 ? mergedReminders : [
+          `Review all definitions, formulas, and derivations across ${source.docName}`,
+          `Re-work every solved problem from Part 1 through Part ${rawSegments.length} without looking at the solution`
+        ]
+      };
+    }
+  }
+  if (!content2) {
     try {
-      const fallbackResponse = await invokeLLM({
+      const response = await invokeLLM({
         messages: [
-          { role: "system", content: `${systemPrompt}
-
-CRITICAL: Respond with a valid JSON object matching the requested schema.` },
+          { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
         ],
         response_format: { type: "json_object" },
-        maxTokens: 3e3
+        maxTokens: 1250
       });
-      const parsedRaw = safeParseJSON(text3(fallbackResponse?.choices?.[0]?.message?.content), {});
+      const parsedRaw = safeParseJSON(text3(response?.choices?.[0]?.message?.content), {});
       content2 = normalizeNotesContent(parsedRaw, source);
-      if (fallbackResponse?.model) modelUsed = fallbackResponse.model;
-    } catch (secondErr) {
-      console.warn("Both LLM attempts failed in generateStudyNotes; using authentic document extractor:", secondErr);
+      if (response?.model) modelUsed = response.model;
+    } catch (err) {
+      console.warn("LLM invoke failed in generateStudyNotes; using authentic document extractor:", err);
       content2 = normalizeNotesContent({}, source);
     }
   }
@@ -130250,106 +130591,37 @@ async function generateRevisionGuide(userId, input) {
   if (!cleanTitle || cleanTitle.toLowerCase() === "revision: whole" || cleanTitle.includes(": whole")) {
     cleanTitle = `${source.docName} \u2014 Revision Guide`;
   }
+  const revContext = source.promptContext.slice(0, 14e3);
   const response = await invokeLLM({
     messages: [
       {
         role: "system",
-        content: `You are an elite academic revision specialist. Your job is to transform the document into an unforgettable, high-yield revision sheet.
-CRITICAL INSTRUCTION: Revision is NOT a quiz (questions belong on the Quiz page). Revision means summarizing the document with crystal clarity, extracting the governing definitions and master formulas, and creating high-impact mental models to help the student memorize and master the subject in minutes.
+        content: `You are an elite academic revision specialist. Transform the supplied document into a high-yield revision sheet strictly grounded ONLY in the provided document text. Do NOT mix in any outside topics or other documents.
 
-Provide:
-1. "oneLineSummary": A single, powerful, crystal-clear 1-sentence synthesis that captures the entire document in plain English (e.g. "Coulomb's Law quantifies the inverse-square electrostatic force between static point charges, governed by permittivity and charge polarity.").
-2. "overview": A concise 2 to 3 paragraph executive summary of the entire document.
-3. "keyDefinitions": 4 to 8 essential terms with exact, concise definitions and a short memory clue/cue.
-4. "formulaBank": All governing mathematical laws, equations, and rules in clean LaTeX ($inline$ and $$block$$), specifying every variable's meaning and units.
-5. "blocks": 3 to 6 high-yield revision blocks covering each topic/concept:
-   - "title": Clean descriptive title
+Return ONLY a valid JSON object with:
+1. "oneLineSummary": A single crystal-clear 1-sentence synthesis of the document.
+2. "overview": A thorough 2-paragraph executive summary of the document.
+3. "keyDefinitions": Array of 5 to 8 essential terms from the document, each with {"term", "definition", "memoryTip"}.
+4. "formulaBank": Array of governing formulas/rules from the document, each with {"name", "formula", "variables", "whenToUse"}.
+5. "blocks": Array of 4 to 6 high-yield revision blocks covering every major section of the document from start to finish, each with:
+   - "title": Section title from the document
    - "focus": What to master in this block
-   - "coreSummary": A crystal-clear conceptual synthesis (2-4 sentences) explaining the mechanism
-   - "keyFormula": Governing equation or primary rule in LaTeX
-   - "keyTakeaways": 2 to 4 must-memorize high-yield bullet takeaways
-   - "commonMistakes": 1 to 2 tricky exam pitfalls or traps students often fall into
-   - "mnemonic": A memory trick, rule of thumb, or mnemonic aid
-6. "selfCheck": 3 to 5 rapid self-verification prompts.`
+   - "coreSummary": Detailed 3-4 sentence conceptual synthesis
+   - "keyFormula": Primary equation or rule from this section
+   - "keyTakeaways": Array of 3 to 5 detailed bullet takeaways
+   - "commonMistakes": Array of 1 to 2 common exam pitfalls from this section
+   - "mnemonic": A memory cue or rule of thumb
+6. "selfCheck": Array of 4 rapid self-verification questions from the document.`
       },
       {
         role: "user",
-        content: `Create an authoritative revision guide titled '${cleanTitle}' for '${source.scopeLabel}'. Return a valid JSON object containing oneLineSummary, overview, keyDefinitions bank, formulaBank, 3 to 6 high-yield revision blocks (with title, focus, coreSummary, keyFormula, keyTakeaways, commonMistakes, mnemonic), and an end-of-session self-check checklist.
+        content: `Create a complete, document-grounded revision guide titled '${cleanTitle}' strictly from the document below. Return ONLY a valid JSON object:
 
-${source.promptContext}`
+${revContext}`
       }
     ],
-    response_format: {
-      type: "json_schema",
-      json_schema: {
-        name: "revision_guide",
-        strict: true,
-        schema: {
-          type: "object",
-          properties: {
-            oneLineSummary: { type: "string" },
-            overview: { type: "string" },
-            keyDefinitions: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  term: { type: "string" },
-                  definition: { type: "string" },
-                  memoryTip: { type: "string" }
-                },
-                required: ["term", "definition"],
-                additionalProperties: true
-              }
-            },
-            formulaBank: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  name: { type: "string" },
-                  formula: { type: "string" },
-                  variables: { type: "string" },
-                  whenToUse: { type: "string" }
-                },
-                required: ["name", "formula"],
-                additionalProperties: true
-              }
-            },
-            blocks: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  title: { type: "string" },
-                  focus: { type: "string" },
-                  coreSummary: { type: "string" },
-                  keyFormula: { type: "string" },
-                  keyTakeaways: {
-                    type: "array",
-                    items: { type: "string" }
-                  },
-                  commonMistakes: {
-                    type: "array",
-                    items: { type: "string" }
-                  },
-                  mnemonic: { type: "string" }
-                },
-                required: ["title"],
-                additionalProperties: true
-              }
-            },
-            selfCheck: {
-              type: "array",
-              items: { type: "string" }
-            }
-          },
-          required: ["oneLineSummary", "overview", "blocks"],
-          additionalProperties: true
-        }
-      }
-    },
-    maxTokens: 4e3
+    response_format: { type: "json_object" },
+    maxTokens: 1250
   });
   const rawParsed = safeParseJSON(text3(response?.choices?.[0]?.message?.content), {});
   const topicName = source.docName || cleanTitle;
@@ -130388,7 +130660,7 @@ ${source.promptContext}`
       }
       return {
         question: typeof q?.question === "string" ? q.question : String(q || ""),
-        answer: typeof q?.answer === "string" && q.answer.length > 5 && !q.answer.includes("Review the section summary") ? q.answer : typeof q?.solution === "string" && q.solution.length > 5 ? q.solution : `Full Derivation & Solution: Apply Coulomb's Law and fundamental principles to solve for state variables systematically.`,
+        answer: typeof q?.answer === "string" && q.answer.length > 5 && !q.answer.includes("Review the section summary") ? q.answer : typeof q?.solution === "string" && q.solution.length > 5 ? q.solution : `Apply the governing principles and definitions from ${topicName} to solve systematically.`,
         examTrap: typeof q?.examTrap === "string" ? q.examTrap : ""
       };
     });
@@ -130404,42 +130676,24 @@ ${source.promptContext}`
     };
   });
   if (blocks.length === 0) {
-    blocks = [
-      {
-        title: `Block 1: Core Definitions & Physical Principles`,
-        focus: `Recall essential terminology, physical rules, and baseline models`,
-        coreSummary: `${topicName} introduces fundamental physical principles. Study the geometric configurations, sign conventions, and definition of state variables.`,
-        keyFormula: `$$\\vec{E} = \\frac{1}{4\\pi\\varepsilon_0}\\frac{q}{r^2}\\hat{r}$$`,
-        keyTakeaways: [
-          `Field lines begin on positive charges and end on negative charges.`,
-          `Density of field lines is proportional to field strength.`,
-          `Field lines can never cross at any point.`
-        ],
-        commonMistakes: [`Forgetting that field lines always meet a conductor perpendicular (90 degrees) to its surface.`],
-        mnemonic: `Lines originate on positive (+q) and terminate on negative (-q). Like charges repel, opposites attract.`
-      },
-      {
-        title: `Block 2: Governing Equations & Derivations`,
-        focus: `Derive on-axis approximations and energy formulations`,
-        coreSummary: `For an electric dipole at distances z much greater than separation d (z >> d), the on-axis electric field decays as 1/z^3 rather than the 1/r^2 dependence of a monopole.`,
-        keyFormula: `$$E_{\\text{axis}} \\approx \\frac{1}{4\\pi\\varepsilon_0}\\frac{2p}{z^3}, \\quad \\tau = \\vec{p} \\times \\vec{E}, \\quad U = -\\vec{p} \\cdot \\vec{E}$$`,
-        keyTakeaways: [
-          `Dipole field decreases as 1/z^3 at large distances.`,
-          `External torque rotates dipole to align with E field.`,
-          `Potential energy is minimum U = -pE when aligned with field.`
-        ],
-        commonMistakes: [`Neglecting the negative sign in potential energy U = -p . E.`],
-        mnemonic: `Dipole torque aligns with field; potential energy is lowest (most stable) when perfectly aligned.`
-      }
-    ];
+    const parsedFromDoc = parseRealAcademicNotes(source.fullText || "", topicName);
+    blocks = parsedFromDoc.map((sec, idx) => ({
+      title: sec.heading || `Block ${idx + 1}: ${topicName}`,
+      focus: `Master the core principles and mechanisms in ${sec.heading || topicName}`,
+      coreSummary: sec.explanation,
+      keyFormula: "",
+      keyTakeaways: sec.bullets,
+      commonMistakes: [`Verify all definitions, boundary conditions, and steps from ${sec.heading || topicName}.`],
+      mnemonic: `Connect ${sec.heading || topicName} directly to the worked examples in the document.`
+    }));
   }
   let selfCheck = Array.isArray(rawParsed.selfCheck) ? rawParsed.selfCheck.map(String).filter(Boolean) : [];
   if (selfCheck.length === 0) {
     selfCheck = [
       `Can I define the central concepts of ${topicName} without looking?`,
-      `Can I state and derive the governing equations and on-axis approximations?`,
-      `Can I state the key memory mnemonics and avoid common exam pitfalls?`,
-      `Can I summarize the entire topic in one clear sentence from memory?`
+      `Can I state and apply the governing rules and formulas from ${topicName}?`,
+      `Can I state the key memory mnemonics and avoid common exam pitfalls in ${topicName}?`,
+      `Can I summarize the entire ${topicName} document in my own words from memory?`
     ];
   }
   const content2 = { oneLineSummary, overview, keyDefinitions, formulaBank, blocks, selfCheck };
@@ -130472,6 +130726,11 @@ async function listRevisionGuides(userId, subjectId) {
     conditions.push(eq(revisionGuides.subjectId, subjectId));
   }
   return db.select().from(revisionGuides).where(and(...conditions)).orderBy(desc(revisionGuides.createdAt));
+}
+async function deleteRevisionGuide(userId, revisionId) {
+  const db = database2(await getDb());
+  await db.delete(revisionGuides).where(and(eq(revisionGuides.id, revisionId), eq(revisionGuides.userId, userId)));
+  return { success: true };
 }
 async function askDocumentGrounded(userId, input) {
   const db = database2(await getDb());
@@ -131170,6 +131429,13 @@ var appRouter = router({
       } catch (error46) {
         return toApiError(error46);
       }
+    }),
+    delete: protectedProcedure.input(external_exports.object({ revisionId: external_exports.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      try {
+        return await deleteRevisionGuide(ctx.user.id, input.revisionId);
+      } catch (error46) {
+        return toApiError(error46);
+      }
     })
   }),
   quizzes: router({
@@ -131567,7 +131833,7 @@ function createExpressApp() {
   });
   const DEFAULT_SUPABASE_URL3 = "";
   const DEFAULT_SUPABASE_ANON_KEY = "";
-  app2.get(["/", "/health", "/api", "/api/health"], (_req, res) => {
+  app2.get(["/health", "/api", "/api/health"], (_req, res) => {
     res.json({ status: "ok", service: "StudentGPT API", timestamp: (/* @__PURE__ */ new Date()).toISOString() });
   });
   app2.get(["/api/auth/supabase-config", "/auth/supabase-config"], (_req, res) => {
@@ -131588,7 +131854,7 @@ function createExpressApp() {
   app2.use("/.netlify/functions/api/api/trpc", trpcHandler);
   app2.use("/api/trpc", trpcHandler);
   app2.use("/trpc", trpcHandler);
-  app2.use((req, res) => {
+  app2.use(["/api", "/trpc", "/.netlify"], (req, res) => {
     res.status(404).json({ error: { message: `Route not found: ${req.method} ${req.originalUrl || req.url}` } });
   });
   app2.use((err, _req, res, _next) => {

@@ -9,30 +9,38 @@ function text(value: unknown) { return typeof value === "string" ? value : ""; }
 async function studySource(userId: number, topic: string, documentId?: number, scopeLabel?: string) {
   const db = dbOrThrow(await getDb());
   if (!documentId) return `Topic: ${topic}`;
-  let document = await db.select().from(documents).where(and(eq(documents.id, documentId), eq(documents.userId, userId), eq(documents.status, "ready"))).limit(1);
-  if (!document[0]) {
-    document = await db.select().from(documents).where(and(eq(documents.id, documentId), eq(documents.status, "ready"))).limit(1);
-  }
-  if (!document[0]) throw new Error("Document not found.");
+  const document = await db.select().from(documents).where(and(eq(documents.id, documentId), eq(documents.userId, userId), eq(documents.status, "ready"))).limit(1);
+  if (!document[0]) throw new Error("The selected PDF document could not be found.");
 
   const cleanDocName = document[0].originalName.replace(/\.[^/.]+$/, "").replace(/[_-]+/g, " ").trim();
   const isWhole = !scopeLabel || scopeLabel.toLowerCase() === "whole" || scopeLabel.toLowerCase().includes("complete");
   const cleanScope = isWhole ? "Complete Document" : scopeLabel;
 
-  let chunks = await db.select()
-    .from(documentChunks)
-    .where(eq(documentChunks.documentId, documentId))
-    .orderBy(asc(documentChunks.chunkIndex))
-    .limit(35);
-
-  let text = chunks.map(chunk => chunk.content).join("\n\n").trim();
-  if (!text) text = document[0].extractedText || "";
+  let text = (document[0].extractedText || "").trim();
+  if (!text || text.length < 100) {
+    let chunks = await db.select()
+      .from(documentChunks)
+      .where(eq(documentChunks.documentId, documentId))
+      .orderBy(asc(documentChunks.chunkIndex))
+      .limit(45);
+    text = chunks.map(chunk => chunk.content).join("\n\n").trim();
+  }
 
   const cleanRealText = text
     .replace(/--\s*\d+\s*of\s*\d+\s*--/gi, "")
     .trim();
 
-  return `Document: ${document[0].originalName} (${cleanDocName})\nRequested scope: ${cleanScope}\n\n${cleanRealText.slice(0, 30000)}`;
+  let sampledText = cleanRealText;
+  if (cleanRealText.length > 10000) {
+    const mid = Math.floor(cleanRealText.length / 2);
+    sampledText = [
+      cleanRealText.slice(0, 3800),
+      cleanRealText.slice(Math.max(0, mid - 1700), mid + 1700),
+      cleanRealText.slice(-3000),
+    ].join("\n\n---\n\n");
+  }
+
+  return `STRICT SOURCE BOUNDING: Generate questions ONLY from this exact document. Do NOT use any other topic or outside subject.\nDocument: ${document[0].originalName} (${cleanDocName})\nRequested scope: ${cleanScope}\n\n${sampledText}`;
 }
 
 function normalizeQuizQuestions(raw: unknown) {
@@ -114,35 +122,43 @@ export async function generateQuiz(userId: number, input: { title: string; topic
     }
   }
   if (effectiveSubjectId) await assertOwnedSubject(userId, effectiveSubjectId);
-  const count = input.questionCount ?? 5; const scope = input.scopeLabel || input.topic; const source = await studySource(userId, input.topic, input.documentId ?? undefined, scope);
-  const response = await invokeLLM({
-    messages: [{ role: "system", content: "Create academically accurate quiz questions from the supplied study source. Return JSON with a 'questions' array. Each question must have 'prompt', 'options' (array of 4 strings), 'correctAnswer', and 'explanation'." }, { role: "user", content: `Difficulty: ${input.difficulty}\nRequested ${input.scopeType ?? "topic"}: ${scope}\nCreate up to ${count} multiple-choice questions, each with four options, one exact correctAnswer, and a concise explanation.\n\n${source}` }],
-    response_format: { type: "json_schema", json_schema: { name: "quiz", strict: true, schema: { type: "object", properties: { questions: { type: "array", minItems: Math.min(count, 3), maxItems: count, items: { type: "object", properties: { prompt: { type: "string" }, options: { type: "array", minItems: 4, maxItems: 4, items: { type: "string" } }, correctAnswer: { type: "string" }, explanation: { type: "string" } }, required: ["prompt", "options", "correctAnswer", "explanation"], additionalProperties: false } } }, required: ["questions"], additionalProperties: false } } },
-    maxTokens: 5000,
-  });
-  const raw = text(response.choices[0]?.message.content); const parsedRaw = safeParseJSON<unknown>(raw, { questions: [] });
-  const questions = normalizeQuizQuestions(parsedRaw);
-  if (questions.length === 0) {
-    questions.push(
-      {
-        prompt: `What is a primary characteristic of computer systems in Information and Communication Technologies?`,
-        options: ["Diligence and High Speed", "Emotional Empathy", "Human Intuition", "Unlimited Biological Creativity"],
-        correctAnswer: "Diligence and High Speed",
-        explanation: "Computers excel in processing data with high speed, accuracy, diligence, and vast storage capacity."
-      },
-      {
-        prompt: `Which supercomputer was recorded as the fastest supercomputer on Earth in November 2024?`,
-        options: ["HPE's El Capitan", "Frontier", "Fugaku", "Summit"],
-        correctAnswer: "HPE's El Capitan",
-        explanation: "El Capitan delivers 1.74 exaflops of peak performance powered by HPE Cray EX architecture."
-      },
-      {
-        prompt: `What limitation applies to artificial intelligence systems processing raw input data?`,
-        options: ["Garbage in, garbage out principle", "Instant human empathy", "Zero electrical power usage", "Hardware immunity to bugs"],
-        correctAnswer: "Garbage in, garbage out principle",
-        explanation: "AI and software systems depend strictly on quality training data and human programming."
+  const count = Math.max(3, Math.min(15, Number(input.questionCount) || 5));
+  const scope = input.scopeLabel || input.topic;
+  const source = await studySource(userId, input.topic, input.documentId ?? undefined, scope);
+
+  const questions: Array<{ prompt: string; options: string[]; correctAnswer: string; explanation: string }> = [];
+  const maxBatches = Math.ceil(count / 5) + 1;
+
+  for (let batchIdx = 0; batchIdx < maxBatches && questions.length < count; batchIdx++) {
+    const needed = Math.min(5, count - questions.length);
+    const existingPrompts = questions.map(q => q.prompt).join(" | ");
+    const avoidClause = existingPrompts ? `\nDo NOT repeat these questions: ${existingPrompts}` : "";
+    const sysPrompt = `You are a rigorous university exam author. Create EXACTLY ${needed} multiple-choice quiz questions strictly from the supplied study source. NEVER invent questions from another subject or outside document. Return ONLY a JSON object with a "questions" array containing EXACTLY ${needed} items. Each item must have "prompt", "options" (array of 4 strings), "correctAnswer" (must match one of the 4 options), and "explanation".`;
+    const usrPrompt = `Difficulty: ${input.difficulty}\nRequested ${input.scopeType ?? "topic"}: ${scope}\nREQUIRED QUESTION COUNT: Generate EXACTLY ${needed} multiple-choice questions strictly from the study source below.${avoidClause}\n\n${source}`;
+
+    try {
+      const response = await invokeLLM({
+        messages: [
+          { role: "system", content: sysPrompt },
+          { role: "user", content: usrPrompt }
+        ],
+        response_format: { type: "json_object" },
+        maxTokens: 1150,
+      });
+      const raw = text(response.choices[0]?.message.content);
+      const batchQuestions = normalizeQuizQuestions(safeParseJSON<unknown>(raw, { questions: [] }));
+      for (const bq of batchQuestions) {
+        if (questions.length < count && !questions.some(existing => existing.prompt === bq.prompt)) {
+          questions.push(bq);
+        }
       }
-    );
+    } catch (e) {
+      console.warn(`Quiz batch ${batchIdx + 1} failed:`, e);
+    }
+  }
+
+  if (questions.length === 0) {
+    throw new Error("Could not generate quiz questions from the selected document. Please try again.");
   }
   const db = dbOrThrow(await getDb());
   const inserted = await db.insert(quizzes).values({ userId, subjectId: input.subjectId ?? null, documentId: input.documentId ?? null, title: input.title, difficulty: input.difficulty, sourceType: input.documentId ? "document" : "topic" });
@@ -176,12 +192,28 @@ export async function generateFlashcards(userId: number, input: { topic: string;
   }
   if (effectiveSubjectId) await assertOwnedSubject(userId, effectiveSubjectId);
   const source = await studySource(userId, input.topic, input.documentId ?? undefined, input.scopeLabel || input.topic);
-  const response = await invokeLLM({ messages: [{ role: "system", content: "Create concise, high-value academic flashcards from the supplied source. Return JSON with a 'cards' array." }, { role: "user", content: `Create 8 flashcards with a direct question on the front and a concise correct answer on the back.\n\n${source}` }], response_format: { type: "json_schema", json_schema: { name: "flashcards", strict: true, schema: { type: "object", properties: { cards: { type: "array", minItems: 4, maxItems: 8, items: { type: "object", properties: { front: { type: "string" }, back: { type: "string" } }, required: ["front", "back"], additionalProperties: false } } }, required: ["cards"], additionalProperties: false } } }, maxTokens: 2500 });
-  const raw = text(response.choices[0]?.message.content); const parsedRaw = safeParseJSON<unknown>(raw, { cards: [] });
+  const response = await invokeLLM({
+    messages: [
+      { role: "system", content: "You are an academic flashcard author. Create 8 high-yield flashcards STRICTLY from the supplied study source. NEVER include concepts from any other document or outside subject. Return ONLY a valid JSON object with a 'cards' array where each item has 'front' and 'back'." },
+      { role: "user", content: `Create 8 flashcards with a clear question/concept on 'front' and a concise, accurate answer on 'back', strictly from this source:\n\n${source}` }
+    ],
+    response_format: { type: "json_object" },
+    maxTokens: 2500
+  });
+  const raw = text(response.choices[0]?.message.content);
+  const parsedRaw = safeParseJSON<unknown>(raw, { cards: [] });
   const cards = normalizeFlashcards(parsedRaw);
-  if (cards.length === 0) throw new Error("Could not generate flashcards from this topic. Please try again.");
-  const db = dbOrThrow(await getDb()); const created = [];
-  for (const card of cards) { const result = await db.insert(flashcards).values({ userId, subjectId: effectiveSubjectId ?? null, documentId: input.documentId ?? null, front: card.front, back: card.back, sourceType: input.documentId ? "document" : "topic" }); const id = Number(result[0].insertId); const stored = await db.select().from(flashcards).where(and(eq(flashcards.id, id), eq(flashcards.userId, userId))).limit(1); if (stored[0]) created.push(stored[0]); }
+  if (cards.length === 0) throw new Error("Could not generate flashcards from this document. Please try again.");
+  const db = dbOrThrow(await getDb());
+  // Replace previous flashcard deck so cards from older PDFs never mix with the current PDF
+  await db.delete(flashcards).where(eq(flashcards.userId, userId));
+  const created = [];
+  for (const card of cards) {
+    const result = await db.insert(flashcards).values({ userId, subjectId: effectiveSubjectId ?? null, documentId: input.documentId ?? null, front: card.front, back: card.back, sourceType: input.documentId ? "document" : "topic" });
+    const id = Number(result[0].insertId);
+    const stored = await db.select().from(flashcards).where(and(eq(flashcards.id, id), eq(flashcards.userId, userId))).limit(1);
+    if (stored[0]) created.push(stored[0]);
+  }
   return created;
 }
 
