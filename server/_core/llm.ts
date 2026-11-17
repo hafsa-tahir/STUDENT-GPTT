@@ -401,7 +401,7 @@ function resolveCustomModelUrl(): string {
 function getProviderCandidates(requestedModel?: string, _isStructuredJson = false): ProviderCandidate[] {
   const candidates: ProviderCandidate[] = [];
 
-  // 0. Custom Fine-Tuned StudentGPT-7B LoRA Model (Primary #1 Priority when active_endpoint.txt is set!)
+  // Layer 1: Custom Fine-Tuned StudentGPT LoRA Model on Hugging Face ZeroGPU (~15-30 req/day)
   const customUrl = resolveCustomModelUrl();
   if (customUrl) {
     candidates.push({
@@ -412,11 +412,17 @@ function getProviderCandidates(requestedModel?: string, _isStructuredJson = fals
     });
   }
 
-  // 1. Groq Keys & Models (Blazing fast 0.6s response, 128K context window)
+  // Layer 2: Groq Multi-Pool (Ordered from lowest token footprint to largest: gpt-oss-20b -> qwen3.8-27b -> gpt-oss-120b -> llama)
   if (ENV.groqApiKeys.length > 0) {
     const groqModels = requestedModel && (requestedModel.includes("qwen") || requestedModel.includes("gpt-oss") || requestedModel.includes("llama"))
       ? [requestedModel]
-      : ["qwen/qwen3.8-27b", "openai/gpt-oss-120b", "openai/gpt-oss-20b"];
+      : [
+          "openai/gpt-oss-20b",
+          "qwen/qwen3.8-27b",
+          "openai/gpt-oss-120b",
+          "llama-3.3-70b-versatile",
+          "llama-3.1-8b-instant",
+        ];
     for (const key of ENV.groqApiKeys) {
       for (const m of groqModels) {
         candidates.push({
@@ -429,11 +435,16 @@ function getProviderCandidates(requestedModel?: string, _isStructuredJson = fals
     }
   }
 
-  // 2. Gemini Keys (Google AI Studio - gemini-3-flash-preview, gemini-3.1-flash-lite-preview, gemma-4-31b-it)
+  // Layer 3: Gemini Flash-Lite Pool FIRST (500 req/day quota on Flash-Lite vs 20/day on regular Flash)
   if (ENV.geminiApiKeys.length > 0) {
     const geminiModels = requestedModel && (requestedModel.includes("gemini") || requestedModel.includes("gemma"))
       ? [requestedModel]
-      : ["gemini-3-flash-preview", "gemini-3.1-flash-lite-preview", "gemma-4-31b-it", "gemma-4-26b-a4b-it"];
+      : [
+          "gemini-3.1-flash-lite-preview",
+          "gemma-4-31b-it",
+          "gemma-4-26b-a4b-it",
+          "gemini-3-flash-preview",
+        ];
     for (let index = 0; index < ENV.geminiApiKeys.length; index++) {
       const key = ENV.geminiApiKeys[index];
       for (const gm of geminiModels) {
@@ -447,7 +458,7 @@ function getProviderCandidates(requestedModel?: string, _isStructuredJson = fals
     }
   }
 
-  // 3. OpenRouter Key & Models
+  // Layer 4: OpenRouter :free Pool (Final Backup)
   if (ENV.openrouterApiKey) {
     const openrouterModels = requestedModel && !requestedModel.includes("gemini") && !requestedModel.includes("qwen") && !requestedModel.includes("gpt-oss")
       ? [requestedModel]
@@ -501,18 +512,60 @@ async function withCustomGpuLock<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
+const llmResponseCache = new Map<string, { result: InvokeResult; expiresAt: number }>();
+let zeroGpuQuotaExhaustedUntil = 0;
+
+function getCacheKey(messages: unknown, schemaName?: string): string {
+  try {
+    return `${schemaName || "raw"}::${JSON.stringify(messages)}`;
+  } catch {
+    return "";
+  }
+}
+
+function getCachedLLMResult(key: string): InvokeResult | null {
+  if (!key) return null;
+  const hit = llmResponseCache.get(key);
+  if (!hit) return null;
+  if (Date.now() > hit.expiresAt) {
+    llmResponseCache.delete(key);
+    return null;
+  }
+  return hit.result;
+}
+
+function setCachedLLMResult(key: string, result: InvokeResult): void {
+  if (!key) return;
+  if (llmResponseCache.size > 250) {
+    const oldestKey = llmResponseCache.keys().next().value;
+    if (oldestKey) llmResponseCache.delete(oldestKey);
+  }
+  llmResponseCache.set(key, {
+    result,
+    expiresAt: Date.now() + 6 * 60 * 60 * 1000, // 6 hours TTL
+  });
+}
+
 async function callGradioZeroGpuSpace(
   rawUrl: string,
   messages: unknown,
   maxTokens: number,
   temperature: number
 ): Promise<InvokeResult | null> {
+  if (Date.now() < zeroGpuQuotaExhaustedUntil) {
+    return null;
+  }
   const baseUrl = rawUrl.replace(/\/v1\/chat\/completions$/, "").replace(/\/$/, "");
   const prefix = "/gradio_api/call/predict";
   try {
     const headers: Record<string, string> = { "content-type": "application/json" };
-    if (process.env.HF_TOKEN) {
-      headers["authorization"] = `Bearer ${process.env.HF_TOKEN.trim()}`;
+    const hfTokens = (process.env.HF_TOKENS || process.env.HF_TOKEN || "")
+      .split(",")
+      .map(t => t.trim())
+      .filter(Boolean);
+    const activeToken = hfTokens.length > 0 ? hfTokens[Math.floor(Math.random() * hfTokens.length)] : "";
+    if (activeToken) {
+      headers["authorization"] = `Bearer ${activeToken}`;
     }
     const postResp = await fetch(`${baseUrl}${prefix}`, {
       method: "POST",
@@ -520,20 +573,26 @@ async function callGradioZeroGpuSpace(
       body: JSON.stringify({
         data: [JSON.stringify(messages), maxTokens, temperature],
       }),
-      signal: AbortSignal.timeout(12000),
+      signal: AbortSignal.timeout(10000),
     });
     if (!postResp.ok) {
+      zeroGpuQuotaExhaustedUntil = Date.now() + 15 * 60 * 1000;
       return null;
     }
     const postJson = (await postResp.json()) as { event_id?: string };
     if (!postJson?.event_id) return null;
 
     const streamResp = await fetch(`${baseUrl}${prefix}/${postJson.event_id}`, {
-      headers: process.env.HF_TOKEN ? { authorization: `Bearer ${process.env.HF_TOKEN.trim()}` } : undefined,
-      signal: AbortSignal.timeout(75000),
+      headers: activeToken ? { authorization: `Bearer ${activeToken}` } : undefined,
+      signal: AbortSignal.timeout(65000),
     });
     if (!streamResp.ok) return null;
     const sseText = await streamResp.text();
+    if (sseText.includes("event: error") || sseText.toLowerCase().includes("exceeded your gpu quota")) {
+      console.warn("[Custom ZeroGPU Model] Daily GPU quota reached — switching directly to Layer 2 (Groq/Gemini) for 30 mins.");
+      zeroGpuQuotaExhaustedUntil = Date.now() + 30 * 60 * 1000;
+      return null;
+    }
     const lines = sseText.split("\n");
     for (let i = 0; i < lines.length; i++) {
       if (lines[i].startsWith("event: complete") && lines[i + 1]?.startsWith("data:")) {
@@ -558,6 +617,7 @@ async function callGradioZeroGpuSpace(
     }
   } catch (err) {
     console.warn(`[Custom ZeroGPU Model] Unreachable or timed out: ${(err as Error).message}`);
+    zeroGpuQuotaExhaustedUntil = Date.now() + 10 * 60 * 1000;
   }
   return null;
 }
@@ -628,6 +688,20 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
         normalizedResponseFormat.type === "json_schema")
   );
 
+  const schemaName =
+    normalizedResponseFormat && "json_schema" in normalizedResponseFormat
+      ? normalizedResponseFormat.json_schema?.name
+      : isStructuredJson
+        ? "json_object"
+        : "text";
+
+  // Step 1: Instant Cache Check (0 tokens, 0 API requests used for repeated prompts)
+  const cacheKey = getCacheKey(payload.messages, schemaName);
+  const cachedHit = getCachedLLMResult(cacheKey);
+  if (cachedHit) {
+    return cachedHit;
+  }
+
   const candidates = getProviderCandidates(model, isStructuredJson);
   let lastError = "LLM invoke failed";
 
@@ -642,12 +716,14 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     }
     if (candidate.name.startsWith("Groq") || candidate.model.includes("gpt-oss") || candidate.model.includes("gemma-4")) {
       delete requestPayload.response_format;
-      const requestedMax = typeof requestPayload.max_tokens === "number" ? requestPayload.max_tokens : 4096;
-      requestPayload.max_tokens = Math.max(requestedMax, 4096);
+      // Smart Token Saver: 2400 tokens for structured JSON schemas, 900 tokens for chat/explanations to preserve 200K/day token pools
+      const defaultMax = isStructuredJson ? 2400 : 900;
+      const requestedMax = typeof requestPayload.max_tokens === "number" ? requestPayload.max_tokens : defaultMax;
+      requestPayload.max_tokens = isStructuredJson ? Math.max(requestedMax, 2200) : Math.min(requestedMax, 1000);
     }
     if (candidate.model.includes("StudentGPT")) {
-      const requestedMax = typeof requestPayload.max_tokens === "number" ? requestPayload.max_tokens : 1200;
-      requestPayload.max_tokens = Math.min(requestedMax, 1250);
+      const requestedMax = typeof requestPayload.max_tokens === "number" ? requestPayload.max_tokens : (isStructuredJson ? 1400 : 800);
+      requestPayload.max_tokens = Math.min(requestedMax, 1400);
     }
 
     try {
@@ -656,7 +732,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
           callGradioZeroGpuSpace(
             candidate.url,
             requestPayload.messages,
-            typeof requestPayload.max_tokens === "number" ? requestPayload.max_tokens : 1500,
+            typeof requestPayload.max_tokens === "number" ? requestPayload.max_tokens : 1400,
             typeof requestPayload.temperature === "number" ? requestPayload.temperature : 0.3
           )
         );
@@ -666,9 +742,11 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
             const parsedCheck = safeParseJSON<Record<string, unknown>>(rawStr, {});
             if (parsedCheck && typeof parsedCheck === "object" && Object.keys(parsedCheck).length > 0) {
               gradioData.choices[0].message.content = JSON.stringify(parsedCheck);
+              setCachedLLMResult(cacheKey, gradioData);
               return gradioData;
             }
           } else {
+            setCachedLLMResult(cacheKey, gradioData);
             return gradioData;
           }
         }
@@ -711,6 +789,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
             }
             data.choices[0].message.content = JSON.stringify(parsedCheck);
           }
+          setCachedLLMResult(cacheKey, data);
           return data;
         }
         console.warn(`Provider ${candidate.name} returned response without valid choices array.`);

@@ -1547,7 +1547,13 @@ function getProviderCandidates(requestedModel, _isStructuredJson = false) {
     });
   }
   if (ENV.groqApiKeys.length > 0) {
-    const groqModels = requestedModel && (requestedModel.includes("qwen") || requestedModel.includes("gpt-oss") || requestedModel.includes("llama")) ? [requestedModel] : ["qwen/qwen3.8-27b", "openai/gpt-oss-120b", "openai/gpt-oss-20b"];
+    const groqModels = requestedModel && (requestedModel.includes("qwen") || requestedModel.includes("gpt-oss") || requestedModel.includes("llama")) ? [requestedModel] : [
+      "openai/gpt-oss-20b",
+      "qwen/qwen3.8-27b",
+      "openai/gpt-oss-120b",
+      "llama-3.3-70b-versatile",
+      "llama-3.1-8b-instant"
+    ];
     for (const key of ENV.groqApiKeys) {
       for (const m of groqModels) {
         candidates.push({
@@ -1560,7 +1566,12 @@ function getProviderCandidates(requestedModel, _isStructuredJson = false) {
     }
   }
   if (ENV.geminiApiKeys.length > 0) {
-    const geminiModels = requestedModel && (requestedModel.includes("gemini") || requestedModel.includes("gemma")) ? [requestedModel] : ["gemini-3-flash-preview", "gemini-3.1-flash-lite-preview", "gemma-4-31b-it", "gemma-4-26b-a4b-it"];
+    const geminiModels = requestedModel && (requestedModel.includes("gemini") || requestedModel.includes("gemma")) ? [requestedModel] : [
+      "gemini-3.1-flash-lite-preview",
+      "gemma-4-31b-it",
+      "gemma-4-26b-a4b-it",
+      "gemini-3-flash-preview"
+    ];
     for (let index2 = 0; index2 < ENV.geminiApiKeys.length; index2++) {
       const key = ENV.geminiApiKeys[index2];
       for (const gm of geminiModels) {
@@ -1617,13 +1628,49 @@ async function withCustomGpuLock(fn) {
     release();
   }
 }
+var llmResponseCache = /* @__PURE__ */ new Map();
+var zeroGpuQuotaExhaustedUntil = 0;
+function getCacheKey(messages2, schemaName) {
+  try {
+    return `${schemaName || "raw"}::${JSON.stringify(messages2)}`;
+  } catch {
+    return "";
+  }
+}
+function getCachedLLMResult(key) {
+  if (!key) return null;
+  const hit = llmResponseCache.get(key);
+  if (!hit) return null;
+  if (Date.now() > hit.expiresAt) {
+    llmResponseCache.delete(key);
+    return null;
+  }
+  return hit.result;
+}
+function setCachedLLMResult(key, result) {
+  if (!key) return;
+  if (llmResponseCache.size > 250) {
+    const oldestKey = llmResponseCache.keys().next().value;
+    if (oldestKey) llmResponseCache.delete(oldestKey);
+  }
+  llmResponseCache.set(key, {
+    result,
+    expiresAt: Date.now() + 6 * 60 * 60 * 1e3
+    // 6 hours TTL
+  });
+}
 async function callGradioZeroGpuSpace(rawUrl, messages2, maxTokens, temperature) {
+  if (Date.now() < zeroGpuQuotaExhaustedUntil) {
+    return null;
+  }
   const baseUrl = rawUrl.replace(/\/v1\/chat\/completions$/, "").replace(/\/$/, "");
   const prefix = "/gradio_api/call/predict";
   try {
     const headers = { "content-type": "application/json" };
-    if (process.env.HF_TOKEN) {
-      headers["authorization"] = `Bearer ${process.env.HF_TOKEN.trim()}`;
+    const hfTokens = (process.env.HF_TOKENS || process.env.HF_TOKEN || "").split(",").map((t2) => t2.trim()).filter(Boolean);
+    const activeToken = hfTokens.length > 0 ? hfTokens[Math.floor(Math.random() * hfTokens.length)] : "";
+    if (activeToken) {
+      headers["authorization"] = `Bearer ${activeToken}`;
     }
     const postResp = await fetch(`${baseUrl}${prefix}`, {
       method: "POST",
@@ -1631,19 +1678,25 @@ async function callGradioZeroGpuSpace(rawUrl, messages2, maxTokens, temperature)
       body: JSON.stringify({
         data: [JSON.stringify(messages2), maxTokens, temperature]
       }),
-      signal: AbortSignal.timeout(12e3)
+      signal: AbortSignal.timeout(1e4)
     });
     if (!postResp.ok) {
+      zeroGpuQuotaExhaustedUntil = Date.now() + 15 * 60 * 1e3;
       return null;
     }
     const postJson = await postResp.json();
     if (!postJson?.event_id) return null;
     const streamResp = await fetch(`${baseUrl}${prefix}/${postJson.event_id}`, {
-      headers: process.env.HF_TOKEN ? { authorization: `Bearer ${process.env.HF_TOKEN.trim()}` } : void 0,
-      signal: AbortSignal.timeout(75e3)
+      headers: activeToken ? { authorization: `Bearer ${activeToken}` } : void 0,
+      signal: AbortSignal.timeout(65e3)
     });
     if (!streamResp.ok) return null;
     const sseText = await streamResp.text();
+    if (sseText.includes("event: error") || sseText.toLowerCase().includes("exceeded your gpu quota")) {
+      console.warn("[Custom ZeroGPU Model] Daily GPU quota reached \u2014 switching directly to Layer 2 (Groq/Gemini) for 30 mins.");
+      zeroGpuQuotaExhaustedUntil = Date.now() + 30 * 60 * 1e3;
+      return null;
+    }
     const lines = sseText.split("\n");
     for (let i = 0; i < lines.length; i++) {
       if (lines[i].startsWith("event: complete") && lines[i + 1]?.startsWith("data:")) {
@@ -1668,6 +1721,7 @@ async function callGradioZeroGpuSpace(rawUrl, messages2, maxTokens, temperature)
     }
   } catch (err) {
     console.warn(`[Custom ZeroGPU Model] Unreachable or timed out: ${err.message}`);
+    zeroGpuQuotaExhaustedUntil = Date.now() + 10 * 60 * 1e3;
   }
   return null;
 }
@@ -1724,6 +1778,12 @@ async function invokeLLM(params) {
   const isStructuredJson = Boolean(
     normalizedResponseFormat && (normalizedResponseFormat.type === "json_object" || normalizedResponseFormat.type === "json_schema")
   );
+  const schemaName = normalizedResponseFormat && "json_schema" in normalizedResponseFormat ? normalizedResponseFormat.json_schema?.name : isStructuredJson ? "json_object" : "text";
+  const cacheKey = getCacheKey(payload.messages, schemaName);
+  const cachedHit = getCachedLLMResult(cacheKey);
+  if (cachedHit) {
+    return cachedHit;
+  }
   const candidates = getProviderCandidates(model, isStructuredJson);
   let lastError = "LLM invoke failed";
   for (const candidate of candidates) {
@@ -1737,12 +1797,13 @@ async function invokeLLM(params) {
     }
     if (candidate.name.startsWith("Groq") || candidate.model.includes("gpt-oss") || candidate.model.includes("gemma-4")) {
       delete requestPayload.response_format;
-      const requestedMax = typeof requestPayload.max_tokens === "number" ? requestPayload.max_tokens : 4096;
-      requestPayload.max_tokens = Math.max(requestedMax, 4096);
+      const defaultMax = isStructuredJson ? 2400 : 900;
+      const requestedMax = typeof requestPayload.max_tokens === "number" ? requestPayload.max_tokens : defaultMax;
+      requestPayload.max_tokens = isStructuredJson ? Math.max(requestedMax, 2200) : Math.min(requestedMax, 1e3);
     }
     if (candidate.model.includes("StudentGPT")) {
-      const requestedMax = typeof requestPayload.max_tokens === "number" ? requestPayload.max_tokens : 1200;
-      requestPayload.max_tokens = Math.min(requestedMax, 1250);
+      const requestedMax = typeof requestPayload.max_tokens === "number" ? requestPayload.max_tokens : isStructuredJson ? 1400 : 800;
+      requestPayload.max_tokens = Math.min(requestedMax, 1400);
     }
     try {
       if (candidate.url.includes(".hf.space")) {
@@ -1750,7 +1811,7 @@ async function invokeLLM(params) {
           () => callGradioZeroGpuSpace(
             candidate.url,
             requestPayload.messages,
-            typeof requestPayload.max_tokens === "number" ? requestPayload.max_tokens : 1500,
+            typeof requestPayload.max_tokens === "number" ? requestPayload.max_tokens : 1400,
             typeof requestPayload.temperature === "number" ? requestPayload.temperature : 0.3
           )
         );
@@ -1760,9 +1821,11 @@ async function invokeLLM(params) {
             const parsedCheck = safeParseJSON(rawStr, {});
             if (parsedCheck && typeof parsedCheck === "object" && Object.keys(parsedCheck).length > 0) {
               gradioData.choices[0].message.content = JSON.stringify(parsedCheck);
+              setCachedLLMResult(cacheKey, gradioData);
               return gradioData;
             }
           } else {
+            setCachedLLMResult(cacheKey, gradioData);
             return gradioData;
           }
         }
@@ -1796,6 +1859,7 @@ async function invokeLLM(params) {
             }
             data.choices[0].message.content = JSON.stringify(parsedCheck);
           }
+          setCachedLLMResult(cacheKey, data);
           return data;
         }
         console.warn(`Provider ${candidate.name} returned response without valid choices array.`);
