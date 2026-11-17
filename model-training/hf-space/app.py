@@ -1,9 +1,15 @@
 import spaces
 import os
 import json
+import inspect
 import torch
+import safetensors.torch
 import gradio as gr
 from transformers import AutoModelForCausalLM, AutoTokenizer
+
+# Force safetensors to load weights on CPU during ZeroGPU startup (before @spaces.GPU attaches physical CUDA)
+_orig_safe_load = safetensors.torch.load_file
+safetensors.torch.load_file = lambda filename, device="cpu": _orig_safe_load(filename, device="cpu")
 
 # Automatically detect uploaded LoRA adapter weights (either in root ./ or ./studentgpt_lora_model)
 LORA_DIR = None
@@ -14,16 +20,25 @@ elif os.path.exists("./studentgpt_lora_model/adapter_model.safetensors"):
 
 MODEL_ID = os.environ.get("BASE_MODEL_ID", "Qwen/Qwen2.5-7B-Instruct")
 if LORA_DIR and os.path.exists(os.path.join(LORA_DIR, "adapter_config.json")):
+    cfg_path = os.path.join(LORA_DIR, "adapter_config.json")
     try:
-        with open(os.path.join(LORA_DIR, "adapter_config.json"), "r", encoding="utf-8") as f:
+        with open(cfg_path, "r", encoding="utf-8") as f:
             cfg = json.load(f)
-            base_path = str(cfg.get("base_model_name_or_path", ""))
-            if "3B" in base_path:
-                MODEL_ID = "Qwen/Qwen2.5-3B-Instruct"
-            elif "7B" in base_path:
-                MODEL_ID = "Qwen/Qwen2.5-7B-Instruct"
-    except Exception:
-        pass
+        base_path = str(cfg.get("base_model_name_or_path", ""))
+        if "3B" in base_path:
+            MODEL_ID = "Qwen/Qwen2.5-3B-Instruct"
+        elif "7B" in base_path:
+            MODEL_ID = "Qwen/Qwen2.5-7B-Instruct"
+
+        # Strip experimental Unsloth keys that older PEFT versions reject
+        from peft import LoraConfig
+        valid_keys = set(inspect.signature(LoraConfig.__init__).parameters.keys())
+        cleaned_cfg = {k: v for k, v in cfg.items() if k in valid_keys or k == "peft_type"}
+        cleaned_cfg["base_model_name_or_path"] = MODEL_ID
+        with open(cfg_path, "w", encoding="utf-8") as f:
+            json.dump(cleaned_cfg, f, indent=2)
+    except Exception as e:
+        print("Config cleanup warning:", e)
 
 DEFAULT_SYSTEM_PROMPT = (
     "You are StudentGPT, a custom fine-tuned academic AI engine created by Hafsa Tahir for "
@@ -32,20 +47,27 @@ DEFAULT_SYSTEM_PROMPT = (
     "source fidelity, use clean KaTeX/LaTeX notation for formulas, and never invent citations."
 )
 
-print(f"Loading tokenizer & model: {MODEL_ID} on ZeroGPU...")
+print(f"Loading tokenizer & base model on CPU: {MODEL_ID}...")
 tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
-model = AutoModelForCausalLM.from_pretrained(
+base_model = AutoModelForCausalLM.from_pretrained(
     MODEL_ID,
     torch_dtype=torch.bfloat16,
-).to("cuda")
+    low_cpu_mem_usage=False,
+)
 
 LORA_STATUS = "Base Model + StudentGPT Alignment"
 if LORA_DIR:
-    from peft import PeftModel
-    print(f"Attaching custom fine-tuned StudentGPT LoRA adapter weights from {LORA_DIR}...")
-    model = PeftModel.from_pretrained(model, LORA_DIR).to("cuda")
-    LORA_STATUS = f"Custom QLoRA Fine-Tuned Weights Attached ({LORA_DIR}/adapter_model.safetensors)"
+    try:
+        from peft import PeftModel
+        print(f"Attaching & merging custom fine-tuned StudentGPT LoRA weights from {LORA_DIR} on CPU...")
+        peft_model = PeftModel.from_pretrained(base_model, LORA_DIR, torch_device="cpu")
+        base_model = peft_model.merge_and_unload()
+        LORA_STATUS = f"Custom QLoRA Fine-Tuned Weights Merged ({LORA_DIR}/adapter_model.safetensors)"
+        print("Successfully merged custom LoRA weights into base model!")
+    except Exception as e:
+        print("LoRA attach warning (falling back to base model):", e)
 
+model = base_model.to("cuda")
 model.eval()
 
 
